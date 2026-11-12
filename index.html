@@ -93,11 +93,35 @@
 
     <!-- スクリプト -->
     <script>
+        // データの安全な読み込みと古いデータの自動修復
         let workouts = [];
         try {
-            workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
-            if (!Array.isArray(workouts)) workouts = [];
+            const raw = localStorage.getItem('simple_workouts');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    workouts = parsed.map(item => {
+                        // データの互換性修復
+                        if (!item.id) item.id = Date.now().toString() + Math.random();
+                        if (!item.dateStr && item.createdAt) item.dateStr = item.createdAt.split('T')[0];
+                        if (!item.dateStr) item.dateStr = new Date().toISOString().slice(0, 10);
+                        
+                        if (item.minutes !== undefined) {
+                            item.isCardio = true;
+                            if (!item.name) item.name = '有酸素運動';
+                        } else if (!item.isCardio) {
+                            item.isCardio = false;
+                            if (!item.setList && item.weight !== undefined) {
+                                item.setList = [{ weight: item.weight, reps: item.reps }];
+                            }
+                            if (!Array.isArray(item.setList)) item.setList = [];
+                        }
+                        return item;
+                    });
+                }
+            }
         } catch (e) {
+            console.error("Data load error:", e);
             workouts = [];
         }
 
@@ -181,7 +205,10 @@
         }
 
         function formatDate(dateStr) {
-            const [y, m, d] = dateStr.split('-');
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const [y, m, d] = parts;
             const date = new Date(y, m - 1, d);
             const w = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
             return `${y}/${parseInt(m)}/${parseInt(d)} (${w})`;
@@ -193,7 +220,7 @@
             if (!list) return;
             list.innerHTML = '';
 
-            if (workouts.length === 0) {
+            if (!Array.isArray(workouts) || workouts.length === 0) {
                 if (empty) empty.classList.remove('hidden');
                 return;
             }
@@ -260,6 +287,7 @@
 
                 let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
                 
+                // 1. 筋トレ種目
                 const strengthItems = dayItems.filter(i => !i.isCardio);
                 strengthItems.forEach(item => {
                     const ppl = getPplTag(item.name || '');
@@ -291,6 +319,7 @@
                     `;
                 });
 
+                // 2. 有酸素運動（筋トレ種目一覧の下）
                 const cardioItems = dayItems.filter(i => i.isCardio);
                 cardioItems.forEach(item => {
                     body += `
@@ -347,38 +376,4 @@
             }
         }
 
-        function setTargetDate(dateStr) {
-            targetDateStr = dateStr;
-            const [y, m, d] = dateStr.split('-');
-            document.getElementById('formTitle').textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            document.getElementById('cancelTargetDateBtn').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function resetTargetDate() {
-            targetDateStr = null;
-            document.getElementById('formTitle').textContent = "今日のトレーニングを記録";
-            document.getElementById('cancelTargetDateBtn').classList.add('hidden');
-        }
-
-        function saveStrengthWorkout() {
-            const nameInput = document.getElementById('exerciseName');
-            const name = nameInput.value.trim();
-            if (!name) {
-                alert('筋トレの種目名を入力してください');
-                nameInput.focus();
-                return;
-            }
-
-            const container = document.getElementById('setsContainer');
-            const rows = container.querySelectorAll('.set-row');
-            const setList = [];
-            rows.forEach(row => {
-                const w = parseFloat(row.querySelector('.weight-input').value);
-                const r = parseInt(row.querySelector('.reps-input').value);
-                if (!isNaN(w) && !isNaN(r)) {
-                    setList.push({ weight: w, reps: r });
-                }
-            });
-
-   
+        function s
