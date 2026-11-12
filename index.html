@@ -27,7 +27,7 @@
     <main class="max-w-md w-full mx-auto p-4 flex-grow pb-24 space-y-6">
         
         <!-- 入力フォーム -->
-        <form id="workoutForm" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
+        <form id="workoutForm" onsubmit="handleFormSubmit(event)" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
             <div class="flex justify-between items-center">
                 <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今日のトレーニングを記録</h2>
                 <button type="button" id="cancelTargetDateBtn" onclick="resetTargetDate()" class="text-xs text-gray-400 hover:text-white hidden underline">今日に戻す</button>
@@ -90,18 +90,8 @@
     <!-- スクリプト -->
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
-        let targetDateStr = null; // 記録を追加する対象の日付
-        let selectedDateFilter = null; // 絞り込み中の日付
-
-        const form = document.getElementById('workoutForm');
-        const formTitle = document.getElementById('formTitle');
-        const cancelTargetDateBtn = document.getElementById('cancelTargetDateBtn');
-        const setsContainer = document.getElementById('setsContainer');
-        const workoutList = document.getElementById('workoutList');
-        const emptyMessage = document.getElementById('emptyMessage');
-        const dateFilter = document.getElementById('dateFilter');
-        const clearFilterBtn = document.getElementById('clearFilterBtn');
-        const listTitle = document.getElementById('listTitle');
+        let targetDateStr = null;
+        let selectedDateFilter = null;
 
         function getPplTag(name) {
             const n = name.toLowerCase();
@@ -117,7 +107,9 @@
             return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
         }
 
-        window.addSetRow = function(defaultWeight = '', defaultReps = '') {
+        // セット行を追加（グローバル関数として確実に定義）
+        function addSetRow(defaultWeight = '', defaultReps = '') {
+            const setsContainer = document.getElementById('setsContainer');
             const rows = setsContainer.querySelectorAll('.set-row');
             const setNum = rows.length + 1;
 
@@ -141,16 +133,18 @@
             `;
             setsContainer.appendChild(row);
             updateSetNumbers();
-        };
+        }
 
-        window.removeSetRow = function(btn) {
+        function removeSetRow(btn) {
+            const setsContainer = document.getElementById('setsContainer');
             const rows = setsContainer.querySelectorAll('.set-row');
             if (rows.length <= 1) return;
             btn.closest('.set-row').remove();
             updateSetNumbers();
-        };
+        }
 
         function updateSetNumbers() {
+            const setsContainer = document.getElementById('setsContainer');
             const rows = setsContainer.querySelectorAll('.set-row');
             rows.forEach((row, index) => {
                 row.querySelector('.set-label').textContent = `${index + 1}.`;
@@ -159,7 +153,8 @@
             });
         }
 
-        window.resetSetRows = function() {
+        function resetSetRows() {
+            const setsContainer = document.getElementById('setsContainer');
             setsContainer.innerHTML = `
                 <div class="set-row flex items-center gap-2">
                     <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
@@ -182,6 +177,11 @@
         }
 
         function renderWorkouts() {
+            const workoutList = document.getElementById('workoutList');
+            const emptyMessage = document.getElementById('emptyMessage');
+            const listTitle = document.getElementById('listTitle');
+            const clearFilterBtn = document.getElementById('clearFilterBtn');
+
             if (!workoutList) return;
             workoutList.innerHTML = '';
 
@@ -268,34 +268,35 @@
             });
         }
 
-        window.setTargetDateForAdd = function(dateStr) {
+        function setTargetDateForAdd(dateStr) {
             targetDateStr = dateStr;
             const [y, m, d] = dateStr.split('-');
-            formTitle.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            cancelTargetDateBtn.classList.remove('hidden');
+            document.getElementById('formTitle').textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
+            document.getElementById('cancelTargetDateBtn').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+        }
 
-        window.resetTargetDate = function() {
+        function resetTargetDate() {
             targetDateStr = null;
-            formTitle.textContent = "今日のトレーニングを記録";
-            cancelTargetDateBtn.classList.add('hidden');
-        };
+            document.getElementById('formTitle').textContent = "今日のトレーニングを記録";
+            document.getElementById('cancelTargetDateBtn').classList.add('hidden');
+        }
 
-        window.filterByDate = function(dateStr) {
+        function filterByDate(dateStr) {
             selectedDateFilter = dateStr;
             renderWorkouts();
-        };
+        }
 
-        window.clearFilter = function() {
+        function clearFilter() {
             selectedDateFilter = null;
-            dateFilter.value = '';
+            document.getElementById('dateFilter').value = '';
             renderWorkouts();
-        };
+        }
 
-        form.addEventListener('submit', (e) => {
+        function handleFormSubmit(e) {
             e.preventDefault();
             const name = document.getElementById('exerciseName').value.trim();
+            const setsContainer = document.getElementById('setsContainer');
             
             const rows = setsContainer.querySelectorAll('.set-row');
             const newSets = [];
@@ -336,17 +337,17 @@
             document.getElementById('exerciseName').focus();
 
             renderWorkouts();
-        });
+        }
 
-        window.deleteWorkout = function(id) {
+        function deleteWorkout(id) {
             if (confirm('この記録を削除しますか？')) {
                 workouts = workouts.filter(item => item.id !== id);
                 localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                 renderWorkouts();
             }
-        };
+        }
 
-        window.exportData = function() {
+        function exportData() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
@@ -354,9 +355,9 @@
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
-        };
+        }
 
-        window.importData = function(event) {
+        function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -385,13 +386,8 @@
                 }
             };
             reader.readAsText(file);
-        };
+        }
 
         function escapeHtml(str) {
             return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-   
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"
