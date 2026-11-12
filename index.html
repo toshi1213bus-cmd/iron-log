@@ -41,9 +41,7 @@
                 <div class="flex justify-between items-center text-xs text-gray-400 px-1">
                     <span>セットごとの重量 × 回数</span>
                 </div>
-                <div id="setsContainer" class="space-y-2">
-                    <!-- 1セット目の初期行 -->
-                </div>
+                <div id="setsContainer" class="space-y-2"></div>
                 <button type="button" onclick="addSetRow()" 
                     class="w-full py-2 border border-dashed border-gray-600 hover:border-orange-400 text-gray-300 hover:text-orange-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1">
                     ＋ セットを追加
@@ -90,12 +88,10 @@
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         const listTitle = document.getElementById('listTitle');
 
-        // セット入力行を追加する関数
         window.addSetRow = function(defaultWeight = '', defaultReps = '') {
             const rows = setsContainer.querySelectorAll('.set-row');
             const setNum = rows.length + 1;
 
-            // 前の行があれば重量を自動コピーして入力を楽にする
             if (defaultWeight === '' && rows.length > 0) {
                 const lastWeight = rows[rows.length - 1].querySelector('.weight-input').value;
                 if (lastWeight) defaultWeight = lastWeight;
@@ -110,7 +106,7 @@
                 <span class="text-gray-500 font-bold">×</span>
                 <input type="number" required placeholder="回" value="${defaultReps}"
                     class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500 transition">
-                <button type="button" onclick="removeSetRow(this)" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="このセットを削除">
+                <button type="button" onclick="removeSetRow(this)" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="削除">
                     ✕
                 </button>
             `;
@@ -118,7 +114,6 @@
             updateSetNumbers();
         };
 
-        // セット入力行を削除する関数（最低1行は残す）
         window.removeSetRow = function(btn) {
             const rows = setsContainer.querySelectorAll('.set-row');
             if (rows.length <= 1) return;
@@ -126,7 +121,6 @@
             updateSetNumbers();
         };
 
-        // セット番号（1., 2., 3...）を振り直す
         function updateSetNumbers() {
             const rows = setsContainer.querySelectorAll('.set-row');
             rows.forEach((row, index) => {
@@ -136,7 +130,6 @@
             });
         }
 
-        // 初期状態で1セット目を用意
         function resetSetRows() {
             setsContainer.innerHTML = '';
             addSetRow();
@@ -150,13 +143,13 @@
             return `${year}/${parseInt(month)}/${parseInt(day)} (${dayOfWeek})`;
         }
 
-        // 画面に履歴を描画
+        // 画面に履歴を描画（同じ日・同じ種目を1つに合体）
         function renderWorkouts() {
             workoutList.innerHTML = '';
 
             let filteredWorkouts = workouts;
             if (selectedDateFilter) {
-                filteredWorkouts = workouts.filter(item => item.createdAt.startsWith(selectedDateFilter));
+                filteredWorkouts = workouts.filter(item => item.dateStr === selectedDateFilter);
                 listTitle.textContent = `${selectedDateFilter.replace(/-/g, '/')} の記録`;
                 clearFilterBtn.classList.remove('hidden');
             } else {
@@ -170,35 +163,31 @@
             }
             emptyMessage.classList.add('hidden');
 
-            const sortedWorkouts = [...filteredWorkouts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            // 日付が新しい順、同じ日なら種目名順に並び替え
+            const sortedWorkouts = [...filteredWorkouts].sort((a, b) => {
+                if (b.dateStr !== a.dateStr) {
+                    return new Date(b.dateStr) - new Date(a.dateStr);
+                }
+                return a.name.localeCompare(b.name);
+            });
 
             sortedWorkouts.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow flex justify-between items-start';
                 
-                // 新形式（複数セット配列）と旧形式（単一データ）の両方に対応して表示
-                let setsHtml = '';
-                if (Array.isArray(item.setList)) {
-                    setsHtml = `<div class="mt-2 space-y-1">
-                        ${item.setList.map((s, idx) => `
-                            <div class="text-sm text-gray-300 font-semibold flex items-center gap-2">
-                                <span class="text-xs text-gray-500 w-5">${idx + 1}.</span>
-                                <span class="text-orange-300">${s.weight} kg</span> × 
-                                <span class="text-orange-300">${s.reps} 回</span>
-                            </div>
-                        `).join('')}
-                    </div>`;
-                } else {
-                    setsHtml = `<div class="text-sm text-gray-300 font-semibold mt-1">
-                        <span class="text-orange-300">${item.weight} kg</span> × 
-                        <span class="text-orange-300">${item.reps} 回</span> × 
-                        <span class="text-gray-400">${item.sets} セット</span>
-                    </div>`;
-                }
+                let setsHtml = `<div class="mt-2 space-y-1">
+                    ${item.setList.map((s, idx) => `
+                        <div class="text-sm text-gray-300 font-semibold flex items-center gap-2">
+                            <span class="text-xs text-gray-500 w-5">${idx + 1}.</span>
+                            <span class="text-orange-300">${s.weight} kg</span> × 
+                            <span class="text-orange-300">${s.reps} 回</span>
+                        </div>
+                    `).join('')}
+                </div>`;
 
                 card.innerHTML = `
                     <div>
-                        <div class="text-xs text-orange-400 font-medium">${formatDate(item.createdAt)}</div>
+                        <div class="text-xs text-orange-400 font-medium">${formatDate(item.dateStr)}</div>
                         <div class="text-lg font-bold text-white">${escapeHtml(item.name)}</div>
                         ${setsHtml}
                     </div>
@@ -223,38 +212,46 @@
             renderWorkouts();
         };
 
-        // フォーム送信時の処理
+        // フォーム送信時：同じ日・同じ種目が既にあればセットを合体させる
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = document.getElementById('exerciseName').value.trim();
+            const name = document.getElementById('exerciseName'].value.trim();
             
             const rows = setsContainer.querySelectorAll('.set-row');
-            const setList = [];
+            const newSets = [];
             rows.forEach(row => {
                 const weight = parseFloat(row.querySelector('.weight-input').value);
                 const reps = parseInt(row.querySelector('.reps-input').value);
                 if (!isNaN(weight) && !isNaN(reps)) {
-                    setList.push({ weight, reps });
+                    newSets.push({ weight, reps });
                 }
             });
 
-            if (setList.length === 0) return;
+            if (newSets.length === 0) return;
 
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
-            const time = now.toTimeString().split(' ')[0];
-            const dateTimeString = `${year}-${month}-${day}T${time}`;
+            const dateStr = `${year}-${month}-${day}`;
 
-            const newWorkout = {
-                id: Date.now().toString(),
-                name,
-                setList,
-                createdAt: dateTimeString
-            };
+            // 既存のデータの中に「同じ日付」かつ「同じ種目名」のものが無いか探す
+            const existingWorkout = workouts.find(item => item.dateStr === dateStr && item.name === name);
 
-            workouts.push(newWorkout);
+            if (existingWorkout) {
+                // あればセットリストを結合する
+                existingWorkout.setList = existingWorkout.setList.concat(newSets);
+            } else {
+                // なければ新しく作成する
+                const newWorkout = {
+                    id: Date.now().toString(),
+                    name,
+                    dateStr,
+                    setList: newSets
+                };
+                workouts.push(newWorkout);
+            }
+
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
             
             document.getElementById('exerciseName').value = '';
@@ -290,7 +287,16 @@
                 try {
                     const imported = JSON.parse(e.target.result);
                     if (Array.isArray(imported)) {
-                        workouts = imported;
+                        // 古いデータの互換性対策（dateStrが無いものはcreatedAtから復元）
+                        workouts = imported.map(item => {
+                            if (!item.dateStr && item.createdAt) {
+                                item.dateStr = item.createdAt.split('T')[0];
+                            }
+                            if (!item.setList && item.weight) {
+                                item.setList = [{ weight: item.weight, reps: item.reps }];
+                            }
+                            return item;
+                        });
                         localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                         renderWorkouts();
                         alert('データを正常に復元しました！');
@@ -310,7 +316,6 @@
             );
         }
 
-        // 初期化
         resetSetRows();
         renderWorkouts();
     </script>
