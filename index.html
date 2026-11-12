@@ -176,15 +176,14 @@
             sortedDates.forEach(dateStr => {
                 const dayItems = grouped[dateStr];
                 
-                // --- その日の総負荷量を計算 (重量 × 回数の総和) ---
+                // --- 総負荷量を計算し、Math.round()で小数点以下を四捨五入して整数にする ---
                 let totalVolume = 0;
                 dayItems.forEach(item => {
                     item.setList.forEach(set => {
                         totalVolume += (set.weight * set.reps);
                     });
                 });
-                // 3桁ごとにカンマを入れる（例: 5,680）
-                const formattedVolume = totalVolume.toLocaleString();
+                const formattedVolume = Math.round(totalVolume).toLocaleString();
 
                 const tagsMap = {};
                 dayItems.forEach(i => {
