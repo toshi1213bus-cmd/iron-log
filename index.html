@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPL 筋トレメモ</title>
+    <title>PPL 筋トレメモ v4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-5">
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-6">
 
     <!-- ヘッダー -->
     <header class="flex justify-between items-center bg-gray-800 p-4 rounded-2xl border border-gray-700 shadow">
@@ -20,24 +20,6 @@
             </label>
         </div>
     </header>
-
-    <!-- インターバルタイマー -->
-    <div id="timerCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 transition-colors">
-        <div class="flex justify-between items-center">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">⏱ インターバルタイマー</span>
-            <div class="flex items-center gap-3">
-                <span id="timerDisplay" class="text-2xl font-mono font-bold text-white">00:00</span>
-                <button type="button" id="timerResetBtn" onclick="resetTimer()" class="hidden text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-lg">リセット</button>
-            </div>
-        </div>
-        <div class="grid grid-cols-5 gap-1.5">
-            <button type="button" onclick="startTimer(60)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">1分</button>
-            <button type="button" onclick="startTimer(120)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">2分</button>
-            <button type="button" onclick="startTimer(180)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">3分</button>
-            <button type="button" onclick="startTimer(240)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">4分</button>
-            <button type="button" onclick="startTimer(300)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">5分</button>
-        </div>
-    </div>
 
     <!-- 入力フォーム -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
@@ -86,77 +68,9 @@
 
     <!-- スクリプト -->
     <script>
-        // データロード
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
         let targetDateStr = null;
 
-        // --- タイマー処理 ---
-        let timerInterval = null;
-        let remainingSeconds = 0;
-
-        function startTimer(seconds) {
-            clearInterval(timerInterval);
-            remainingSeconds = seconds;
-            
-            const card = document.getElementById('timerCard');
-            const display = document.getElementById('timerDisplay');
-            const resetBtn = document.getElementById('timerResetBtn');
-            
-            card.className = "bg-gray-800 border rounded-2xl p-4 shadow space-y-3 transition-colors border-orange-500";
-            display.className = "text-2xl font-mono font-bold text-orange-400";
-            resetBtn.classList.remove('hidden');
-
-            updateTimerDisplay();
-
-            timerInterval = setInterval(() => {
-                remainingSeconds--;
-                if (remainingSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    remainingSeconds = 0;
-                    updateTimerDisplay();
-                    finishTimer();
-                } else {
-                    updateTimerDisplay();
-                }
-            }, 1000);
-        }
-
-        function updateTimerDisplay() {
-            const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
-            const s = String(remainingSeconds % 60).padStart(2, '0');
-            const disp = document.getElementById('timerDisplay');
-            if (disp) disp.textContent = `${m}:${s}`;
-        }
-
-        function finishTimer() {
-            const card = document.getElementById('timerCard');
-            const display = document.getElementById('timerDisplay');
-            if (card) card.className = "bg-gray-800 border rounded-2xl p-4 shadow space-y-3 transition-colors border-emerald-500 bg-emerald-950/30";
-            if (display) {
-                display.className = "text-2xl font-mono font-bold text-emerald-400";
-                display.textContent = 'GO!';
-            }
-            if (navigator.vibrate) {
-                navigator.vibrate([300, 100, 300, 100, 300]);
-            }
-        }
-
-        function resetTimer() {
-            clearInterval(timerInterval);
-            remainingSeconds = 0;
-            const card = document.getElementById('timerCard');
-            const display = document.getElementById('timerDisplay');
-            const resetBtn = document.getElementById('timerResetBtn');
-            
-            if (card) card.className = "bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 transition-colors";
-            if (display) {
-                display.className = "text-2xl font-mono font-bold text-white";
-                display.textContent = '00:00';
-            }
-            if (resetBtn) resetBtn.classList.add('hidden');
-        }
-
-        // --- PPLタグ判定 ---
         function getPplTag(name) {
             const n = name.toLowerCase();
             if (n.includes('ベンチ') || n.includes('プレス') || n.includes('チェスト') || n.includes('ショルダー') || n.includes('レイズ') || n.includes('ディップス') || n.includes('プッシュ') || n.includes('三頭') || n.includes('ダンベル')) {
@@ -171,7 +85,6 @@
             return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
         }
 
-        // --- セット行の追加・削除 ---
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
             if (!container) return;
@@ -210,30 +123,27 @@
         function updateNums() {
             const rows = document.querySelectorAll('.set-row');
             rows.forEach((row, idx) => {
-                const label = row.querySelector('.set-label');
+                row.querySelector('.set-label').textContent = `${idx + 1}.`;
                 const delBtn = row.querySelector('button');
-                if (label) label.textContent = `${idx + 1}.`;
-                if (delBtn) delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
+                delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
             });
         }
 
         function resetForm() {
-            const nameInput = document.getElementById('exerciseName');
+            document.getElementById('exerciseName').value = '';
             const container = document.getElementById('setsContainer');
-            if (nameInput) nameInput.value = '';
-            if (container) {
-                container.innerHTML = `
-                    <div class="set-row flex items-center gap-2">
-                        <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
-                        <input type="number" step="0.5" placeholder="kg" 
-                            class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                        <span class="text-gray-500 font-bold">×</span>
-                        <input type="number" placeholder="回" 
-                            class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                        <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-                    </div>
-                `;
-            }
+            if (!container) return;
+            container.innerHTML = `
+                <div class="set-row flex items-center gap-2">
+                    <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
+                    <input type="number" step="0.5" placeholder="kg" 
+                        class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                    <span class="text-gray-500 font-bold">×</span>
+                    <input type="number" placeholder="回" 
+                        class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                    <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
+                </div>
+            `;
         }
 
         function formatDate(dateStr) {
@@ -243,7 +153,6 @@
             return `${y}/${parseInt(m)}/${parseInt(d)} (${w})`;
         }
 
-        // --- 描画処理 ---
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             const empty = document.getElementById('emptyMessage');
@@ -355,21 +264,118 @@
         function setTargetDate(dateStr) {
             targetDateStr = dateStr;
             const [y, m, d] = dateStr.split('-');
-            const titleElem = document.getElementById('formTitle');
-            const cancelBtn = document.getElementById('cancelTargetDateBtn');
-            if (titleElem) titleElem.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            if (cancelBtn) cancelBtn.classList.remove('hidden');
+            document.getElementById('formTitle').textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
+            document.getElementById('cancelTargetDateBtn').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function resetTargetDate() {
             targetDateStr = null;
-            const titleElem = document.getElementById('formTitle');
-            const cancelBtn = document.getElementById('cancelTargetDateBtn');
-            if (titleElem) titleElem.textContent = "今日のトレーニングを記録";
-            if (cancelBtn) cancelBtn.classList.add('hidden');
+            document.getElementById('formTitle').textContent = "今日のトレーニングを記録";
+            document.getElementById('cancelTargetDateBtn').classList.add('hidden');
         }
 
-        // --- 保存処理 ---
         function saveWorkout() {
-            const nameInput = document.g
+            const nameInput = document.getElementById('exerciseName');
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('種目名を入力してください');
+                nameInput.focus();
+                return;
+            }
+
+            const container = document.getElementById('setsContainer');
+            const rows = container.querySelectorAll('.set-row');
+            const setList = [];
+            rows.forEach(row => {
+                const w = parseFloat(row.querySelector('.weight-input').value);
+                const r = parseInt(row.querySelector('.reps-input').value);
+                if (!isNaN(w) && !isNaN(r)) {
+                    setList.push({ weight: w, reps: r });
+                }
+            });
+
+            if (setList.length === 0) {
+                alert('有効な重量と回数を入力してください');
+                return;
+            }
+
+            let dateStr = targetDateStr;
+            if (!dateStr) {
+                const now = new Date();
+                dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            }
+
+            const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
+            if (existing) {
+                existing.setList = existing.setList.concat(setList);
+            } else {
+                workouts.push({
+                    id: Date.now().toString(),
+                    name,
+                    dateStr,
+                    setList
+                });
+            }
+
+            localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+            resetForm();
+            resetTargetDate();
+            renderWorkouts();
+            nameInput.focus();
+        }
+
+        function deleteWorkout(id) {
+            if (confirm('この記録を削除しますか？')) {
+                workouts = workouts.filter(i => i.id !== id);
+                localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                renderWorkouts();
+            }
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
+            const a = document.createElement('a');
+            a.href = dataStr;
+            a.download = `workout_backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        }
+
+        function importData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if (Array.isArray(imported)) {
+                        workouts = imported.map(i => {
+                            if (!i.dateStr && i.createdAt) i.dateStr = i.createdAt.split('T')[0];
+                            if (!i.setList && i.weight) i.setList = [{ weight: i.weight, reps: i.reps }];
+                            return i;
+                        });
+                        localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                        renderWorkouts();
+                        resetTargetDate();
+                        alert('データを正常に復元しました！');
+                    } else {
+                        alert('ファイル形式が正しくありません。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
+        }
+
+        // 初期描画
+        renderWorkouts();
+    </script>
+</body>
+</html>
