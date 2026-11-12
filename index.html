@@ -93,21 +93,29 @@
 
     <!-- スクリプト -->
     <script>
-        let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
+        let workouts = [];
+        try {
+            workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
+            if (!Array.isArray(workouts)) workouts = [];
+        } catch (e) {
+            workouts = [];
+        }
+
         let targetDateStr = null;
 
         function getPplTag(name) {
+            if (!name) return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
             const n = name.toLowerCase();
             if (n.includes('ベンチ') || n.includes('プレス') || n.includes('チェスト') || n.includes('ショルダー') || n.includes('レイズ') || n.includes('ディップス') || n.includes('プッシュ') || n.includes('三頭') || n.includes('ダンベル')) {
-                return { text: 'PUSH', bg: 'bg-red-950 text-red-300 border-red-800', order: 1 };
+                return { text: 'PUSH', bg: 'bg-red-950 text-red-300 border-red-800' };
             }
             if (n.includes('プル') || n.includes('ロー') || n.includes('チン') || n.includes('ラット') || n.includes('デッド') || n.includes('カール') || n.includes('背中') || n.includes('二頭')) {
-                return { text: 'PULL', bg: 'bg-blue-950 text-blue-300 border-blue-800', order: 1 };
+                return { text: 'PULL', bg: 'bg-blue-950 text-blue-300 border-blue-800' };
             }
             if (n.includes('スクワット') || n.includes('レッグ') || n.includes('カーフ') || n.includes('ランジ') || n.includes('脚') || n.includes('腹') || n.includes('アブ')) {
-                return { text: 'LEGS', bg: 'bg-emerald-950 text-emerald-300 border-emerald-800', order: 1 };
+                return { text: 'LEGS', bg: 'bg-emerald-950 text-emerald-300 border-emerald-800' };
             }
-            return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600', order: 1 };
+            return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
         }
 
         function addSetRow(w = '', r = '') {
@@ -193,6 +201,7 @@
 
             const grouped = {};
             workouts.forEach(item => {
+                if (!item || !item.dateStr) return;
                 if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
                 grouped[item.dateStr].push(item);
             });
@@ -204,21 +213,20 @@
                 
                 let totalVolume = 0;
                 dayItems.forEach(item => {
-                    if (!item.isCardio && item.setList) {
+                    if (!item.isCardio && item.setList && Array.isArray(item.setList)) {
                         item.setList.forEach(set => {
-                            totalVolume += (set.weight * set.reps);
+                            totalVolume += (Number(set.weight) || 0) * (Number(set.reps) || 0);
                         });
                     }
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
 
-                // タグの収集と並び順の制御 (PPL系が先、CARDIOが後)
                 const tagsMap = {};
                 let hasCardio = false;
                 dayItems.forEach(i => {
                     if (i.isCardio) {
                         hasCardio = true;
-                    } else {
+                    } else if (i.name) {
                         const t = getPplTag(i.name);
                         tagsMap[t.text] = t;
                     }
@@ -250,14 +258,12 @@
                     </div>
                 `;
 
-                // 筋トレ種目と、有酸素（分）をアコーディオン内に組み立て
                 let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
                 
-                // 1. まず筋トレ種目を展開
                 const strengthItems = dayItems.filter(i => !i.isCardio);
                 strengthItems.forEach(item => {
-                    const ppl = getPplTag(item.name);
-                    const setsHtml = item.setList.map((s, idx) => `
+                    const ppl = getPplTag(item.name || '');
+                    const setsHtml = (item.setList || []).map((s, idx) => `
                         <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
                             <span class="text-gray-500 w-4">${idx + 1}.</span>
                             <span class="text-orange-300">${s.weight} kg</span> × 
@@ -270,8 +276,8 @@
                             <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
-                                    <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
-                                    <span class="text-xs text-gray-500">(${item.setList.length}セット)</span>
+                                    <span class="text-sm font-bold text-white">${escapeHtml(item.name || '')}</span>
+                                    <span class="text-xs text-gray-500">(${(item.setList || []).length}セット)</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-orange-400 ex-toggle-icon">▼</span>
@@ -285,7 +291,6 @@
                     `;
                 });
 
-                // 2. 有酸素の記録がある場合は、アコーディオンを開いた中の一番下にカードとして表示
                 const cardioItems = dayItems.filter(i => i.isCardio);
                 cardioItems.forEach(item => {
                     body += `
@@ -376,10 +381,4 @@
                 }
             });
 
-            if (setList.length === 0) {
-                alert('有効な重量と回数を入力してください');
-                return;
-            }
-
-            let dateStr = targetDateStr;
-            if 
+   
