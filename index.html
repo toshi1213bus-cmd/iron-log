@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-6">
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-5">
 
     <!-- ヘッダー -->
     <header class="flex justify-between items-center bg-gray-800 p-4 rounded-2xl border border-gray-700 shadow">
@@ -20,6 +20,24 @@
             </label>
         </div>
     </header>
+
+    <!-- 超シンプル インターバルタイマー -->
+    <div id="timerCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 transition-colors">
+        <div class="flex justify-between items-center">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">⏱ インターバルタイマー</span>
+            <div class="flex items-center gap-3">
+                <span id="timerDisplay" class="text-2xl font-mono font-bold text-white">00:00</span>
+                <button id="timerResetBtn" onclick="resetTimer()" class="hidden text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-lg">リセット</button>
+            </div>
+        </div>
+        <div class="grid grid-cols-5 gap-1.5">
+            <button onclick="startTimer(60)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">1分</button>
+            <button onclick="startTimer(120)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">2分</button>
+            <button onclick="startTimer(180)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">3分</button>
+            <button onclick="startTimer(240)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">4分</button>
+            <button onclick="startTimer(300)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">5分</button>
+        </div>
+    </div>
 
     <!-- 入力フォーム -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
@@ -57,7 +75,7 @@
         </button>
     </div>
 
-    <!-- 履歴一覧（日付タップ → 種目 → セット詳細の2段階アコーディオン） -->
+    <!-- 履歴一覧（日付タップ → 種目 → セット詳細の3段階アコーディオン） -->
     <div class="space-y-4">
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴（タップで開閉）</h2>
         <div id="workoutList" class="space-y-3"></div>
@@ -71,6 +89,73 @@
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
         let targetDateStr = null;
 
+        // --- タイマー処理 ---
+        let timerInterval = null;
+        let remainingSeconds = 0;
+
+        function startTimer(seconds) {
+            clearInterval(timerInterval);
+            remainingSeconds = seconds;
+            
+            const card = document.getElementById('timerCard');
+            const display = document.getElementById('timerDisplay');
+            const resetBtn = document.getElementById('timerResetBtn');
+            
+            card.classList.remove('border-emerald-500', 'bg-emerald-950/30');
+            card.classList.add('border-orange-500');
+            display.classList.remove('text-emerald-400');
+            display.classList.add('text-orange-400');
+            resetBtn.classList.remove('hidden');
+
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    remainingSeconds = 0;
+                    updateTimerDisplay();
+                    finishTimer();
+                } else {
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+            const s = String(remainingSeconds % 60).padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+        }
+
+        function finishTimer() {
+            const card = document.getElementById('timerCard');
+            const display = document.getElementById('timerDisplay');
+            card.classList.remove('border-orange-500');
+            card.classList.add('border-emerald-500', 'bg-emerald-950/30');
+            display.classList.remove('text-orange-400');
+            display.classList.add('text-emerald-400');
+            display.textContent = 'GO!';
+            if (navigator.vibrate) {
+                navigator.vibrate([300, 100, 300, 100, 300]);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            remainingSeconds = 0;
+            const card = document.getElementById('timerCard');
+            const display = document.getElementById('timerDisplay');
+            const resetBtn = document.getElementById('timerResetBtn');
+            
+            card.classList.remove('border-orange-500', 'border-emerald-500', 'bg-emerald-950/30');
+            display.classList.remove('text-orange-400', 'text-emerald-400');
+            display.classList.add('text-white');
+            display.textContent = '00:00';
+            resetBtn.classList.add('hidden');
+        }
+
+        // --- 筋トレ記録処理 ---
         function getPplTag(name) {
             const n = name.toLowerCase();
             if (n.includes('ベンチ') || n.includes('プレス') || n.includes('チェスト') || n.includes('ショルダー') || n.includes('レイズ') || n.includes('ディップス') || n.includes('プッシュ') || n.includes('三頭') || n.includes('ダンベル')) {
@@ -175,11 +260,9 @@
                 });
                 const tagsHtml = Object.values(tagsMap).map(t => `<span class="text-[10px] font-bold px-2 py-0.5 rounded border ${t.bg}">${t.text}</span>`).join('');
 
-                // 1日分の親カード
                 const card = document.createElement('div');
                 card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow';
 
-                // 第1階層：日付とPPLタグのヘッダー（タップで種目一覧を開閉）
                 let header = `
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
                         <div class="flex items-center gap-2 flex-wrap">
@@ -195,7 +278,6 @@
                     </div>
                 `;
 
-                // 第2階層：種目リストコンテナ（初期は非表示）
                 let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
                 dayItems.forEach(item => {
                     const ppl = getPplTag(item.name);
@@ -209,7 +291,6 @@
 
                     body += `
                         <div class="bg-gray-900 border border-gray-700 rounded-xl p-3">
-                            <!-- 種目ヘッダー（タップでキロと回数を開閉） -->
                             <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
@@ -221,7 +302,6 @@
                                     <button onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1" title="削除">✕</button>
                                 </div>
                             </div>
-                            <!-- 第3階層：キロと回数（初期は非表示） -->
                             <div class="ex-content hidden mt-2 pt-2 border-t border-gray-800 space-y-1">
                                 ${setsHtml}
                             </div>
@@ -235,7 +315,6 @@
             });
         }
 
-        // 日付アコーディオンの開閉
         function toggleDayAccordion(headerElem) {
             const content = headerElem.nextElementSibling;
             const icon = headerElem.querySelector('.day-toggle-icon');
@@ -248,7 +327,6 @@
             }
         }
 
-        // 種目アコーディオンの開閉
         function toggleExerciseAccordion(headerElem) {
             const content = headerElem.nextElementSibling;
             const icon = headerElem.querySelector('.ex-toggle-icon');
@@ -302,77 +380,4 @@
             let dateStr = targetDateStr;
             if (!dateStr) {
                 const now = new Date();
-                dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            }
-
-            const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
-            if (existing) {
-                existing.setList = existing.setList.concat(setList);
-            } else {
-                workouts.push({
-                    id: Date.now().toString(),
-                    name,
-                    dateStr,
-                    setList
-                });
-            }
-
-            localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-            resetForm();
-            resetTargetDate();
-            renderWorkouts();
-            nameInput.focus();
-        }
-
-        function deleteWorkout(id) {
-            if (confirm('この記録を削除しますか？')) {
-                workouts = workouts.filter(i => i.id !== id);
-                localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-                renderWorkouts();
-            }
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
-            const a = document.createElement('a');
-            a.href = dataStr;
-            a.download = `workout_backup_${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        }
-
-        function importData(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const imported = JSON.parse(evt.target.result);
-                    if (Array.isArray(imported)) {
-                        workouts = imported.map(i => {
-                            if (!i.dateStr && i.createdAt) i.dateStr = i.createdAt.split('T')[0];
-                            if (!i.setList && i.weight) i.setList = [{ weight: i.weight, reps: i.reps }];
-                            return i;
-                        });
-                        localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-                        renderWorkouts();
-                        resetTargetDate();
-                        alert('データを正常に復元しました！');
-                    }
-                } catch (err) {
-                    alert('読込に失敗しました。');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
-        }
-
-        // 初期描画
-        renderWorkouts();
-    </script>
-</body>
-</html>
+                dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '
