@@ -70,7 +70,7 @@
             <!-- 月切り替えヘッダー -->
             <div class="flex justify-between items-center">
                 <button type="button" onclick="changeMonth(-1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-xl text-sm font-bold transition">◀ 前月</button>
-                <h2 id="calendarMonthTitle" class="text-base font-bold text-orange-400">2026年 11月</h2>
+                <h2 id="calendarMonthTitle" class="text-base font-bold text-orange-400">読み込み中...</h2>
                 <button type="button" onclick="changeMonth(1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-xl text-sm font-bold transition">翌月 ▶</button>
             </div>
 
@@ -107,7 +107,7 @@
         let currentDate = new Date();
         let currentYear = currentDate.getFullYear();
         let currentMonth = currentDate.getMonth(); // 0-11
-        let targetDateStr = null; // 記録を追加する対象の日付（nullなら今日）
+        let targetDateStr = null;
 
         const form = document.getElementById('workoutForm');
         const formTitle = document.getElementById('formTitle');
@@ -202,6 +202,7 @@
         };
 
         function renderCalendar() {
+            if (!calendarGrid) return;
             calendarGrid.innerHTML = '';
             calendarMonthTitle.textContent = `${currentYear}年 ${currentMonth + 1}月`;
 
@@ -218,7 +219,7 @@
                 workoutMap[item.dateStr].push(item);
             });
 
-            // 前月の余白
+            // 前月の余白日数
             for (let i = firstDayIndex - 1; i >= 0; i--) {
                 const dayNum = prevTotalDays - i;
                 calendarGrid.appendChild(createCell(dayNum, true));
@@ -237,7 +238,7 @@
                 calendarGrid.appendChild(createCell(day, false, dateStr, isToday, isSelected, dayWorkouts));
             }
 
-            // 翌月の余白（42マスグリッド調整）
+            // 翌月の余白日数（42マスグリッド調整）
             const totalCells = firstDayIndex + totalDays;
             const nextDaysCount = totalCells <= 35 ? (35 - totalCells) : (42 - totalCells);
             for (let day = 1; day <= nextDaysCount; day++) {
@@ -297,7 +298,6 @@
             targetDateStr = dateStr;
             const [y, m, d] = dateStr.split('-');
             
-            // フォームのタイトルを「〇月〇日の記録を追加」に変更
             formTitle.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
             cancelTargetDateBtn.classList.remove('hidden');
 
@@ -336,7 +336,7 @@
             }
 
             dayDetailCard.classList.remove('hidden');
-            renderCalendar(); // 選択枠の見た目を更新
+            renderCalendar();
         };
 
         window.closeDetail = function() {
@@ -350,7 +350,6 @@
             renderCalendar();
         };
 
-        // フォーム送信処理
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('exerciseName').value.trim();
@@ -367,7 +366,6 @@
 
             if (newSets.length === 0) return;
 
-            // 保存先の日付（targetDateStrがあればそこ、なければ今日）
             let dateStr = targetDateStr;
             if (!dateStr) {
                 const now = new Date();
@@ -396,6 +394,7 @@
 
             renderCalendar();
 
-            // もし日付を選択した状態で追加したなら、詳細カードも即座に更新
             if (targetDateStr) {
-                const
+                const updatedDayWorkouts = workouts.filter(item => item.dateStr === targetDateStr);
+                selectDate(targetDateStr, updatedDayWorkouts);
+            }
