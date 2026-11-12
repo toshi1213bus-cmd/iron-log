@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプル筋トレ記録</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="theme-color" content="#111827">
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+
+    <!-- ヘッダー -->
+    <header class="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-10 shadow-md">
+        <div class="max-w-md mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wider text-orange-400">💪 筋トレメモ</h1>
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 transition">出力</button>
+                <label class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 cursor-pointer transition">
+                    復元
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="max-w-md w-full mx-auto p-4 flex-grow pb-24">
+        
+        <!-- 入力フォーム -->
+        <form id="workoutForm" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 mb-6 shadow-lg space-y-4">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">新しい記録を追加</h2>
+            
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">種目名</label>
+                <input type="text" id="exerciseName" required placeholder="例: ベンチプレス" 
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">重量 (kg)</label>
+                    <input type="number" step="0.5" id="weight" required placeholder="60" 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">回数 (reps)</label>
+                    <input type="number" id="reps" required placeholder="10" 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">セット数</label>
+                    <input type="number" id="sets" value="1" required 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition active:scale-[0.98]">
+                記録を保存する
+            </button>
+        </form>
+
+        <!-- 履歴一覧 -->
+        <div class="space-y-4">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴</h2>
+            <div id="workoutList" class="space-y-3">
+                <!-- JavaScriptでここに履歴が挿入されます -->
+            </div>
+            <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
+                まだ記録がありません。上のフォームから記録を追加してください！
+            </div>
+        </div>
+    </main>
+
+    <!-- スクリプト -->
+    <script>
+        let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
+
+        const form = document.getElementById('workoutForm');
+        const workoutList = document.getElementById('workoutList');
+        const emptyMessage = document.getElementById('emptyMessage');
+
+        // 日付を「YYYY/MM/DD (曜日)」形式にする
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const days = ['日', '月', '火', '水', '목', '金', '土']; // 修正
+            const d = ['日', '月', '火', '水', '木', '金', '土'];
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const dayOfWeek = d[date.getDay()];
+            return `${year}/${month}/${day} (${dayOfWeek})`;
+        }
+
+        // 画面に履歴を描画
+        function renderWorkouts() {
+            workoutList.innerHTML = '';
+            if (workouts.length === 0) {
+                emptyMessage.classList.remove('hidden');
+                return;
+            }
+            emptyMessage.classList.add('hidden');
+
+            // 新しい順に並び替え
+            const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            sortedWorkouts.forEach((item) => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow flex justify-between items-center';
+                
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="text-xs text-orange-400 font-medium">${formatDate(item.createdAt)}</div>
+                        <div class="text-lg font-bold text-white">${escapeHtml(item.name)}</div>
+                        <div class="text-sm text-gray-300 font-semibold">
+                            <span class="text-orange-300">${item.weight} kg</span> × 
+                            <span class="text-orange-300">${item.reps} 回</span> × 
+                            <span class="text-gray-400">${item.sets} セット</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-2 rounded-lg transition" title="削除">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                workoutList.appendChild(card);
+            });
+        }
+
+        // フォーム送信時の処理
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('exerciseName').value.trim();
+            const weight = parseFloat(document.getElementById('weight').value);
+            const reps = parseInt(document.getElementById('reps').value);
+            const sets = parseInt(document.getElementById('sets').value);
+
+            const newWorkout = {
+                id: Date.now().toString(),
+                name,
+                weight,
+                reps,
+                sets,
+                createdAt: new Date().toISOString()
+            };
+
+            workouts.push(newWorkout);
+            localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+            
+            // 種目名以外（重量や回数）をリセットして再描画
+            document.getElementById('weight').value = '';
+            document.getElementById('reps').value = '';
+            document.getElementById('sets').value = '1';
+            document.getElementById('exerciseName').focus();
+
+            renderWorkouts();
+        });
+
+        // 削除機能
+        window.deleteWorkout = function(id) {
+            if (confirm('この記録を削除しますか？')) {
+                workouts = workouts.filter(item => item.id !== id);
+                localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                renderWorkouts();
+            }
+        };
+
+        // データエクスポート（バックアップ）
+        window.exportData = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `workout_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        };
+
+        // データインポート（復元）
+        window.importData = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        workouts = imported;
+                        localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                        renderWorkouts();
+                        alert('データを正常に復元しました！');
+                    } else {
+                        alert('ファイル形式が正しくありません。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        // XSS対策の簡易エスケープ
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // 初期描画
+        renderWorkouts();
+    </script>
+</body>
+</html>
