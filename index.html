@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPL 筋トレメモ v4</title>
+    <title>PPL 筋トレメモ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
@@ -175,6 +175,17 @@
 
             sortedDates.forEach(dateStr => {
                 const dayItems = grouped[dateStr];
+                
+                // --- その日の総負荷量を計算 (重量 × 回数の総和) ---
+                let totalVolume = 0;
+                dayItems.forEach(item => {
+                    item.setList.forEach(set => {
+                        totalVolume += (set.weight * set.reps);
+                    });
+                });
+                // 3桁ごとにカンマを入れる（例: 5,680）
+                const formattedVolume = totalVolume.toLocaleString();
+
                 const tagsMap = {};
                 dayItems.forEach(i => {
                     const t = getPplTag(i.name);
@@ -189,6 +200,7 @@
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-bold text-orange-400">📅 ${formatDate(dateStr)}</span>
+                            <span class="text-xs bg-gray-900 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-lg font-mono">総負荷: ${formattedVolume}kg</span>
                             <div class="flex gap-1">${tagsHtml}</div>
                         </div>
                         <div class="flex items-center gap-2">
