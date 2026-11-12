@@ -37,7 +37,6 @@
         <div class="space-y-2">
             <span class="block text-xs text-gray-400">セットごとの重量 × 回数</span>
             <div id="setsContainer" class="space-y-2">
-                <!-- 最初のセット行 -->
                 <div class="set-row flex items-center gap-2">
                     <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
                     <input type="number" step="0.5" placeholder="kg" 
@@ -203,15 +202,23 @@
                     `).join('');
 
                     body += `
-                        <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 flex justify-between items-start">
-                            <div class="space-y-1">
+                        <div class="bg-gray-900 border border-gray-700 rounded-xl p-3 space-y-2">
+                            <!-- アコーディオンのヘッダー部分（タップで開閉） -->
+                            <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleAccordion(this)">
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
                                     <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
+                                    <span class="text-xs text-gray-500">(${item.setList.length}セット)</span>
                                 </div>
-                                <div class="space-y-0.5">${setsHtml}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-orange-400 font-medium accordion-btn-text">詳細を見る ▼</span>
+                                    <button onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1" title="削除">✕</button>
+                                </div>
                             </div>
-                            <button onclick="deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
+                            <!-- アコーディオンの中身（初期は非表示） -->
+                            <div class="accordion-content hidden pt-2 border-t border-gray-800 space-y-1">
+                                ${setsHtml}
+                            </div>
                         </div>
                     `;
                 });
@@ -220,6 +227,19 @@
                 card.innerHTML = header + body;
                 list.appendChild(card);
             });
+        }
+
+        // アコーディオンの開閉を切り替える関数
+        function toggleAccordion(headerElem) {
+            const content = headerElem.nextElementSibling;
+            const btnText = headerElem.querySelector('.accordion-btn-text');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                btnText.textContent = '閉じる ▲';
+            } else {
+                content.classList.add('hidden');
+                btnText.textContent = '詳細を見る ▼';
+            }
         }
 
         function setTargetDate(dateStr) {
