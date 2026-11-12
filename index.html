@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>シンプル筋トレ記録</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
@@ -37,22 +36,18 @@
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
             </div>
 
-            <div class="grid grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">重量 (kg)</label>
-                    <input type="number" step="0.5" id="weight" required placeholder="60" 
-                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+            <!-- セット入力エリア -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center text-xs text-gray-400 px-1">
+                    <span>セットごとの重量 × 回数</span>
                 </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">回数 (reps)</label>
-                    <input type="number" id="reps" required placeholder="10" 
-                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
+                <div id="setsContainer" class="space-y-2">
+                    <!-- 1セット目の初期行 -->
                 </div>
-                <div>
-                    <label class="block text-xs text-gray-400 mb-1">セット数</label>
-                    <input type="number" id="sets" value="1" required 
-                        class="w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white focus:outline-none focus:border-orange-500 transition">
-                </div>
+                <button type="button" onclick="addSetRow()" 
+                    class="w-full py-2 border border-dashed border-gray-600 hover:border-orange-400 text-gray-300 hover:text-orange-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-1">
+                    ＋ セットを追加
+                </button>
             </div>
 
             <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-md transition active:scale-[0.98]">
@@ -66,7 +61,6 @@
                 <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">📅 カレンダー・日付絞り込み</h2>
                 <button onclick="clearFilter()" id="clearFilterBtn" class="text-xs text-orange-400 hover:underline hidden">すべて表示</button>
             </div>
-            <!-- 日付選択カレンダー -->
             <input type="date" id="calendarFilter" onchange="filterByDate(this.value)" 
                 class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition text-sm">
         </div>
@@ -76,9 +70,7 @@
             <div class="flex justify-between items-center">
                 <h2 id="listTitle" class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴</h2>
             </div>
-            <div id="workoutList" class="space-y-3">
-                <!-- JavaScriptでここに履歴が挿入されます -->
-            </div>
+            <div id="workoutList" class="space-y-3"></div>
             <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
                 該当する記録はありません。
             </div>
@@ -88,17 +80,69 @@
     <!-- スクリプト -->
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
-        let selectedDateFilter = null; // 絞り込み中の日付
+        let selectedDateFilter = null;
 
         const form = document.getElementById('workoutForm');
+        const setsContainer = document.getElementById('setsContainer');
         const workoutList = document.getElementById('workoutList');
         const emptyMessage = document.getElementById('emptyMessage');
         const calendarFilter = document.getElementById('calendarFilter');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         const listTitle = document.getElementById('listTitle');
 
+        // セット入力行を追加する関数
+        window.addSetRow = function(defaultWeight = '', defaultReps = '') {
+            const rows = setsContainer.querySelectorAll('.set-row');
+            const setNum = rows.length + 1;
+
+            // 前の行があれば重量を自動コピーして入力を楽にする
+            if (defaultWeight === '' && rows.length > 0) {
+                const lastWeight = rows[rows.length - 1].querySelector('.weight-input').value;
+                if (lastWeight) defaultWeight = lastWeight;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'set-row flex items-center gap-2';
+            row.innerHTML = `
+                <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">${setNum}.</span>
+                <input type="number" step="0.5" required placeholder="kg" value="${defaultWeight}"
+                    class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500 transition">
+                <span class="text-gray-500 font-bold">×</span>
+                <input type="number" required placeholder="回" value="${defaultReps}"
+                    class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-white text-center focus:outline-none focus:border-orange-500 transition">
+                <button type="button" onclick="removeSetRow(this)" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="このセットを削除">
+                    ✕
+                </button>
+            `;
+            setsContainer.appendChild(row);
+            updateSetNumbers();
+        };
+
+        // セット入力行を削除する関数（最低1行は残す）
+        window.removeSetRow = function(btn) {
+            const rows = setsContainer.querySelectorAll('.set-row');
+            if (rows.length <= 1) return;
+            btn.closest('.set-row').remove();
+            updateSetNumbers();
+        };
+
+        // セット番号（1., 2., 3...）を振り直す
+        function updateSetNumbers() {
+            const rows = setsContainer.querySelectorAll('.set-row');
+            rows.forEach((row, index) => {
+                row.querySelector('.set-label').textContent = `${index + 1}.`;
+                const delBtn = row.querySelector('button');
+                delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
+            });
+        }
+
+        // 初期状態で1セット目を用意
+        function resetSetRows() {
+            setsContainer.innerHTML = '';
+            addSetRow();
+        }
+
         function formatDate(dateString) {
-            // YYYY-MM-DD からローカルの年月日を安全に生成
             const [year, month, day] = dateString.split('T')[0].split('-');
             const date = new Date(year, month - 1, day);
             const d = ['日', '月', '火', '水', '木', '金', '土'];
@@ -110,7 +154,6 @@
         function renderWorkouts() {
             workoutList.innerHTML = '';
 
-            // 絞り込み処理
             let filteredWorkouts = workouts;
             if (selectedDateFilter) {
                 filteredWorkouts = workouts.filter(item => item.createdAt.startsWith(selectedDateFilter));
@@ -127,22 +170,37 @@
             }
             emptyMessage.classList.add('hidden');
 
-            // 新しい順に並び替え
             const sortedWorkouts = [...filteredWorkouts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             sortedWorkouts.forEach((item) => {
                 const card = document.createElement('div');
-                card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow flex justify-between items-center';
+                card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow flex justify-between items-start';
                 
+                // 新形式（複数セット配列）と旧形式（単一データ）の両方に対応して表示
+                let setsHtml = '';
+                if (Array.isArray(item.setList)) {
+                    setsHtml = `<div class="mt-2 space-y-1">
+                        ${item.setList.map((s, idx) => `
+                            <div class="text-sm text-gray-300 font-semibold flex items-center gap-2">
+                                <span class="text-xs text-gray-500 w-5">${idx + 1}.</span>
+                                <span class="text-orange-300">${s.weight} kg</span> × 
+                                <span class="text-orange-300">${s.reps} 回</span>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                } else {
+                    setsHtml = `<div class="text-sm text-gray-300 font-semibold mt-1">
+                        <span class="text-orange-300">${item.weight} kg</span> × 
+                        <span class="text-orange-300">${item.reps} 回</span> × 
+                        <span class="text-gray-400">${item.sets} セット</span>
+                    </div>`;
+                }
+
                 card.innerHTML = `
-                    <div class="space-y-1">
+                    <div>
                         <div class="text-xs text-orange-400 font-medium">${formatDate(item.createdAt)}</div>
                         <div class="text-lg font-bold text-white">${escapeHtml(item.name)}</div>
-                        <div class="text-sm text-gray-300 font-semibold">
-                            <span class="text-orange-300">${item.weight} kg</span> × 
-                            <span class="text-orange-300">${item.reps} 回</span> × 
-                            <span class="text-gray-400">${item.sets} セット</span>
-                        </div>
+                        ${setsHtml}
                     </div>
                     <button onclick="deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-2 rounded-lg transition" title="削除">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -154,13 +212,11 @@
             });
         }
 
-        // カレンダーで日付が選ばれたとき
         window.filterByDate = function(dateStr) {
             selectedDateFilter = dateStr;
             renderWorkouts();
         };
 
-        // 絞り込み解除
         window.clearFilter = function() {
             selectedDateFilter = null;
             calendarFilter.value = '';
@@ -171,11 +227,19 @@
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('exerciseName').value.trim();
-            const weight = parseFloat(document.getElementById('weight').value);
-            const reps = parseInt(document.getElementById('reps').value);
-            const sets = parseInt(document.getElementById('sets').value);
+            
+            const rows = setsContainer.querySelectorAll('.set-row');
+            const setList = [];
+            rows.forEach(row => {
+                const weight = parseFloat(row.querySelector('.weight-input').value);
+                const reps = parseInt(row.querySelector('.reps-input').value);
+                if (!isNaN(weight) && !isNaN(reps)) {
+                    setList.push({ weight, reps });
+                }
+            });
 
-            // 今日または選択中の日付で保存
+            if (setList.length === 0) return;
+
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -186,24 +250,20 @@
             const newWorkout = {
                 id: Date.now().toString(),
                 name,
-                weight,
-                reps,
-                sets,
+                setList,
                 createdAt: dateTimeString
             };
 
             workouts.push(newWorkout);
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
             
-            document.getElementById('weight').value = '';
-            document.getElementById('reps').value = '';
-            document.getElementById('sets').value = '1';
+            document.getElementById('exerciseName').value = '';
+            resetSetRows();
             document.getElementById('exerciseName').focus();
 
             renderWorkouts();
         });
 
-        // 削除機能
         window.deleteWorkout = function(id) {
             if (confirm('この記録を削除しますか？')) {
                 workouts = workouts.filter(item => item.id !== id);
@@ -212,7 +272,6 @@
             }
         };
 
-        // データエクスポート
         window.exportData = function() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
             const downloadAnchor = document.createElement('a');
@@ -223,7 +282,6 @@
             downloadAnchor.remove();
         };
 
-        // データインポート
         window.importData = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -252,6 +310,8 @@
             );
         }
 
+        // 初期化
+        resetSetRows();
         renderWorkouts();
     </script>
 </body>
