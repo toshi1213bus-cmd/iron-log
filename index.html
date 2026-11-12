@@ -93,19 +93,22 @@
 
     <!-- スクリプト -->
     <script>
-        // データのロード
-        let workouts = [];
-        try {
-            const raw = localStorage.getItem('simple_workouts');
-            if (raw) {
-                workouts = JSON.parse(raw);
-                if (!Array.isArray(workouts)) workouts = [];
+        // データの安全なロードとサニタイズ
+        function loadWorkouts() {
+            try {
+                const raw = localStorage.getItem('simple_workouts');
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                if (!Array.isArray(parsed)) return [];
+                // 各データが壊れていないか最低限チェック
+                return parsed.filter(item => item && item.dateStr);
+            } catch (e) {
+                console.error("Load error:", e);
+                return [];
             }
-        } catch (e) {
-            console.error("Load error:", e);
-            workouts = [];
         }
 
+        let workouts = loadWorkouts();
         let targetDateStr = null;
 
         function getPplTag(name) {
@@ -201,7 +204,9 @@
             if (!list) return;
             list.innerHTML = '';
 
-            if (!Array.isArray(workouts) || workouts.length === 0) {
+            workouts = loadWorkouts();
+
+            if (workouts.length === 0) {
                 if (empty) empty.classList.remove('hidden');
                 return;
             }
@@ -376,10 +381,4 @@
             const name = nameInput.value.trim();
             if (!name) {
                 alert('筋トレの種目名を入力してください');
-                nameInput.focus();
-                return;
-            }
-
-            const container = document.getElementById('setsContainer');
-            const rows = container.querySelectorAll('.set-row');
-            con
+                nameInpu
