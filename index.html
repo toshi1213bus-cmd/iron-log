@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPL 筋トレカレンダー</title>
+    <title>PPL 筋トレメモ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
@@ -12,7 +12,7 @@
     <!-- ヘッダー -->
     <header class="bg-gray-800 border-b border-gray-700 p-4 sticky top-0 z-20 shadow-md">
         <div class="max-w-md mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold tracking-wider text-orange-400">📅 PPL カレンダー</h1>
+            <h1 class="text-xl font-bold tracking-wider text-orange-400">💪 PPL Workout</h1>
             <div class="flex gap-2">
                 <button onclick="exportData()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 transition">出力</button>
                 <label class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 cursor-pointer transition">
@@ -65,59 +65,43 @@
             </button>
         </form>
 
-        <!-- 壁掛けカレンダー表示エリア -->
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-4">
-            <!-- 月切り替えヘッダー -->
+        <!-- 日付で絞り込み・検索エリア -->
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-2">
             <div class="flex justify-between items-center">
-                <button type="button" onclick="changeMonth(-1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-xl text-sm font-bold transition">◀ 前月</button>
-                <h2 id="calendarMonthTitle" class="text-base font-bold text-orange-400">読み込み中...</h2>
-                <button type="button" onclick="changeMonth(1)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-xl text-sm font-bold transition">翌月 ▶</button>
+                <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">📅 日付でジャンプ・絞り込み</h2>
+                <button onclick="clearFilter()" id="clearFilterBtn" class="text-xs text-orange-400 hover:underline hidden">すべて表示</button>
             </div>
-
-            <!-- 曜日の見出し (日〜土) -->
-            <div class="grid grid-cols-7 gap-1 text-center text-xs font-bold text-gray-400">
-                <span class="text-red-400">日</span>
-                <span>月</span>
-                <span>火</span>
-                <span>水</span>
-                <span>木</span>
-                <span>金</span>
-                <span class="text-blue-400">土</span>
-            </div>
-
-            <!-- カレンダーのマス目グリッド -->
-            <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+            <input type="date" id="dateFilter" onchange="filterByDate(this.value)" 
+                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition text-sm">
         </div>
 
-        <!-- 選択した日付の詳細表示エリア -->
-        <div id="dayDetailCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 hidden">
-            <div class="flex justify-between items-center border-b border-gray-700 pb-2">
-                <h3 id="selectedDateTitle" class="text-sm font-bold text-orange-400">📅 日付の記録</h3>
-                <button type="button" onclick="closeDetail()" class="text-xs text-gray-400 hover:text-white px-2 py-1 rounded bg-gray-700">閉じる</button>
+        <!-- 履歴一覧（日付ごとの美しいカードリスト） -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 id="listTitle" class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴一覧</h2>
             </div>
-            <div id="selectedDateContent" class="space-y-3"></div>
+            <div id="workoutList" class="space-y-4"></div>
+            <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
+                記録がまだありません。上のフォームから入力してみましょう！
+            </div>
         </div>
-
     </main>
 
     <!-- スクリプト -->
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
-        
-        let currentDate = new Date();
-        let currentYear = currentDate.getFullYear();
-        let currentMonth = currentDate.getMonth(); // 0-11
-        let targetDateStr = null;
+        let targetDateStr = null; // 記録を追加する対象の日付
+        let selectedDateFilter = null; // 絞り込み中の日付
 
         const form = document.getElementById('workoutForm');
         const formTitle = document.getElementById('formTitle');
         const cancelTargetDateBtn = document.getElementById('cancelTargetDateBtn');
         const setsContainer = document.getElementById('setsContainer');
-        const calendarGrid = document.getElementById('calendarGrid');
-        const calendarMonthTitle = document.getElementById('calendarMonthTitle');
-        const dayDetailCard = document.getElementById('dayDetailCard');
-        const selectedDateTitle = document.getElementById('selectedDateTitle');
-        const selectedDateContent = document.getElementById('selectedDateContent');
+        const workoutList = document.getElementById('workoutList');
+        const emptyMessage = document.getElementById('emptyMessage');
+        const dateFilter = document.getElementById('dateFilter');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
+        const listTitle = document.getElementById('listTitle');
 
         function getPplTag(name) {
             const n = name.toLowerCase();
@@ -189,124 +173,73 @@
             `;
         }
 
-        window.changeMonth = function(dir) {
-            currentMonth += dir;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            } else if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            renderCalendar();
-        };
-
-        function renderCalendar() {
-            if (!calendarGrid) return;
-            calendarGrid.innerHTML = '';
-            calendarMonthTitle.textContent = `${currentYear}年 ${currentMonth + 1}月`;
-
-            const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-            const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const prevTotalDays = new Date(currentYear, currentMonth, 0).getDate();
-
-            const now = new Date();
-            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-            const workoutMap = {};
-            workouts.forEach(item => {
-                if (!workoutMap[item.dateStr]) workoutMap[item.dateStr] = [];
-                workoutMap[item.dateStr].push(item);
-            });
-
-            // 前月の余白日数
-            for (let i = firstDayIndex - 1; i >= 0; i--) {
-                const dayNum = prevTotalDays - i;
-                calendarGrid.appendChild(createCell(dayNum, true));
-            }
-
-            // 当月の日付
-            for (let day = 1; day <= totalDays; day++) {
-                const mStr = String(currentMonth + 1).padStart(2, '0');
-                const dStr = String(day).padStart(2, '0');
-                const dateStr = `${currentYear}-${mStr}-${dStr}`;
-
-                const isToday = (dateStr === todayStr);
-                const isSelected = (dateStr === targetDateStr);
-                const dayWorkouts = workoutMap[dateStr] || [];
-
-                calendarGrid.appendChild(createCell(day, false, dateStr, isToday, isSelected, dayWorkouts));
-            }
-
-            // 翌月の余白日数（42マスグリッド調整）
-            const totalCells = firstDayIndex + totalDays;
-            const nextDaysCount = totalCells <= 35 ? (35 - totalCells) : (42 - totalCells);
-            for (let day = 1; day <= nextDaysCount; day++) {
-                calendarGrid.appendChild(createCell(day, true));
-            }
+        function formatDate(dateString) {
+            const [year, month, day] = dateString.split('T')[0].split('-');
+            const date = new Date(year, month - 1, day);
+            const d = ['日', '月', '火', '水', '木', '金', '土'];
+            const dayOfWeek = d[date.getDay()];
+            return `${year}年${parseInt(month)}月${parseInt(day)}日 (${dayOfWeek})`;
         }
 
-        function createCell(dayNum, isOtherMonth, dateStr = '', isToday = false, isSelected = false, dayWorkouts = []) {
-            const cell = document.createElement('div');
-            let baseClasses = "h-20 bg-gray-900 border border-gray-700/80 rounded-xl p-1.5 flex flex-col justify-between overflow-hidden transition relative select-none";
-            
-            if (isOtherMonth) {
-                baseClasses += " opacity-25";
+        // 履歴を描画（日付ごとに綺麗にカード化）
+        function renderWorkouts() {
+            workoutList.innerHTML = '';
+
+            let filteredWorkouts = workouts;
+            if (selectedDateFilter) {
+                filteredWorkouts = workouts.filter(item => item.dateStr === selectedDateFilter);
+                listTitle.textContent = `${selectedDateFilter.replace(/-/g, '/')} の記録`;
+                clearFilterBtn.classList.remove('hidden');
             } else {
-                baseClasses += " cursor-pointer hover:border-orange-400 hover:bg-gray-800";
+                listTitle.textContent = 'トレーニング履歴一覧';
+                clearFilterBtn.classList.add('hidden');
             }
-            if (isToday) {
-                baseClasses += " ring-2 ring-orange-500";
-            }
-            if (isSelected) {
-                baseClasses += " bg-orange-950/40 border-orange-500";
-            }
-            cell.className = baseClasses;
 
-            let numColor = "text-xs font-bold text-gray-300";
-            if (isToday) numColor = "text-xs font-bold text-orange-400";
+            if (filteredWorkouts.length === 0) {
+                emptyMessage.classList.remove('hidden');
+                return;
+            }
+            emptyMessage.classList.add('hidden');
 
-            let tagsHtml = '';
-            if (!isOtherMonth && dayWorkouts.length > 0) {
+            // 日付ごとにグループ化
+            const grouped = {};
+            filteredWorkouts.forEach(item => {
+                if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
+                grouped[item.dateStr].push(item);
+            });
+
+            // 日付の新しい順に並び替え
+            const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+            sortedDates.forEach(dateStr => {
+                const dayWorkouts = grouped[dateStr];
+
+                // その日やった部位のタグを収集（重複なし）
                 const tagsMap = {};
                 dayWorkouts.forEach(item => {
                     const tag = getPplTag(item.name);
                     tagsMap[tag.text] = tag;
                 });
-                tagsHtml = `<div class="space-y-0.5 overflow-y-auto max-h-11 pointer-events-none">`;
-                Object.values(tagsMap).forEach(t => {
-                    tagsHtml += `<div class="text-[9px] font-extrabold px-1 py-0.5 rounded border text-center ${t.bg}">${t.text}</div>`;
-                });
-                tagsHtml += `</div>`;
-            }
+                const dayTags = Object.values(tagsMap);
+                let tagsHtml = dayTags.map(t => `<span class="text-[10px] font-bold px-2 py-0.5 rounded border ${t.bg}">${t.text}</span>`).join('');
 
-            cell.innerHTML = `
-                <div class="${numColor}">${dayNum}</div>
-                ${tagsHtml}
-            `;
+                // 1日分のカードコンテナ
+                const card = document.createElement('div');
+                card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3';
 
-            if (!isOtherMonth && dateStr) {
-                cell.addEventListener('click', () => {
-                    selectDate(dateStr, dayWorkouts);
-                });
-            }
+                let cardHeader = `
+                    <div class="flex justify-between items-center border-b border-gray-700/80 pb-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-bold text-orange-400">📅 ${formatDate(dateStr)}</span>
+                            <div class="flex gap-1">${tagsHtml}</div>
+                        </div>
+                        <button type="button" onclick="setTargetDateForAdd('${dateStr}')" class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-lg transition">
+                            ＋ この日に追加
+                        </button>
+                    </div>
+                `;
 
-            return cell;
-        }
-
-        window.selectDate = function(dateStr, dayWorkouts) {
-            targetDateStr = dateStr;
-            const [y, m, d] = dateStr.split('-');
-            
-            formTitle.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            cancelTargetDateBtn.classList.remove('hidden');
-
-            selectedDateTitle.textContent = `📅 ${y}年${parseInt(m)}月${parseInt(d)}日の記録`;
-            selectedDateContent.innerHTML = '';
-
-            if (dayWorkouts.length === 0) {
-                selectedDateContent.innerHTML = `<div class="text-xs text-gray-500 text-center py-3">この日の記録はまだありません。上のフォームから追加できます！</div>`;
-            } else {
+                let itemsHtml = `<div class="space-y-2">`;
                 dayWorkouts.forEach(item => {
                     const ppl = getPplTag(item.name);
                     let setsHtml = item.setList.map((s, idx) => `
@@ -317,39 +250,55 @@
                         </div>
                     `).join('');
 
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'bg-gray-900 border border-gray-700 rounded-xl p-3 flex justify-between items-start';
-                    itemDiv.innerHTML = `
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
-                                <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
+                    itemsHtml += `
+                        <div class="bg-gray-900 border border-gray-700/60 rounded-xl p-3 flex justify-between items-start">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
+                                    <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
+                                </div>
+                                <div class="space-y-0.5">${setsHtml}</div>
                             </div>
-                            <div class="space-y-0.5">${setsHtml}</div>
+                            <button type="button" onclick="deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="削除">
+                                ✕
+                            </button>
                         </div>
-                        <button type="button" onclick="deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1.5 transition" title="削除">
-                            ✕
-                        </button>
                     `;
-                    selectedDateContent.appendChild(itemDiv);
                 });
-            }
+                itemsHtml += `</div>`;
 
-            dayDetailCard.classList.remove('hidden');
-            renderCalendar();
-        };
+                card.innerHTML = cardHeader + itemsHtml;
+                workoutList.appendChild(card);
+            });
+        }
 
-        window.closeDetail = function() {
-            dayDetailCard.classList.add('hidden');
+        // 過去の特定の日付に記録を追加モードにする
+        window.setTargetDateForAdd = function(dateStr) {
+            targetDateStr = dateStr;
+            const [y, m, d] = dateStr.split('-');
+            formTitle.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
+            cancelTargetDateBtn.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.resetTargetDate = function() {
             targetDateStr = null;
             formTitle.textContent = "今日のトレーニングを記録";
             cancelTargetDateBtn.classList.add('hidden');
-            renderCalendar();
         };
 
+        window.filterByDate = function(dateStr) {
+            selectedDateFilter = dateStr;
+            renderWorkouts();
+        };
+
+        window.clearFilter = function() {
+            selectedDateFilter = null;
+            dateFilter.value = '';
+            renderWorkouts();
+        };
+
+        // フォーム送信
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const name = document.getElementById('exerciseName').value.trim();
@@ -392,9 +341,58 @@
             resetSetRows();
             document.getElementById('exerciseName').focus();
 
-            renderCalendar();
+            renderWorkouts();
+        });
 
-            if (targetDateStr) {
-                const updatedDayWorkouts = workouts.filter(item => item.dateStr === targetDateStr);
-                selectDate(targetDateStr, updatedDayWorkouts);
+        window.deleteWorkout = function(id) {
+            if (confirm('この記録を削除しますか？')) {
+                workouts = workouts.filter(item => item.id !== id);
+                localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                renderWorkouts();
             }
+        };
+
+        window.exportData = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `workout_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        };
+
+        window.importData = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        workouts = imported.map(item => {
+                            if (!item.dateStr && item.createdAt) {
+                                item.dateStr = item.createdAt.split('T')[0];
+                            }
+                            if (!item.setList && item.weight) {
+                                item.setList = [{ weight: item.weight, reps: item.reps }];
+                            }
+                            return item;
+                        });
+                        localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                        renderWorkouts();
+                        resetTargetDate();
+                        alert('データを正常に復元しました！');
+                    } else {
+                        alert('ファイル形式が正しくありません。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        };
+
+        function escapeHtml(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<'
