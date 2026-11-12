@@ -9,18 +9,6 @@
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-6">
 
-    <!-- ヘッダー -->
-    <header class="flex justify-between items-center bg-gray-800 p-4 rounded-2xl border border-gray-700 shadow">
-        <h1 class="text-xl font-bold text-orange-400">💪 PPL Workout</h1>
-        <div class="flex gap-2">
-            <button type="button" onclick="exportData()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600">出力</button>
-            <label class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 cursor-pointer">
-                復元
-                <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
-            </label>
-        </div>
-    </header>
-
     <!-- 入力フォーム -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
         <div class="flex justify-between items-center">
@@ -63,6 +51,25 @@
         <div id="workoutList" class="space-y-3"></div>
         <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
             記録がまだありません。
+        </div>
+    </div>
+
+    <!-- 画面最下部の設定アコーディオン -->
+    <div class="pt-6">
+        <div class="bg-gray-800/50 border border-gray-800 rounded-2xl p-3">
+            <div class="flex justify-between items-center cursor-pointer select-none px-2 py-1" onclick="toggleSettingsAccordion(this)">
+                <span class="text-xs text-gray-500 font-medium">設定</span>
+                <span class="text-xs text-gray-600 settings-toggle-icon">▼</span>
+            </div>
+            <div class="settings-content hidden mt-3 pt-3 border-t border-gray-800 flex gap-2">
+                <button type="button" onclick="exportData()" class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 font-medium">
+                    データ出力 (JSON)
+                </button>
+                <label class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 text-center font-medium cursor-pointer">
+                    データ復元
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
+                </label>
+            </div>
         </div>
     </div>
 
@@ -176,7 +183,6 @@
             sortedDates.forEach(dateStr => {
                 const dayItems = grouped[dateStr];
                 
-                // --- 総負荷量を計算し、Math.round()で小数点以下を四捨五入して整数にする ---
                 let totalVolume = 0;
                 dayItems.forEach(item => {
                     item.setList.forEach(set => {
@@ -263,6 +269,18 @@
         function toggleExerciseAccordion(headerElem) {
             const content = headerElem.nextElementSibling;
             const icon = headerElem.querySelector('.ex-toggle-icon');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.textContent = '▲';
+            } else {
+                content.classList.add('hidden');
+                icon.textContent = '▼';
+            }
+        }
+
+        function toggleSettingsAccordion(headerElem) {
+            const content = headerElem.nextElementSibling;
+            const icon = headerElem.querySelector('.settings-toggle-icon');
             if (content.classList.contains('hidden')) {
                 content.classList.remove('hidden');
                 icon.textContent = '▲';
@@ -388,5 +406,4 @@
         // 初期描画
         renderWorkouts();
     </script>
-</body>
-</html>
+</b
