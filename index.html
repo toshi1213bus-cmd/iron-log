@@ -13,7 +13,7 @@
     <header class="flex justify-between items-center bg-gray-800 p-4 rounded-2xl border border-gray-700 shadow">
         <h1 class="text-xl font-bold text-orange-400">💪 PPL Workout</h1>
         <div class="flex gap-2">
-            <button onclick="exportData()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600">出力</button>
+            <button type="button" onclick="exportData()" class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600">出力</button>
             <label class="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded-lg border border-gray-600 cursor-pointer">
                 復元
                 <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
@@ -27,15 +27,15 @@
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">⏱ インターバルタイマー</span>
             <div class="flex items-center gap-3">
                 <span id="timerDisplay" class="text-2xl font-mono font-bold text-white">00:00</span>
-                <button id="timerResetBtn" onclick="resetTimer()" class="hidden text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-lg">リセット</button>
+                <button type="button" id="timerResetBtn" onclick="resetTimer()" class="hidden text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2.5 py-1 rounded-lg">リセット</button>
             </div>
         </div>
         <div class="grid grid-cols-5 gap-1.5">
-            <button onclick="startTimer(60)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">1分</button>
-            <button onclick="startTimer(120)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">2分</button>
-            <button onclick="startTimer(180)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">3分</button>
-            <button onclick="startTimer(240)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">4分</button>
-            <button onclick="startTimer(300)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">5分</button>
+            <button type="button" onclick="startTimer(60)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">1分</button>
+            <button type="button" onclick="startTimer(120)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">2分</button>
+            <button type="button" onclick="startTimer(180)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">3分</button>
+            <button type="button" onclick="startTimer(240)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">4分</button>
+            <button type="button" onclick="startTimer(300)" class="bg-gray-900 hover:bg-orange-500/20 border border-gray-700 hover:border-orange-500 text-orange-300 font-bold py-2 rounded-xl text-xs transition active:scale-95">5分</button>
         </div>
     </div>
 
@@ -43,7 +43,7 @@
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
         <div class="flex justify-between items-center">
             <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今日のトレーニングを記録</h2>
-            <button id="cancelTargetDateBtn" onclick="resetTargetDate()" class="text-xs text-gray-400 hover:text-white hidden underline">今日に戻す</button>
+            <button type="button" id="cancelTargetDateBtn" onclick="resetTargetDate()" class="text-xs text-gray-400 hover:text-white hidden underline">今日に戻す</button>
         </div>
         
         <div>
@@ -376,9 +376,4 @@
 
             if (setList.length === 0) {
                 alert('有効な重量と回数を入力してください');
-                return;
-            }
-
-            let dateStr = targetDateStr;
-            if (!dateStr) {
-       
+   
