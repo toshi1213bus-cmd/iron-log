@@ -86,6 +86,7 @@
 
     <!-- スクリプト -->
     <script>
+        // データロード
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
         let targetDateStr = null;
 
@@ -123,15 +124,18 @@
         function updateTimerDisplay() {
             const m = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
             const s = String(remainingSeconds % 60).padStart(2, '0');
-            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+            const disp = document.getElementById('timerDisplay');
+            if (disp) disp.textContent = `${m}:${s}`;
         }
 
         function finishTimer() {
             const card = document.getElementById('timerCard');
             const display = document.getElementById('timerDisplay');
-            card.className = "bg-gray-800 border rounded-2xl p-4 shadow space-y-3 transition-colors border-emerald-500 bg-emerald-950/30";
-            display.className = "text-2xl font-mono font-bold text-emerald-400";
-            display.textContent = 'GO!';
+            if (card) card.className = "bg-gray-800 border rounded-2xl p-4 shadow space-y-3 transition-colors border-emerald-500 bg-emerald-950/30";
+            if (display) {
+                display.className = "text-2xl font-mono font-bold text-emerald-400";
+                display.textContent = 'GO!';
+            }
             if (navigator.vibrate) {
                 navigator.vibrate([300, 100, 300, 100, 300]);
             }
@@ -144,10 +148,12 @@
             const display = document.getElementById('timerDisplay');
             const resetBtn = document.getElementById('timerResetBtn');
             
-            card.className = "bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 transition-colors";
-            display.className = "text-2xl font-mono font-bold text-white";
-            display.textContent = '00:00';
-            resetBtn.classList.add('hidden');
+            if (card) card.className = "bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3 transition-colors";
+            if (display) {
+                display.className = "text-2xl font-mono font-bold text-white";
+                display.textContent = '00:00';
+            }
+            if (resetBtn) resetBtn.classList.add('hidden');
         }
 
         // --- PPLタグ判定 ---
@@ -204,27 +210,30 @@
         function updateNums() {
             const rows = document.querySelectorAll('.set-row');
             rows.forEach((row, idx) => {
-                row.querySelector('.set-label').textContent = `${idx + 1}.`;
+                const label = row.querySelector('.set-label');
                 const delBtn = row.querySelector('button');
-                delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
+                if (label) label.textContent = `${idx + 1}.`;
+                if (delBtn) delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
             });
         }
 
         function resetForm() {
-            document.getElementById('exerciseName').value = '';
+            const nameInput = document.getElementById('exerciseName');
             const container = document.getElementById('setsContainer');
-            if (!container) return;
-            container.innerHTML = `
-                <div class="set-row flex items-center gap-2">
-                    <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
-                    <input type="number" step="0.5" placeholder="kg" 
-                        class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                    <span class="text-gray-500 font-bold">×</span>
-                    <input type="number" placeholder="回" 
-                        class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                    <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-                </div>
-            `;
+            if (nameInput) nameInput.value = '';
+            if (container) {
+                container.innerHTML = `
+                    <div class="set-row flex items-center gap-2">
+                        <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
+                        <input type="number" step="0.5" placeholder="kg" 
+                            class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                        <span class="text-gray-500 font-bold">×</span>
+                        <input type="number" placeholder="回" 
+                            class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                        <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
+                    </div>
+                `;
+            }
         }
 
         function formatDate(dateStr) {
@@ -346,31 +355,21 @@
         function setTargetDate(dateStr) {
             targetDateStr = dateStr;
             const [y, m, d] = dateStr.split('-');
-            document.getElementById('formTitle').textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            document.getElementById('cancelTargetDateBtn').classList.remove('hidden');
+            const titleElem = document.getElementById('formTitle');
+            const cancelBtn = document.getElementById('cancelTargetDateBtn');
+            if (titleElem) titleElem.textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
+            if (cancelBtn) cancelBtn.classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function resetTargetDate() {
             targetDateStr = null;
-            document.getElementById('formTitle').textContent = "今日のトレーニングを記録";
-            document.getElementById('cancelTargetDateBtn').classList.add('hidden');
+            const titleElem = document.getElementById('formTitle');
+            const cancelBtn = document.getElementById('cancelTargetDateBtn');
+            if (titleElem) titleElem.textContent = "今日のトレーニングを記録";
+            if (cancelBtn) cancelBtn.classList.add('hidden');
         }
 
         // --- 保存処理 ---
         function saveWorkout() {
-            const nameInput = document.getElementById('exerciseName');
-            const name = nameInput.value.trim();
-            if (!name) {
-                alert('種目名を入力してください');
-                nameInput.focus();
-                return;
-            }
-
-            const container = document.getElementById('setsContainer');
-            const rows = container.querySelectorAll('.set-row');
-            const setList = [];
-            rows.forEach(row => {
-                const w = parseFloat(row.querySelector('.weight-input').value);
-                const r = parseInt(row.querySelector('.reps-input').value);
-     
+            const nameInput = document.g
