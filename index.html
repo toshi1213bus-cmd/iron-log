@@ -93,17 +93,16 @@
 
     <!-- スクリプト -->
     <script>
-        // 安全なデータ読み込み
+        // データのロード
         let workouts = [];
         try {
             const raw = localStorage.getItem('simple_workouts');
             if (raw) {
-                const parsed = JSON.parse(raw);
-                if (Array.isArray(parsed)) {
-                    workouts = parsed;
-                }
+                workouts = JSON.parse(raw);
+                if (!Array.isArray(workouts)) workouts = [];
             }
         } catch (e) {
+            console.error("Load error:", e);
             workouts = [];
         }
 
@@ -373,14 +372,14 @@
         }
 
         function saveStrengthWorkout() {
-            try {
-                const nameInput = document.getElementById('exerciseName');
-                const name = nameInput.value.trim();
-                if (!name) {
-                    alert('筋トレの種目名を入力してください');
-                    nameInput.focus();
-                    return;
-                }
+            const nameInput = document.getElementById('exerciseName');
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('筋トレの種目名を入力してください');
+                nameInput.focus();
+                return;
+            }
 
-                const container = document.getElementById('setsContainer');
-                const rows 
+            const container = document.getElementById('setsContainer');
+            const rows = container.querySelectorAll('.set-row');
+            con
