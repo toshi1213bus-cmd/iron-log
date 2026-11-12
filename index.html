@@ -60,14 +60,27 @@
             </button>
         </form>
 
+        <!-- カレンダー＆日付フィルター機能 -->
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 mb-6 shadow">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">📅 カレンダー・日付絞り込み</h2>
+                <button onclick="clearFilter()" id="clearFilterBtn" class="text-xs text-orange-400 hover:underline hidden">すべて表示</button>
+            </div>
+            <!-- 日付選択カレンダー -->
+            <input type="date" id="calendarFilter" onchange="filterByDate(this.value)" 
+                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-orange-500 transition text-sm">
+        </div>
+
         <!-- 履歴一覧 -->
         <div class="space-y-4">
-            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴</h2>
+            <div class="flex justify-between items-center">
+                <h2 id="listTitle" class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴</h2>
+            </div>
             <div id="workoutList" class="space-y-3">
                 <!-- JavaScriptでここに履歴が挿入されます -->
             </div>
             <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
-                まだ記録がありません。上のフォームから記録を追加してください！
+                該当する記録はありません。
             </div>
         </div>
     </main>
@@ -75,34 +88,47 @@
     <!-- スクリプト -->
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
+        let selectedDateFilter = null; // 絞り込み中の日付
 
         const form = document.getElementById('workoutForm');
         const workoutList = document.getElementById('workoutList');
         const emptyMessage = document.getElementById('emptyMessage');
+        const calendarFilter = document.getElementById('calendarFilter');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
+        const listTitle = document.getElementById('listTitle');
 
-        // 日付を「YYYY/MM/DD (曜日)」形式にする
         function formatDate(dateString) {
-            const date = new Date(dateString);
-            const days = ['日', '月', '火', '水', '목', '金', '土']; // 修正
+            // YYYY-MM-DD からローカルの年月日を安全に生成
+            const [year, month, day] = dateString.split('T')[0].split('-');
+            const date = new Date(year, month - 1, day);
             const d = ['日', '月', '火', '水', '木', '金', '土'];
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
             const dayOfWeek = d[date.getDay()];
-            return `${year}/${month}/${day} (${dayOfWeek})`;
+            return `${year}/${parseInt(month)}/${parseInt(day)} (${dayOfWeek})`;
         }
 
         // 画面に履歴を描画
         function renderWorkouts() {
             workoutList.innerHTML = '';
-            if (workouts.length === 0) {
+
+            // 絞り込み処理
+            let filteredWorkouts = workouts;
+            if (selectedDateFilter) {
+                filteredWorkouts = workouts.filter(item => item.createdAt.startsWith(selectedDateFilter));
+                listTitle.textContent = `${selectedDateFilter.replace(/-/g, '/')} の記録`;
+                clearFilterBtn.classList.remove('hidden');
+            } else {
+                listTitle.textContent = 'トレーニング履歴';
+                clearFilterBtn.classList.add('hidden');
+            }
+
+            if (filteredWorkouts.length === 0) {
                 emptyMessage.classList.remove('hidden');
                 return;
             }
             emptyMessage.classList.add('hidden');
 
             // 新しい順に並び替え
-            const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const sortedWorkouts = [...filteredWorkouts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             sortedWorkouts.forEach((item) => {
                 const card = document.createElement('div');
@@ -128,6 +154,19 @@
             });
         }
 
+        // カレンダーで日付が選ばれたとき
+        window.filterByDate = function(dateStr) {
+            selectedDateFilter = dateStr;
+            renderWorkouts();
+        };
+
+        // 絞り込み解除
+        window.clearFilter = function() {
+            selectedDateFilter = null;
+            calendarFilter.value = '';
+            renderWorkouts();
+        };
+
         // フォーム送信時の処理
         form.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -136,19 +175,26 @@
             const reps = parseInt(document.getElementById('reps').value);
             const sets = parseInt(document.getElementById('sets').value);
 
+            // 今日または選択中の日付で保存
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const time = now.toTimeString().split(' ')[0];
+            const dateTimeString = `${year}-${month}-${day}T${time}`;
+
             const newWorkout = {
                 id: Date.now().toString(),
                 name,
                 weight,
                 reps,
                 sets,
-                createdAt: new Date().toISOString()
+                createdAt: dateTimeString
             };
 
             workouts.push(newWorkout);
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
             
-            // 種目名以外（重量や回数）をリセットして再描画
             document.getElementById('weight').value = '';
             document.getElementById('reps').value = '';
             document.getElementById('sets').value = '1';
@@ -166,7 +212,7 @@
             }
         };
 
-        // データエクスポート（バックアップ）
+        // データエクスポート
         window.exportData = function() {
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
             const downloadAnchor = document.createElement('a');
@@ -177,7 +223,7 @@
             downloadAnchor.remove();
         };
 
-        // データインポート（復元）
+        // データインポート
         window.importData = function(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -200,14 +246,12 @@
             reader.readAsText(file);
         };
 
-        // XSS対策の簡易エスケープ
         function escapeHtml(str) {
             return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
 
-        // 初期描画
         renderWorkouts();
     </script>
 </body>
