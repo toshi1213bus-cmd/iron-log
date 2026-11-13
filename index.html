@@ -45,6 +45,24 @@
         </button>
     </div>
 
+    <!-- 代表種目 成長グラフ（軽量SVG） -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow space-y-3">
+        <div class="flex justify-between items-center">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">代表種目 総負荷推移</h2>
+            <div class="flex gap-1" id="chartTabs">
+                <button type="button" onclick="selectChartTab('PUSH')" data-tab="PUSH" class="chart-tab text-[10px] font-bold px-2.5 py-1 rounded-lg border transition">PUSH</button>
+                <button type="button" onclick="selectChartTab('PULL')" data-tab="PULL" class="chart-tab text-[10px] font-bold px-2.5 py-1 rounded-lg border transition">PULL</button>
+                <button type="button" onclick="selectChartTab('LEGS')" data-tab="LEGS" class="chart-tab text-[10px] font-bold px-2.5 py-1 rounded-lg border transition">LEGS</button>
+            </div>
+        </div>
+        <div id="chartInfo" class="flex justify-between items-baseline text-xs">
+            <span id="chartExerciseLabel" class="font-bold text-white">ベンチプレス</span>
+            <span id="chartLatestValue" class="font-mono text-gray-400">-</span>
+        </div>
+        <div id="chartContainer" class="w-full h-32 bg-gray-900/80 border border-gray-800 rounded-xl flex items-center justify-center overflow-hidden p-2">
+        </div>
+    </div>
+
     <!-- 履歴一覧 -->
     <div class="space-y-4">
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">トレーニング履歴（タップで開閉）</h2>
@@ -77,6 +95,13 @@
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
         let targetDateStr = null;
+        let currentChartTab = 'PUSH';
+
+        const REP_EXERCISES = {
+            PUSH: { label: 'ベンチプレス', keywords: ['ベンチプレス'], color: '#f87171', activeBtn: 'bg-red-950 text-red-300 border-red-700' },
+            PULL: { label: 'ラットプル', keywords: ['ラットプル'], color: '#60a5fa', activeBtn: 'bg-blue-950 text-blue-300 border-blue-700' },
+            LEGS: { label: 'ブルガリアンスクワット', keywords: ['ブルガリアン'], color: '#34d399', activeBtn: 'bg-emerald-950 text-emerald-300 border-emerald-700' }
+        };
 
         function getPplTag(name) {
             const n = name.toLowerCase();
@@ -90,6 +115,110 @@
                 return { text: 'LEGS', bg: 'bg-emerald-950 text-emerald-300 border-emerald-800' };
             }
             return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
+        }
+
+        function selectChartTab(tab) {
+            currentChartTab = tab;
+            renderChart();
+        }
+
+        function renderChart() {
+            const config = REP_EXERCISES[currentChartTab];
+            document.getElementById('chartExerciseLabel').textContent = config.label;
+
+            // タブのスタイル更新
+            document.querySelectorAll('.chart-tab').forEach(btn => {
+                const t = btn.getAttribute('data-tab');
+                if (t === currentChartTab) {
+                    btn.className = `chart-tab text-[10px] font-bold px-2.5 py-1 rounded-lg border transition ${REP_EXERCISES[t].activeBtn}`;
+                } else {
+                    btn.className = 'chart-tab text-[10px] font-bold px-2.5 py-1 rounded-lg border border-gray-700 bg-gray-900 text-gray-500 hover:text-gray-300 transition';
+                }
+            });
+
+            // 日付ごとに該当種目の総負荷を集計
+            const dailyMap = {};
+            workouts.forEach(item => {
+                const isMatch = config.keywords.some(kw => item.name.includes(kw));
+                if (isMatch) {
+                    let vol = 0;
+                    item.setList.forEach(s => {
+                        vol += (s.weight * s.reps);
+                    });
+                    dailyMap[item.dateStr] = (dailyMap[item.dateStr] || 0) + vol;
+                }
+            });
+
+            const sortedDates = Object.keys(dailyMap).sort((a, b) => new Date(a) - new Date(b));
+            const pointsData = sortedDates.map((d, idx) => ({
+                cycle: idx + 1,
+                dateStr: d,
+                volume: Math.round(dailyMap[d])
+            }));
+
+            const container = document.getElementById('chartContainer');
+            const latestLabel = document.getElementById('chartLatestValue');
+
+            if (pointsData.length === 0) {
+                latestLabel.textContent = 'データなし';
+                container.innerHTML = `<span class="text-xs text-gray-600">「${config.label}」の記録を追加するとグラフが表示されます</span>`;
+                return;
+            }
+
+            const latest = pointsData[pointsData.length - 1];
+            const prev = pointsData.length > 1 ? pointsData[pointsData.length - 2] : null;
+            let diffHtml = '';
+            if (prev) {
+                const diff = latest.volume - prev.volume;
+                const sign = diff > 0 ? '+' : '';
+                const diffColor = diff > 0 ? 'text-emerald-400' : (diff < 0 ? 'text-red-400' : 'text-gray-400');
+                diffHtml = `<span class="ml-1.5 ${diffColor}">(${sign}${diff.toLocaleString()}kg)</span>`;
+            }
+            latestLabel.innerHTML = `最新(${latest.cycle}回目): <strong class="text-gray-200">${latest.volume.toLocaleString()}kg</strong>${diffHtml}`;
+
+            // 直近最大10回分を表示
+            const displayData = pointsData.slice(-10);
+            const W = 320;
+            const H = 100;
+            const padX = 22;
+            const padY = 20;
+            const plotW = W - padX * 2;
+            const plotH = H - padY * 2;
+
+            const vols = displayData.map(d => d.volume);
+            const minV = Math.min(...vols);
+            const maxV = Math.max(...vols);
+            const rangeV = maxV - minV;
+
+            const coords = displayData.map((d, i) => {
+                const x = displayData.length === 1 
+                    ? W / 2 
+                    : padX + (i / (displayData.length - 1)) * plotW;
+                const y = rangeV === 0 
+                    ? H / 2 
+                    : padY + plotH - ((d.volume - minV) / rangeV) * plotH;
+                return { x, y, ...d };
+            });
+
+            const polylinePoints = coords.map(c => `${c.x},${c.y}`).join(' ');
+
+            const circlesAndLabels = coords.map(c => {
+                const shortDate = `${parseInt(c.dateStr.split('-')[1])}/${parseInt(c.dateStr.split('-')[2])}`;
+                return `
+                    <circle cx="${c.x}" cy="${c.y}" r="3.5" fill="${config.color}" stroke="#111827" stroke-width="1.5" />
+                    <text x="${c.x}" y="${c.y - 7}" fill="#e5e7eb" font-size="9" font-family="monospace" text-anchor="middle">${c.volume.toLocaleString()}</text>
+                    <text x="${c.x}" y="${H - 3}" fill="#6b7280" font-size="8" text-anchor="middle">#${c.cycle}(${shortDate})</text>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <svg viewBox="0 0 ${W} ${H}" class="w-full h-full overflow-visible">
+                    <line x1="${padX}" y1="${padY}" x2="${W - padX}" y2="${padY}" stroke="#1f2937" stroke-width="1" stroke-dasharray="2,2" />
+                    <line x1="${padX}" y1="${H - padY}" x2="${W - padX}" y2="${H - padY}" stroke="#1f2937" stroke-width="1" />
+                    ${coords.length > 1 ? `<polyline fill="none" stroke="${config.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="${polylinePoints}" />` : ''}
+                    ${circlesAndLabels}
+                </svg>
+            `;
         }
 
         function addSetRow(w = '', r = '') {
@@ -161,6 +290,8 @@
         }
 
         function renderWorkouts() {
+            renderChart();
+
             const list = document.getElementById('workoutList');
             const empty = document.getElementById('emptyMessage');
             if (!list) return;
@@ -191,7 +322,6 @@
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
 
-                // 1. 履歴の日付横（アコーディオン外側）にだけPPLタグを表示
                 const tagsMap = {};
                 dayItems.forEach(i => {
                     const t = getPplTag(i.name);
@@ -218,18 +348,7 @@
                     </div>
                 `;
 
-                // 2. アコーディオンを開いた中の種目行からはPPLタグを削除
-                let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
-                dayItems.forEach(item => {
-                    const setsHtml = item.setList.map((s, idx) => `
-                        <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
-                            <span class="text-gray-500 w-4">${idx + 1}.</span>
-                            <span class="text-orange-300">${s.weight} kg</span> × 
-                            <span class="text-orange-300">${s.reps} 回</span>
-                        </div>
-                    `).join('');
-
-                    body += `
+                             body += `
                         <div class="bg-gray-900 border border-gray-700 rounded-xl p-3">
                             <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
                                 <div class="flex items-center gap-2">
