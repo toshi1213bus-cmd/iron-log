@@ -176,6 +176,16 @@
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
 
+                // 日付グループごとのPPLタグ（未設定なら空）
+                const currentTag = dayItems[0].pplTag || '';
+                
+                // タグに応じた色
+                let tagColorClass = "bg-gray-900 border-gray-700 text-gray-400";
+                if (currentTag === 'PUSH') tagColorClass = "bg-red-950 text-red-300 border-red-800";
+                else if (currentTag === 'PULL') tagColorClass = "bg-blue-950 text-blue-300 border-blue-800";
+                else if (currentTag === 'LEGS') tagColorClass = "bg-emerald-950 text-emerald-300 border-emerald-800";
+                else if (currentTag === 'OTHER') tagColorClass = "bg-gray-700 text-gray-200 border-gray-600";
+
                 const card = document.createElement('div');
                 card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow';
 
@@ -183,6 +193,13 @@
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-bold text-orange-400">📅 ${formatDate(dateStr)}</span>
+                            <select onclick="event.stopPropagation()" onchange="updateDayTag('${dateStr}', this.value)" class="text-xs px-2 py-0.5 rounded border font-bold ${tagColorClass} focus:outline-none cursor-pointer">
+                                <option value="" ${currentTag === '' ? 'selected' : ''}>部位選択</option>
+                                <option value="PUSH" ${currentTag === 'PUSH' ? 'selected' : ''}>PUSH</option>
+                                <option value="PULL" ${currentTag === 'PULL' ? 'selected' : ''}>PULL</option>
+                                <option value="LEGS" ${currentTag === 'LEGS' ? 'selected' : ''}>LEGS</option>
+                                <option value="OTHER" ${currentTag === 'OTHER' ? 'selected' : ''}>OTHER</option>
+                            </select>
                             <span class="text-xs bg-gray-900 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-lg font-mono">総負荷: ${formattedVolume}kg</span>
                         </div>
                         <div class="flex items-center gap-2">
@@ -227,6 +244,17 @@
                 card.innerHTML = header + body;
                 list.appendChild(card);
             });
+        }
+
+        // 日付ごとのPPLタグを更新して保存
+        function updateDayTag(dateStr, tagValue) {
+            workouts.forEach(item => {
+                if (item.dateStr === dateStr) {
+                    item.pplTag = tagValue;
+                }
+            });
+            localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+            renderWorkouts();
         }
 
         function toggleDayAccordion(headerElem) {
@@ -318,7 +346,8 @@
                     id: Date.now().toString(),
                     name,
                     dateStr,
-                    setList
+                    setList,
+                    pplTag: ""
                 });
             }
 
@@ -358,6 +387,7 @@
                         workouts = imported.map(i => {
                             if (!i.dateStr && i.createdAt) i.dateStr = i.createdAt.split('T')[0];
                             if (!i.setList && i.weight) i.setList = [{ weight: i.weight, reps: i.reps }];
+                            if (!i.pplTag) i.pplTag = "";
                             return i;
                         });
                         localStorage.setItem('simple_workouts', JSON.stringify(workouts));
@@ -369,7 +399,7 @@
                     }
                 } catch (err) {
                     alert('ファイルの読み込みに失敗しました。');
-                }
+                                    }
             };
             reader.readAsText(file);
         }
