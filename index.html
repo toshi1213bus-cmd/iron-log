@@ -191,6 +191,7 @@
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
 
+                // 1. 履歴の日付横（アコーディオン外側）にだけPPLタグを表示
                 const tagsMap = {};
                 dayItems.forEach(i => {
                     const t = getPplTag(i.name);
@@ -217,9 +218,9 @@
                     </div>
                 `;
 
+                // 2. アコーディオンを開いた中の種目行からはPPLタグを削除
                 let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
                 dayItems.forEach(item => {
-                    const ppl = getPplTag(item.name);
                     const setsHtml = item.setList.map((s, idx) => `
                         <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
                             <span class="text-gray-500 w-4">${idx + 1}.</span>
@@ -232,7 +233,6 @@
                         <div class="bg-gray-900 border border-gray-700 rounded-xl p-3">
                             <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
                                 <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${ppl.bg}">${ppl.text}</span>
                                     <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
                                     <span class="text-xs text-gray-500">(${item.setList.length}セット)</span>
                                 </div>
