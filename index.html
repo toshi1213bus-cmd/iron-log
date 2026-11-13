@@ -11,10 +11,7 @@
 
     <!-- 入力フォーム -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
-        <div class="flex justify-between items-center">
-            <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今日のトレーニングを記録</h2>
-            <button type="button" id="cancelTargetDateBtn" onclick="resetTargetDate()" class="text-xs text-gray-400 hover:text-white hidden underline">今日に戻す</button>
-        </div>
+        <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今日のトレーニングを記録</h2>
         
         <div>
             <label class="block text-xs text-gray-400 mb-1">種目名</label>
@@ -76,21 +73,7 @@
     <!-- スクリプト -->
     <script>
         let workouts = JSON.parse(localStorage.getItem('simple_workouts')) || [];
-        let targetDateStr = null;
-
-        function getPplTag(name) {
-            const n = name.toLowerCase();
-            if (n.includes('ベンチ') || n.includes('プレス') || n.includes('チェスト') || n.includes('ショルダー') || n.includes('レイズ') || n.includes('ディップス') || n.includes('プッシュ') || n.includes('三頭') || n.includes('ダンベル')) {
-                return { text: 'PUSH', bg: 'bg-red-950 text-red-300 border-red-800' };
-            }
-            if (n.includes('プル') || n.includes('ロー') || n.includes('チン') || n.includes('ラット') || n.includes('デッド') || n.includes('カール') || n.includes('背中') || n.includes('二頭')) {
-                return { text: 'PULL', bg: 'bg-blue-950 text-blue-300 border-blue-800' };
-            }
-            if (n.includes('スクワット') || n.includes('レッグ') || n.includes('カーフ') || n.includes('ランジ') || n.includes('脚') || n.includes('腹') || n.includes('アブ')) {
-                return { text: 'LEGS', bg: 'bg-emerald-950 text-emerald-300 border-emerald-800' };
-            }
-            return { text: 'OTHER', bg: 'bg-gray-700 text-gray-300 border-gray-600' };
-        }
+        let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
 
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
@@ -160,6 +143,11 @@
             return `${y}/${parseInt(m)}/${parseInt(d)} (${w})`;
         }
 
+        function updateDayPpl(dateStr, selectElem) {
+            dayPplMap[dateStr] = selectElem.value;
+            localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+        }
+
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             const empty = document.getElementById('emptyMessage');
@@ -191,13 +179,7 @@
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
 
-                // 1. 履歴の日付横（アコーディオン外側）にだけPPLタグを表示
-                const tagsMap = {};
-                dayItems.forEach(i => {
-                    const t = getPplTag(i.name);
-                    tagsMap[t.text] = t;
-                });
-                const tagsHtml = Object.values(tagsMap).map(t => `<span class="text-[10px] font-bold px-2 py-0.5 rounded border ${t.bg}">${t.text}</span>`).join('');
+                const currentPpl = dayPplMap[dateStr] || 'PUSH';
 
                 const card = document.createElement('div');
                 card.className = 'bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow';
@@ -207,18 +189,17 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-bold text-orange-400">📅 ${formatDate(dateStr)}</span>
                             <span class="text-xs bg-gray-900 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-lg font-mono">総負荷: ${formattedVolume}kg</span>
-                            <div class="flex gap-1">${tagsHtml}</div>
+                            <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-orange-300 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
+                                <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
+                                <option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
+                                <option value="LEGS" ${currentPpl === 'LEGS' ? 'selected' : ''}>LEGS</option>
+                                <option value="OTHER" ${currentPpl === 'OTHER' ? 'selected' : ''}>OTHER</option>
+                            </select>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs text-gray-400 day-toggle-icon">▼</span>
-                            <button type="button" onclick="event.stopPropagation(); setTargetDate('${dateStr}')" class="text-xs bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1 rounded-lg font-bold">
-                                ＋追加
-                            </button>
-                        </div>
+                        <span class="text-xs text-gray-400 day-toggle-icon">▼</span>
                     </div>
                 `;
 
-                // 2. アコーディオンを開いた中の種目行からはPPLタグを削除
                 let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
                 dayItems.forEach(item => {
                     const setsHtml = item.setList.map((s, idx) => `
@@ -290,20 +271,6 @@
             }
         }
 
-        function setTargetDate(dateStr) {
-            targetDateStr = dateStr;
-            const [y, m, d] = dateStr.split('-');
-            document.getElementById('formTitle').textContent = `${parseInt(m)}月${parseInt(d)}日 に記録を追加`;
-            document.getElementById('cancelTargetDateBtn').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function resetTargetDate() {
-            targetDateStr = null;
-            document.getElementById('formTitle').textContent = "今日のトレーニングを記録";
-            document.getElementById('cancelTargetDateBtn').classList.add('hidden');
-        }
-
         function saveWorkout() {
             const nameInput = document.getElementById('exerciseName');
             const name = nameInput.value.trim();
@@ -329,11 +296,8 @@
                 return;
             }
 
-            let dateStr = targetDateStr;
-            if (!dateStr) {
-                const now = new Date();
-                dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            }
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
             const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
             if (existing) {
@@ -349,7 +313,6 @@
 
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
             resetForm();
-            resetTargetDate();
             renderWorkouts();
             nameInput.focus();
         }
@@ -363,7 +326,11 @@
         }
 
         function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(workouts));
+            const exportObj = {
+                workouts: workouts,
+                dayPplMap: dayPplMap
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
             const a = document.createElement('a');
             a.href = dataStr;
             a.download = `workout_backup_${new Date().toISOString().slice(0,10)}.json`;
@@ -385,13 +352,15 @@
                             if (!i.setList && i.weight) i.setList = [{ weight: i.weight, reps: i.reps }];
                             return i;
                         });
-                        localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-                        renderWorkouts();
-                        resetTargetDate();
-                        alert('データを正常に復元しました！');
-                    } else {
-                        alert('ファイル形式が正しくありません。');
+                        dayPplMap = {};
+                    } else if (imported && typeof imported === 'object') {
+                        workouts = imported.workouts || [];
+                        dayPplMap = imported.dayPplMap || {};
                     }
+                    localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                    localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+                    renderWorkouts();
+                    alert('データを正常に復元しました！');
                 } catch (err) {
                     alert('ファイルの読み込みに失敗しました。');
                 }
