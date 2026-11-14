@@ -15,7 +15,7 @@
         
         <div>
             <label class="block text-xs text-gray-400 mb-1">種目名</label>
-            <input type="text" id="exerciseName" placeholder="例: ベンチプレス" 
+            <input type="text" id="exerciseName" placeholder="入力" 
                 class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500">
         </div>
 
@@ -60,10 +60,10 @@
             </div>
             <div class="settings-content hidden mt-3 pt-3 border-t border-gray-800 flex gap-2">
                 <button type="button" onclick="exportData()" class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 font-medium">
-                    データ出力 (JSON)
+                    出力 (JSON)
                 </button>
                 <label class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 text-center font-medium cursor-pointer">
-                    データ復元
+                    復元
                     <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
                 </label>
             </div>
