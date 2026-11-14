@@ -75,11 +75,20 @@
 
     <!-- スクリプト -->
     <script>
+        // データの表記揺れや重複を完全に排除する強力なお掃除＆ガード関数
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
-            return rawWorkouts.map(item => {
-                if (item.setList && Array.isArray(item.setList)) {
-                    item.setList = item.setList.map(set => {
+            const uniqueMap = new Map();
+
+            rawWorkouts.forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const id = item.id || String(Date.now() + Math.random());
+                
+                // セットの掃除
+                let setList = [];
+                const rawSets = item.setList || [];
+                if (Array.isArray(rawSets)) {
+                    setList = rawSets.map(set => {
                         let w = set.weight !== undefined ? set.weight : 
                                 (set.体重 !== undefined ? set.体重 : 
                                 (set['wei ght'] !== undefined ? set['wei ght'] : 
@@ -94,14 +103,23 @@
                         };
                     });
                 }
-                return item;
+
+                let name = item.name || item.名前 || item.ナムe || '不明な種目';
+                let dateStr = item.dateStr || '2026-01-01';
+
+                uniqueMap.set(id, {
+                    id: String(id),
+                    name: String(name),
+                    dateStr: String(dateStr),
+                    setList: setList
+                });
             });
+
+            return Array.from(uniqueMap.values());
         }
 
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
-        
-        // 編集中のアイテムIDを保持する変数（nullなら新規作成モード）
         let editingId = null;
 
         function addSetRow(w = '', r = '') {
@@ -191,7 +209,6 @@
                 addSetRow(set.weight, set.reps);
             });
 
-            // 最上部にスムーズスクロール
             window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('exerciseName').focus();
         }
@@ -358,14 +375,12 @@
             }
 
             if (editingId) {
-                // 編集モード：既存のアイテムを更新（IDと日付は維持）
                 const target = workouts.find(i => i.id === editingId);
                 if (target) {
                     target.name = name;
                     target.setList = setList;
                 }
             } else {
-                // 新規保存モード
                 const now = new Date();
                 const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
@@ -383,14 +398,13 @@
             }
 
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-            resetForm();
+                        resetForm();
             renderWorkouts();
             nameInput.focus();
         }
 
         function deleteWorkout(id) {
             if (confirm('この記録を削除しますか？')) {
-                // もし現在編集中だったものを削除した場合はフォームをリセット
                 if (editingId === id) {
                     resetForm();
                 }
@@ -400,7 +414,7 @@
             }
         }
 
-                function exportData() {
+        function exportData() {
             const exportObj = {
                 workouts: workouts,
                 dayPplMap: dayPplMap
