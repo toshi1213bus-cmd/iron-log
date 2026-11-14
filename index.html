@@ -11,7 +11,10 @@
 
     <!-- 入力フォーム -->
     <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
-        <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">トレーニング記録</h2>
+        <div class="flex justify-between items-center">
+            <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">トレーニング記録</h2>
+            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white hidden">キャンセル</button>
+        </div>
         
         <div>
             <label class="block text-xs text-gray-400 mb-1">種目名</label>
@@ -37,7 +40,7 @@
             </button>
         </div>
 
-        <button type="button" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
+        <button type="button" id="saveBtn" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
             保存
         </button>
     </div>
@@ -72,19 +75,16 @@
 
     <!-- スクリプト -->
     <script>
-        // データの表記揺れ（体重、回数、wei ght等）を自動でお掃除して英語キーに直す関数
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
             return rawWorkouts.map(item => {
                 if (item.setList && Array.isArray(item.setList)) {
                     item.setList = item.setList.map(set => {
-                        // weightの揺れを吸収 (weight, 体重, wei ght など)
                         let w = set.weight !== undefined ? set.weight : 
                                 (set.体重 !== undefined ? set.体重 : 
                                 (set['wei ght'] !== undefined ? set['wei ght'] : 
                                 (set['wei  ght'] !== undefined ? set['wei  ght'] : 0)));
                         
-                        // repsの揺れを吸収 (reps, 回数 など)
                         let r = set.reps !== undefined ? set.reps : 
                                 (set.回数 !== undefined ? set.回数 : 0);
 
@@ -100,6 +100,9 @@
 
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
+        
+        // 編集中のアイテムIDを保持する変数（nullなら新規作成モード）
+        let editingId = null;
 
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
@@ -146,7 +149,12 @@
         }
 
         function resetForm() {
+            editingId = null;
             document.getElementById('exerciseName').value = '';
+            document.getElementById('formTitle').textContent = 'トレーニング記録';
+            document.getElementById('saveBtn').textContent = '保存';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            
             const container = document.getElementById('setsContainer');
             if (!container) return;
             container.innerHTML = `
@@ -160,6 +168,32 @@
                     <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
                 </div>
             `;
+        }
+
+        function cancelEdit() {
+            resetForm();
+        }
+
+        function editWorkout(id) {
+            const target = workouts.find(i => i.id === id);
+            if (!target) return;
+
+            editingId = id;
+            document.getElementById('formTitle').textContent = 'トレーニング記録（編集中）';
+            document.getElementById('saveBtn').textContent = '更新';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            
+            document.getElementById('exerciseName').value = target.name;
+
+            const container = document.getElementById('setsContainer');
+            container.innerHTML = '';
+            target.setList.forEach(set => {
+                addSetRow(set.weight, set.reps);
+            });
+
+            // 最上部にスムーズスクロール
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('exerciseName').focus();
         }
 
         function formatDate(dateStr) {
@@ -245,6 +279,7 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-orange-400 ex-toggle-icon">▼</span>
+                                    <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-orange-400 px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium" title="編集">編集</button>
                                     <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1" title="削除">✕</button>
                                 </div>
                             </div>
@@ -322,19 +357,29 @@
                 return;
             }
 
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-            const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
-            if (existing) {
-                existing.setList = existing.setList.concat(setList);
+            if (editingId) {
+                // 編集モード：既存のアイテムを更新（IDと日付は維持）
+                const target = workouts.find(i => i.id === editingId);
+                if (target) {
+                    target.name = name;
+                    target.setList = setList;
+                }
             } else {
-                workouts.push({
-                    id: Date.now().toString(),
-                    name,
-                    dateStr,
-                    setList
-                });
+                // 新規保存モード
+                const now = new Date();
+                const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
+                if (existing) {
+                    existing.setList = existing.setList.concat(setList);
+                } else {
+                    workouts.push({
+                        id: Date.now().toString(),
+                        name,
+                        dateStr,
+                        setList
+                    });
+                }
             }
 
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
@@ -345,13 +390,17 @@
 
         function deleteWorkout(id) {
             if (confirm('この記録を削除しますか？')) {
+                // もし現在編集中だったものを削除した場合はフォームをリセット
+                if (editingId === id) {
+                    resetForm();
+                }
                 workouts = workouts.filter(i => i.id !== id);
                 localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                 renderWorkouts();
             }
         }
 
-        function exportData() {
+                function exportData() {
             const exportObj = {
                 workouts: workouts,
                 dayPplMap: dayPplMap
@@ -386,6 +435,7 @@
 
                     localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                     localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+                    resetForm();
                     renderWorkouts();
                     alert('データを正常に復元しました！');
                 } catch (err) {
