@@ -9,94 +9,118 @@
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-6">
 
-    <!-- 入力フォーム -->
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
-        <div class="flex justify-between items-center">
-            <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">トレーニング記録</h2>
-            <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white hidden">キャンセル</button>
-        </div>
-        
-        <div>
-            <label class="block text-xs text-gray-400 mb-1">種目名</label>
-            <input type="text" id="exerciseName" placeholder="入力" 
-                class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500">
-        </div>
-
-        <div class="space-y-2">
-            <span class="block text-xs text-gray-400">セット</span>
-            <div id="setsContainer" class="space-y-2">
-                <div class="set-row flex items-center gap-2">
-                    <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
-                    <input type="number" step="0.5" placeholder="kg" inputmode="decimal" autocapitalize="off" autocomplete="off" autocorrect="off"
-                        class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                    <span class="text-gray-500 font-bold">×</span>
-                    <input type="number" placeholder="回" inputmode="numeric" autocapitalize="off" autocomplete="off" autocorrect="off"
-                        class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-                    <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-                </div>
-            </div>
-            <button type="button" onclick="addSetRow()" class="w-full py-2.5 border border-dashed border-gray-600 hover:border-orange-400 text-gray-300 hover:text-orange-400 rounded-xl text-sm font-medium transition">
-                ＋ セット
-            </button>
-        </div>
-
-        <button type="button" id="saveBtn" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
-            保存
+    <!-- 最上段タブ切り替えバー -->
+    <div class="flex bg-gray-800 border border-gray-700 rounded-2xl p-1 shadow-md">
+        <button type="button" onclick="switchTab('workout')" id="tabBtnWorkout" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition">
+            トレーニング記録
+        </button>
+        <button type="button" onclick="switchTab('cardio')" id="tabBtnCardio" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
+            有酸素記録
+        </button>
+        <button type="button" onclick="switchTab('settings')" id="tabBtnSettings" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
+            設定
         </button>
     </div>
 
-    <!-- 基本種目スリム推移カード -->
-    <div class="space-y-3">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">基本種目推移</h2>
-        <div class="space-y-2">
-            <!-- PUSH -->
-            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
-                <div id="pickupPush" class="space-y-0.5 text-xs">
-                    <div class="text-gray-400">PUSH (ベンチプレス) : データなし</div>
+    <!-- ================= 1. トレーニング記録タブ ================= -->
+    <div id="tabContentWorkout" class="space-y-6">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">トレーニング記録</h2>
+                <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white hidden">キャンセル</button>
+            </div>
+            
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">種目名</label>
+                <input type="text" id="exerciseName" placeholder="入力" 
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div class="space-y-2">
+                <span class="block text-xs text-gray-400">セット</span>
+                <div id="setsContainer" class="space-y-2">
+                    <div class="set-row flex items-center gap-2">
+                        <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
+                        <input type="number" step="0.5" placeholder="kg" inputmode="decimal" autocapitalize="off" autocomplete="off" autocorrect="off"
+                            class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                        <span class="text-gray-500 font-bold">×</span>
+                        <input type="number" placeholder="回" inputmode="numeric" autocapitalize="off" autocomplete="off" autocorrect="off"
+                            class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
+                        <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addSetRow()" class="w-full py-2.5 border border-dashed border-gray-600 hover:border-orange-400 text-gray-300 hover:text-orange-400 rounded-xl text-sm font-medium transition">
+                    ＋ セット
+                </button>
+            </div>
+
+            <button type="button" id="saveBtn" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
+                保存
+            </button>
+        </div>
+
+        <div class="space-y-3">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">基本種目推移</h2>
+            <div class="space-y-2">
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                    <div id="pickupPush" class="space-y-0.5 text-xs"><div class="text-gray-400">PUSH (ベンチプレス) : データなし</div></div>
+                </div>
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                    <div id="pickupPull" class="space-y-0.5 text-xs"><div class="text-gray-400">PULL (ワイドラット) : データなし</div></div>
+                </div>
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                    <div id="pickupLegs" class="space-y-0.5 text-xs"><div class="text-gray-400">LEGS (ブルガリアン) : データなし</div></div>
+                </div>
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                    <div id="pickupOther" class="space-y-0.5 text-xs"><div class="text-gray-400">OTHER (レッグレイズ) : データなし</div></div>
                 </div>
             </div>
-            <!-- PULL -->
-            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
-                <div id="pickupPull" class="space-y-0.5 text-xs">
-                    <div class="text-gray-400">PULL (ワイドラット) : データなし</div>
-                </div>
-            </div>
-            <!-- LEGS -->
-            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
-                <div id="pickupLegs" class="space-y-0.5 text-xs">
-                    <div class="text-gray-400">LEGS (ブルガリアン) : データなし</div>
-                </div>
-            </div>
-            <!-- OTHER -->
-            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
-                <div id="pickupOther" class="space-y-0.5 text-xs">
-                    <div class="text-gray-400">OTHER (レッグレイズ) : データなし</div>
-                </div>
+        </div>
+
+        <div class="space-y-4">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">履歴（タップ開閉）</h2>
+            <div id="workoutList" class="space-y-3"></div>
+            <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
+                記録がまだありません。
             </div>
         </div>
     </div>
 
-    <!-- 履歴一覧 -->
-    <div class="space-y-4">
-        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">履歴（タップ開閉）</h2>
-        <div id="workoutList" class="space-y-3"></div>
-        <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
-            記録がまだありません。
+    <!-- ================= 2. 有酸素記録タブ ================= -->
+    <div id="tabContentCardio" class="space-y-6 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
+            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">有酸素運動の記録</h2>
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">時間 (分)</label>
+                <input type="number" id="cardioMinutes" placeholder="30" inputmode="numeric"
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
+            </div>
+            <button type="button" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
+                保存
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">有酸素履歴</h2>
+            <div id="cardioList" class="space-y-3"></div>
+            <div id="emptyCardioMessage" class="text-center text-gray-500 py-10 hidden">
+                有酸素の記録がまだありません。
+            </div>
         </div>
     </div>
 
-    <!-- 画面最下部の設定アコーディオン -->
-    <div class="pt-6">
-        <div class="bg-gray-800/50 border border-gray-800 rounded-2xl p-3">
-            <div class="flex justify-between items-center cursor-pointer select-none px-2 py-1" onclick="toggleSettingsAccordion(this)">
-                <span class="text-xs text-gray-500 font-medium">設定</span>
-                <span class="text-xs text-gray-600 settings-toggle-icon">▼</span>
-            </div>
-            <div class="settings-content hidden mt-3 pt-3 border-t border-gray-800 flex gap-2">
-                <button type="button" onclick="exportData()" class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 font-medium">
+    <!-- ================= 3. 設定タブ ================= -->
+    <div id="tabContentSettings" class="space-y-6 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
+            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">データバックアップ・復元</h2>
+            <p class="text-xs text-gray-400 leading-relaxed">
+                トレーニングと有酸素の全データをJSONファイルとして一括バックアップしたり、復元することができます。
+            </p>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="exportData()" class="flex-1 bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
                     出力 (JSON)
                 </button>
-                <label class="flex-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl border border-gray-700 text-center font-medium cursor-pointer">
+                <label class="flex-1 bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold text-center cursor-pointer transition">
                     復元
                     <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)">
                 </label>
@@ -109,54 +133,87 @@
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
             const uniqueMap = new Map();
-
             rawWorkouts.forEach(item => {
                 if (!item || typeof item !== 'object') return;
                 const id = item.id || String(Date.now() + Math.random());
-                
                 let setList = [];
                 const rawSets = item.setList || [];
                 if (Array.isArray(rawSets)) {
-                    setList = rawSets.map(set => {
-                        let w = set.weight !== undefined ? set.weight : (set.体重 !== undefined ? set.体重 : 0);
-                        let r = set.reps !== undefined ? set.reps : (set.回数 !== undefined ? set.回数 : 0);
-                        return {
-                            weight: Number(w) || 0,
-                            reps: Number(r) || 0
-                        };
-                    });
+                    setList = rawSets.map(set => ({
+                        weight: Number(set.weight !== undefined ? set.weight : set.体重) || 0,
+                        reps: Number(set.reps !== undefined ? set.reps : set.回数) || 0
+                    }));
                 }
-
-                let name = item.name || item.名前 || '不明な種目';
-                let dateStr = item.dateStr || '2026-01-01';
-
                 uniqueMap.set(id, {
                     id: String(id),
-                    name: String(name),
-                    dateStr: String(dateStr),
+                    name: String(item.name || item.名前 || '不明な種目'),
+                    dateStr: String(item.dateStr || '2026-01-01'),
                     setList: setList
                 });
             });
+            return Array.from(uniqueMap.values());
+        }
 
+        function sanitizeCardios(rawCardios) {
+            if (!Array.isArray(rawCardios)) return [];
+            const uniqueMap = new Map();
+            rawCardios.forEach(item => {
+                if (!item || typeof item !== 'object') return;
+                const id = item.id || String(Date.now() + Math.random());
+                uniqueMap.set(id, {
+                    id: String(id),
+                    minutes: Number(item.minutes) || 0,
+                    dateStr: String(item.dateStr || '2026-01-01')
+                });
+            });
             return Array.from(uniqueMap.values());
         }
 
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
+        let cardios = sanitizeCardios(JSON.parse(localStorage.getItem('simple_cardios')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
         let editingId = null;
         let visibleDaysCount = 5;
+        let visibleCardioDaysCount = 5;
+
+        function switchTab(tabName) {
+            const wContent = document.getElementById('tabContentWorkout');
+            const cContent = document.getElementById('tabContentCardio');
+            const sContent = document.getElementById('tabContentSettings');
+            
+            const wBtn = document.getElementById('tabBtnWorkout');
+            const cBtn = document.getElementById('tabBtnCardio');
+            const sBtn = document.getElementById('tabBtnSettings');
+
+            wContent.classList.add('hidden');
+            cContent.classList.add('hidden');
+            sContent.classList.add('hidden');
+
+            wBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
+            cBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
+            sBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
+
+            if (tabName === 'workout') {
+                wContent.classList.remove('hidden');
+                wBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
+            } else if (tabName === 'cardio') {
+                cContent.classList.remove('hidden');
+                cBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
+            } else if (tabName === 'settings') {
+                sContent.classList.remove('hidden');
+                sBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
+            }
+        }
 
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
             if (!container) return;
             const rows = container.querySelectorAll('.set-row');
             const num = rows.length + 1;
-
             if (w === '' && rows.length > 0) {
                 const lastW = rows[rows.length - 1].querySelector('.weight-input').value;
                 if (lastW) w = lastW;
             }
-
             const div = document.createElement('div');
             div.className = 'set-row flex items-center gap-2';
             div.innerHTML = `
@@ -185,8 +242,7 @@
             const rows = document.querySelectorAll('.set-row');
             rows.forEach((row, idx) => {
                 row.querySelector('.set-label').textContent = `${idx + 1}.`;
-                const delBtn = row.querySelector('button');
-                delBtn.style.visibility = rows.length === 1 ? 'hidden' : 'visible';
+                row.querySelector('button').style.visibility = rows.length === 1 ? 'hidden' : 'visible';
             });
         }
 
@@ -196,7 +252,6 @@
             document.getElementById('formTitle').textContent = 'トレーニング記録';
             document.getElementById('saveBtn').textContent = '保存';
             document.getElementById('cancelEditBtn').classList.add('hidden');
-            
             const container = document.getElementById('setsContainer');
             if (!container) return;
             container.innerHTML = `
@@ -212,33 +267,26 @@
             `;
         }
 
-        function cancelEdit() {
-            resetForm();
-        }
+        function cancelEdit() { resetForm(); }
 
         function editWorkout(id) {
             const target = workouts.find(i => i.id === id);
             if (!target) return;
-
             editingId = id;
             document.getElementById('formTitle').textContent = 'トレーニング記録（編集中）';
             document.getElementById('saveBtn').textContent = '更新';
             document.getElementById('cancelEditBtn').classList.remove('hidden');
-            
             document.getElementById('exerciseName').value = target.name;
-
             const container = document.getElementById('setsContainer');
             container.innerHTML = '';
-            target.setList.forEach(set => {
-                addSetRow(set.weight, set.reps);
-            });
-
+            target.setList.forEach(set => addSetRow(set.weight, set.reps));
             window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('exerciseName').focus();
         }
+
         function formatDate(dateStr) {
-               const [y, m, d] = dateStr.split('-');
-               return `${parseInt(m)}/${parseInt(d)}`;
+            const [y, m, d] = dateStr.split('-');
+            return `${parseInt(m)}/${parseInt(d)}`;
         }
 
         function updateDayPpl(dateStr, selectElem) {
@@ -257,46 +305,35 @@
             for (const [elemId, config] of Object.entries(targets)) {
                 const container = document.getElementById(elemId);
                 if (!container) continue;
-
                 const matchedItems = workouts.filter(item => item.name.trim() === config.name);
-
                 if (matchedItems.length === 0) {
                     container.innerHTML = `<div class="text-gray-400 text-[11px]">${config.label.slice(0,4)} (${config.name}) : データなし</div>`;
                     continue;
                 }
-
                 const dateMap = {};
                 matchedItems.forEach(item => {
                     if (!dateMap[item.dateStr]) dateMap[item.dateStr] = [];
                     dateMap[item.dateStr].push(...item.setList);
                 });
-
                 const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
-
                 const values = sortedDates.map(dateStr => {
                     const sets = dateMap[dateStr];
                     if (config.type === 'weight') {
                         let dayTotal = 0;
-                        sets.forEach(s => {
-                            dayTotal += (s.weight + (s.reps * 0.1));
-                        });
+                        sets.forEach(s => { dayTotal += (s.weight + (s.reps * 0.1)); });
                         return Number(dayTotal.toFixed(1));
                     } else {
-                        const totalReps = sets.reduce((sum, s) => sum + s.reps, 0);
-                        return totalReps;
+                        return sets.reduce((sum, s) => sum + s.reps, 0);
                     }
                 });
-
                 const latestVal = values[values.length - 1];
                 const trendStr = values.join(' ➔ ');
-
                 container.innerHTML = `
                     <div class="text-orange-300 font-bold">${config.label}：${latestVal}</div>
                     <div class="text-gray-400 font-mono text-[11px] break-all">推移：${trendStr}</div>
                 `;
             }
         }
-
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             const empty = document.getElementById('emptyMessage');
@@ -306,6 +343,7 @@
             if (workouts.length === 0) {
                 if (empty) empty.classList.remove('hidden');
                 updatePickupStats();
+                renderCardios();
                 return;
             }
             if (empty) empty.classList.add('hidden');
@@ -321,15 +359,11 @@
 
             displayDates.forEach(dateStr => {
                 const dayItems = grouped[dateStr];
-                
                 let totalVolume = 0;
                 dayItems.forEach(item => {
-                    item.setList.forEach(set => {
-                        totalVolume += (set.weight * set.reps);
-                    });
+                    item.setList.forEach(set => { totalVolume += (set.weight * set.reps); });
                 });
                 const formattedVolume = Math.round(totalVolume).toLocaleString();
-
                 const currentPpl = dayPplMap[dateStr] || 'PUSH';
 
                 const card = document.createElement('div');
@@ -370,8 +404,8 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-orange-400 ex-toggle-icon">▼</span>
-                                    <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-orange-400 px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium" title="編集">編集</button>
-                                    <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1" title="削除">✕</button>
+                                    <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-orange-400 px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium">編集</button>
+                                    <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
                                 </div>
                             </div>
                             <div class="ex-content hidden mt-2 pt-2 border-t border-gray-800 space-y-1">
@@ -396,11 +430,17 @@
             }
 
             updatePickupStats();
+            renderCardios();
         }
 
         function loadMoreDays() {
             visibleDaysCount += 5;
             renderWorkouts();
+        }
+
+        function loadMoreCardioDays() {
+            visibleCardioDaysCount += 5;
+            renderCardios();
         }
 
         function toggleDayAccordion(headerElem) {
@@ -418,18 +458,6 @@
         function toggleExerciseAccordion(headerElem) {
             const content = headerElem.nextElementSibling;
             const icon = headerElem.querySelector('.ex-toggle-icon');
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                icon.textContent = '▲';
-            } else {
-                content.classList.add('hidden');
-                icon.textContent = '▼';
-            }
-        }
-
-        function toggleSettingsAccordion(headerElem) {
-            const content = headerElem.nextElementSibling;
-            const icon = headerElem.querySelector('.settings-toggle-icon');
             if (content.classList.contains('hidden')) {
                 content.classList.remove('hidden');
                 icon.textContent = '▲';
@@ -473,17 +501,11 @@
             } else {
                 const now = new Date();
                 const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
                 const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
                 if (existing) {
                     existing.setList = existing.setList.concat(setList);
                 } else {
-                    workouts.push({
-                        id: Date.now().toString(),
-                        name,
-                        dateStr,
-                        setList
-                    });
+                    workouts.push({ id: Date.now().toString(), name, dateStr, setList });
                 }
             }
 
@@ -495,24 +517,106 @@
 
         function deleteWorkout(id) {
             if (confirm('この記録を削除しますか？')) {
-                if (editingId === id) {
-                    resetForm();
-                }
+                if (editingId === id) resetForm();
                 workouts = workouts.filter(i => i.id !== id);
                 localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                 renderWorkouts();
             }
         }
 
+        // 有酸素保存・削除（同日加算仕様）
+        function saveCardio() {
+            const minInput = document.getElementById('cardioMinutes');
+            const minutes = parseInt(minInput.value);
+
+            if (isNaN(minutes) || minutes <= 0) {
+                alert('有効な時間を入力してください');
+                minInput.focus();
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            // 同じ日の記録がすでに存在すれば加算する
+            const existingCardio = cardios.find(i => i.dateStr === dateStr);
+            if (existingCardio) {
+                existingCardio.minutes += minutes;
+            } else {
+                cardios.push({
+                    id: Date.now().toString(),
+                    minutes: minutes,
+                    dateStr: dateStr
+                });
+            }
+
+            localStorage.setItem('simple_cardios', JSON.stringify(cardios));
+            minInput.value = '';
+            renderCardios();
+        }
+
+        function deleteCardio(id) {
+            if (confirm('この有酸素記録を削除しますか？')) {
+                cardios = cardios.filter(i => i.id !== id);
+                localStorage.setItem('simple_cardios', JSON.stringify(cardios));
+                renderCardios();
+            }
+        }
+
+        function renderCardios() {
+            const list = document.getElementById('cardioList');
+            const empty = document.getElementById('emptyCardioMessage');
+            if (!list) return;
+            list.innerHTML = '';
+
+            if (cardios.length === 0) {
+                if (empty) empty.classList.remove('hidden');
+                return;
+            }
+            if (empty) empty.classList.add('hidden');
+
+            const sortedDates = [...new Set(cardios.map(i => i.dateStr))].sort((a, b) => new Date(b) - new Date(a));
+            const displayDates = sortedDates.slice(0, visibleCardioDaysCount);
+
+            displayDates.forEach(dateStr => {
+                const dayCardio = cardios.find(i => i.dateStr === dateStr);
+                if (!dayCardio) return;
+
+                const div = document.createElement('div');
+                div.className = 'bg-gray-800 border border-gray-700 rounded-xl p-3 flex justify-between items-center shadow';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-orange-400">${formatDate(dateStr)}</span>
+                        <div>
+                            <span class="text-sm font-bold text-white">有酸素運動</span>
+                            <span class="text-xs text-gray-400 ml-2">${dayCardio.minutes} 分</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
+                `;
+                list.appendChild(div);
+            });
+
+            if (sortedDates.length > visibleCardioDaysCount) {
+                const moreBtn = document.createElement('button');
+                moreBtn.type = 'button';
+                moreBtn.onclick = loadMoreCardioDays;
+                moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-orange-400 text-sm font-bold rounded-xl border border-gray-700 shadow transition active:scale-[0.98]';
+                moreBtn.textContent = '＋ さらに過去の履歴を表示';
+                list.appendChild(moreBtn);
+            }
+        }
+
         function exportData() {
             const exportObj = {
                 workouts: workouts,
+                cardios: cardios,
                 dayPplMap: dayPplMap
             };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
             const a = document.createElement('a');
             a.href = dataStr;
-            a.download = `workout_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -526,18 +630,21 @@
                 try {
                     const imported = JSON.parse(evt.target.result);
                     let rawWorkouts = [];
+                    let rawCardios = [];
                     
                     if (Array.isArray(imported)) {
                         rawWorkouts = imported;
-                        dayPplMap = {};
                     } else if (imported && typeof imported === 'object') {
                         rawWorkouts = imported.workouts || [];
+                        rawCardios = imported.cardios || [];
                         dayPplMap = imported.dayPplMap || {};
                     }
                     
                     workouts = sanitizeWorkouts(rawWorkouts);
+                    cardios = sanitizeCardios(rawCardios);
 
                     localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+                    localStorage.setItem('simple_cardios', JSON.stringify(cardios));
                     localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
                     resetForm();
                     renderWorkouts();
