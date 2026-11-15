@@ -99,6 +99,13 @@
             </button>
         </div>
 
+        <div class="space-y-3">
+            <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">今月合計</h2>
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 shadow">
+                <div id="monthlyCardioSummary" class="text-xs text-orange-300 font-bold">0分 / 約0kcal</div>
+            </div>
+        </div>
+
         <div class="space-y-4">
             <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">履歴</h2>
             <div id="cardioList" class="space-y-3"></div>
@@ -108,19 +115,16 @@
         </div>
     </div>
 
-    <!-- ================= 3. 設定タブ（テキスト貼り付け対応） ================= -->
+    <!-- ================= 3. 設定タブ ================= -->
     <div id="tabContentSettings" class="space-y-6 hidden">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
             <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力・復元</h2>
-            <p class="text-xs text-gray-400 leading-relaxed">
-            </p>
             <div class="space-y-2 pt-2">
                 <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
                     出力 (JSON)
                 </button>
             </div>
             <div class="space-y-2 pt-4 border-t border-gray-700">
-                <label class="block text-xs text-gray-400"></label>
                 <textarea id="importText" rows="4" placeholder="JSON貼り付け" 
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-orange-500"></textarea>
                 <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-orange-400 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -130,7 +134,6 @@
         </div>
     </div>
 
-    <!-- スクリプト前半 -->
     <script>
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
@@ -170,7 +173,6 @@
             });
             return Array.from(uniqueMap.values());
         }
-
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let cardios = sanitizeCardios(JSON.parse(localStorage.getItem('simple_cardios')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
@@ -182,7 +184,6 @@
             const wContent = document.getElementById('tabContentWorkout');
             const cContent = document.getElementById('tabContentCardio');
             const sContent = document.getElementById('tabContentSettings');
-            
             const wBtn = document.getElementById('tabBtnWorkout');
             const cBtn = document.getElementById('tabBtnCardio');
             const sBtn = document.getElementById('tabBtnSettings');
@@ -566,8 +567,18 @@
         function renderCardios() {
             const list = document.getElementById('cardioList');
             const empty = document.getElementById('emptyCardioMessage');
+            const summary = document.getElementById('monthlyCardioSummary');
             if (!list) return;
             list.innerHTML = '';
+
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const monthlyItems = cardios.filter(i => i.dateStr.startsWith(currentYearMonth));
+            const totalMin = monthlyItems.reduce((sum, i) => sum + i.minutes, 0);
+            const totalKcal = Math.round(totalMin * 3.5);
+            if (summary) {
+                summary.textContent = `${totalMin}分 / 約${totalKcal}kcal`;
+            }
 
             if (cardios.length === 0) {
                 if (empty) empty.classList.remove('hidden');
@@ -582,14 +593,13 @@
                 const dayCardio = cardios.find(i => i.dateStr === dateStr);
                 if (!dayCardio) return;
 
+                const dayKcal = Math.round(dayCardio.minutes * 3.5);
                 const div = document.createElement('div');
                 div.className = 'bg-gray-800 border border-gray-700 rounded-xl p-3 flex justify-between items-center shadow';
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <span class="text-xs font-bold text-orange-400">${formatDate(dateStr)}</span>
-                        <div>
-                            <span class="text-xs text-gray-400 ml-2">${dayCardio.minutes} 分</span>
-                        </div>
+                        <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
+                        <span class="text-sm font-bold text-white">${dayCardio.minutes}分 <span class="text-xs text-gray-400 font-normal">(約${dayKcal}kcal)</span></span>
                     </div>
                     <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
                 `;
@@ -621,7 +631,6 @@
             a.remove();
         }
 
-        // テキスト貼り付けによる復元処理
         function importFromJsonText() {
             const text = document.getElementById('importText').value.trim();
             if (!text) {
@@ -660,7 +669,6 @@
             return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
         }
 
-        // 初期描画
         renderWorkouts();
     </script>
 </body>
