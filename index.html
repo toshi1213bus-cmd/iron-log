@@ -26,7 +26,7 @@
     <div id="tabContentWorkout" class="space-y-6">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
             <div class="flex justify-between items-center">
-                <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider">トレーニング記録</h2>
+                <h2 id="formTitle" class="text-sm font-semibold text-orange-400 uppercase tracking-wider"></h2>
                 <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white hidden">キャンセル</button>
             </div>
             
@@ -252,7 +252,7 @@
         function resetForm() {
             editingId = null;
             document.getElementById('exerciseName').value = '';
-            document.getElementById('formTitle').textContent = 'トレーニング記録';
+            document.getElementById('formTitle').textContent = '';
             document.getElementById('saveBtn').textContent = '保存';
             document.getElementById('cancelEditBtn').classList.add('hidden');
             const container = document.getElementById('setsContainer');
