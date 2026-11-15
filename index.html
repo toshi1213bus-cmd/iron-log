@@ -45,6 +45,37 @@
         </button>
     </div>
 
+    <!-- 基本種目スリム推移カード -->
+    <div class="space-y-3">
+        <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">基本種目推移</h2>
+        <div class="space-y-2">
+            <!-- PUSH -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                <div id="pickupPush" class="space-y-0.5 text-xs">
+                    <div class="text-gray-400">PUSH (ベンチプレス) : データなし</div>
+                </div>
+            </div>
+            <!-- PULL -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                <div id="pickupPull" class="space-y-0.5 text-xs">
+                    <div class="text-gray-400">PULL (ワイドラット) : データなし</div>
+                </div>
+            </div>
+            <!-- LEGS -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                <div id="pickupLegs" class="space-y-0.5 text-xs">
+                    <div class="text-gray-400">LEGS (ブルガリアン) : データなし</div>
+                </div>
+            </div>
+            <!-- OTHER -->
+            <div class="bg-gray-800 border border-gray-700 rounded-xl p-3 shadow space-y-0.5">
+                <div id="pickupOther" class="space-y-0.5 text-xs">
+                    <div class="text-gray-400">OTHER (レッグレイズ) : データなし</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 履歴一覧 -->
     <div class="space-y-4">
         <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">履歴（タップ開閉）</h2>
@@ -73,9 +104,8 @@
         </div>
     </div>
 
-    <!-- スクリプト -->
+    <!-- スクリプト前半 -->
     <script>
-        // データの表記揺れや重複を完全に排除する強力なお掃除＆ガード関数
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
             const uniqueMap = new Map();
@@ -84,19 +114,12 @@
                 if (!item || typeof item !== 'object') return;
                 const id = item.id || String(Date.now() + Math.random());
                 
-                // セットの掃除
                 let setList = [];
                 const rawSets = item.setList || [];
                 if (Array.isArray(rawSets)) {
                     setList = rawSets.map(set => {
-                        let w = set.weight !== undefined ? set.weight : 
-                                (set.体重 !== undefined ? set.体重 : 
-                                (set['wei ght'] !== undefined ? set['wei ght'] : 
-                                (set['wei  ght'] !== undefined ? set['wei  ght'] : 0)));
-                        
-                        let r = set.reps !== undefined ? set.reps : 
-                                (set.回数 !== undefined ? set.回数 : 0);
-
+                        let w = set.weight !== undefined ? set.weight : (set.体重 !== undefined ? set.体重 : 0);
+                        let r = set.reps !== undefined ? set.reps : (set.回数 !== undefined ? set.回数 : 0);
                         return {
                             weight: Number(w) || 0,
                             reps: Number(r) || 0
@@ -104,7 +127,7 @@
                     });
                 }
 
-                let name = item.name || item.名前 || item.ナムe || '不明な種目';
+                let name = item.name || item.名前 || '不明な種目';
                 let dateStr = item.dateStr || '2026-01-01';
 
                 uniqueMap.set(id, {
@@ -121,6 +144,7 @@
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
         let editingId = null;
+        let visibleDaysCount = 5;
 
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
@@ -212,17 +236,65 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('exerciseName').focus();
         }
-
         function formatDate(dateStr) {
-            const [y, m, d] = dateStr.split('-');
-            const date = new Date(y, m - 1, d);
-            const w = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-            return `${y}/${parseInt(m)}/${parseInt(d)} (${w})`;
+               const [y, m, d] = dateStr.split('-');
+               return `${parseInt(m)}/${parseInt(d)}`;
         }
 
         function updateDayPpl(dateStr, selectElem) {
             dayPplMap[dateStr] = selectElem.value;
             localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+        }
+
+        function updatePickupStats() {
+            const targets = {
+                pickupPush: { label: 'PUSH最新負荷量', name: 'ベンチプレス', type: 'weight' },
+                pickupPull: { label: 'PULL最新負荷量', name: 'ワイドラットプル', type: 'weight' },
+                pickupLegs: { label: 'LEGS最新負荷量', name: 'ブルガリアンスクワット', type: 'weight' },
+                pickupOther: { label: 'OTHER最新回数', name: 'レッグレイズ', type: 'reps' }
+            };
+
+            for (const [elemId, config] of Object.entries(targets)) {
+                const container = document.getElementById(elemId);
+                if (!container) continue;
+
+                const matchedItems = workouts.filter(item => item.name.trim() === config.name);
+
+                if (matchedItems.length === 0) {
+                    container.innerHTML = `<div class="text-gray-400 text-[11px]">${config.label.slice(0,4)} (${config.name}) : データなし</div>`;
+                    continue;
+                }
+
+                const dateMap = {};
+                matchedItems.forEach(item => {
+                    if (!dateMap[item.dateStr]) dateMap[item.dateStr] = [];
+                    dateMap[item.dateStr].push(...item.setList);
+                });
+
+                const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
+
+                const values = sortedDates.map(dateStr => {
+                    const sets = dateMap[dateStr];
+                    if (config.type === 'weight') {
+                        let dayTotal = 0;
+                        sets.forEach(s => {
+                            dayTotal += (s.weight + (s.reps * 0.1));
+                        });
+                        return Number(dayTotal.toFixed(1));
+                    } else {
+                        const totalReps = sets.reduce((sum, s) => sum + s.reps, 0);
+                        return totalReps;
+                    }
+                });
+
+                const latestVal = values[values.length - 1];
+                const trendStr = values.join(' ➔ ');
+
+                container.innerHTML = `
+                    <div class="text-orange-300 font-bold">${config.label}：${latestVal}</div>
+                    <div class="text-gray-400 font-mono text-[11px] break-all">推移：${trendStr}</div>
+                `;
+            }
         }
 
         function renderWorkouts() {
@@ -233,6 +305,7 @@
 
             if (workouts.length === 0) {
                 if (empty) empty.classList.remove('hidden');
+                updatePickupStats();
                 return;
             }
             if (empty) empty.classList.add('hidden');
@@ -244,8 +317,9 @@
             });
 
             const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+            const displayDates = sortedDates.slice(0, visibleDaysCount);
 
-            sortedDates.forEach(dateStr => {
+            displayDates.forEach(dateStr => {
                 const dayItems = grouped[dateStr];
                 
                 let totalVolume = 0;
@@ -264,7 +338,7 @@
                 let header = `
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-sm font-bold text-orange-400">📅 ${formatDate(dateStr)}</span>
+                            <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
                             <span class="text-xs bg-gray-900 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-lg font-mono">総負荷: ${formattedVolume}kg</span>
                             <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-orange-300 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
                                 <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
@@ -311,6 +385,22 @@
                 card.innerHTML = header + body;
                 list.appendChild(card);
             });
+
+            if (sortedDates.length > visibleDaysCount) {
+                const moreBtn = document.createElement('button');
+                moreBtn.type = 'button';
+                moreBtn.onclick = loadMoreDays;
+                moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-orange-400 text-sm font-bold rounded-xl border border-gray-700 shadow transition active:scale-[0.98]';
+                moreBtn.textContent = '＋ さらに過去の履歴を表示';
+                list.appendChild(moreBtn);
+            }
+
+            updatePickupStats();
+        }
+
+        function loadMoreDays() {
+            visibleDaysCount += 5;
+            renderWorkouts();
         }
 
         function toggleDayAccordion(headerElem) {
@@ -398,7 +488,7 @@
             }
 
             localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-                        resetForm();
+            resetForm();
             renderWorkouts();
             nameInput.focus();
         }
