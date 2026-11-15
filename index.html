@@ -275,7 +275,7 @@
             const target = workouts.find(i => i.id === id);
             if (!target) return;
             editingId = id;
-            document.getElementById('formTitle').textContent = 'トレーニング記録（編集中）';
+            document.getElementById('formTitle').textContent = '編集中';
             document.getElementById('saveBtn').textContent = '更新';
             document.getElementById('cancelEditBtn').classList.remove('hidden');
             document.getElementById('exerciseName').value = target.name;
