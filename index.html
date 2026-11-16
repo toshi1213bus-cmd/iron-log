@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-6">
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-4">
 
     <!-- 最上段タブ切り替えバー -->
     <div class="flex bg-gray-800 border border-gray-700 rounded-2xl p-1 shadow-md">
@@ -24,13 +24,28 @@
 
     <!-- ================= 1. トレーニング記録タブ ================= -->
     <div id="tabContentWorkout" class="space-y-6">
+        
+        <!-- インターバルタイマーバー（※トレーニングタブの中だけに配置） -->
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl px-4 py-2.5 shadow-md flex justify-between items-center">
+            <div class="flex items-center gap-2 font-mono text-sm font-bold text-orange-400">
+                <span>⏱</span>
+                <span id="timerDisplay">00:00</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                <button type="button" onclick="startTimer(3)" class="px-2.5 py-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs font-bold text-gray-200 transition">3分</button>
+                <button type="button" onclick="startTimer(2)" class="px-2.5 py-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs font-bold text-gray-200 transition">2分</button>
+                <button type="button" onclick="startTimer(1)" class="px-2.5 py-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs font-bold text-gray-200 transition">1分</button>
+                <button type="button" onclick="stopTimer()" class="px-2 py-1 bg-gray-900 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs font-bold text-gray-400 hover:text-red-400 transition">✕</button>
+            </div>
+        </div>
+
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg">
+            <div id="formHeaderContainer"></div>
             
             <div class="mb-4 relative">
                 <label class="block text-xs text-gray-400 mb-1">種目名</label>
                 <input type="text" id="exerciseName" placeholder="入力" oninput="checkExerciseSuggestion()"
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
-                <!-- 絵文字なし・日付と種目名だけのクリーンなサジェストリスト -->
                 <div id="suggestionBox" class="hidden absolute left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden"></div>
             </div>
 
@@ -131,7 +146,6 @@
             </div>
         </div>
     </div>
-
     <script>
         function sanitizeWorkouts(rawWorkouts) {
             if (!Array.isArray(rawWorkouts)) return [];
@@ -171,12 +185,96 @@
             });
             return Array.from(uniqueMap.values());
         }
+
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let cardios = sanitizeCardios(JSON.parse(localStorage.getItem('simple_cardios')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
         let editingId = null;
         let visibleDaysCount = 5;
         let visibleCardioDaysCount = 5;
+
+        // タイマー＆アラーム継続ロジック（AudioContext使い回し版）
+        let timerInterval = null;
+        let alarmInterval = null;
+        let targetEndTime = null;
+        let sharedAudioCtx = null;
+
+        function getAudioContext() {
+            if (!sharedAudioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                sharedAudioCtx = new AudioContextClass();
+            }
+            if (sharedAudioCtx.state === 'suspended') {
+                sharedAudioCtx.resume();
+            }
+            return sharedAudioCtx;
+        }
+
+        function startTimer(minutes) {
+            stopTimer();
+            targetEndTime = Date.now() + minutes * 60 * 1000;
+            updateTimerDisplay();
+            timerInterval = setInterval(updateTimerDisplay, 200);
+        }
+
+        function updateTimerDisplay() {
+            if (!targetEndTime) return;
+            const now = Date.now();
+            const diff = targetEndTime - now;
+
+            if (diff <= 0) {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                targetEndTime = null;
+                document.getElementById('timerDisplay').textContent = '00:00';
+                
+                if (!alarmInterval) {
+                    playSingleBeep();
+                    alarmInterval = setInterval(playSingleBeep, 400);
+                }
+                return;
+            }
+
+            const totalSec = Math.ceil(diff / 1000);
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            document.getElementById('timerDisplay').textContent = 
+                String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            if (alarmInterval) {
+                clearInterval(alarmInterval);
+                alarmInterval = null;
+            }
+            targetEndTime = null;
+            const display = document.getElementById('timerDisplay');
+            if (display) display.textContent = '00:00';
+        }
+
+        function playSingleBeep() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {
+                console.log(e);
+            }
+        }
 
         function switchTab(tabName) {
             const wContent = document.getElementById('tabContentWorkout');
@@ -206,7 +304,7 @@
             }
         }
 
-        // 入力文字に合致する過去の履歴をリアルタイム絞り込み（前方一致・各種目最新1件のみ）
+        // 前方一致・種目ごとに最新1件のみのサジェスト
         function checkExerciseSuggestion() {
             const query = document.getElementById('exerciseName').value.trim().toLowerCase();
             const box = document.getElementById('suggestionBox');
@@ -218,16 +316,12 @@
                 return;
             }
 
-            // ① 全ワークアウトを新しい順（ID降順）にソート
             const sortedWorkouts = [...workouts].sort((a, b) => Number(b.id) - Number(a.id));
-
             const matched = [];
-            const seenNames = new Set(); // 既に抽出した種目名をメモする用（最新1件のみにするため）
+            const seenNames = new Set();
 
             for (const workout of sortedWorkouts) {
-                // ② 「前方一致（startsWith）」で判定
                 if (workout.name.toLowerCase().startsWith(query)) {
-                    // ③ まだ結果リストに入っていない種目名（＝その種目の最新1件目）なら追加
                     if (!seenNames.has(workout.name)) {
                         seenNames.add(workout.name);
                         matched.push(workout);
@@ -241,7 +335,6 @@
                 return;
             }
 
-            // 最大5件までに制限
             const displayItems = matched.slice(0, 5);
             let html = '';
 
@@ -258,18 +351,14 @@
             box.innerHTML = html;
         }
 
-        // サジェストをタップした時：過去データを「借りてきて（コピーして）」新規フォームに展開する
         function applySuggestion(id) {
             const target = workouts.find(i => i.id === id);
             if (!target) return;
 
-            // 種目名を入力欄にセット
             document.getElementById('exerciseName').value = target.name;
-            // サジェスト枠を非表示にする
             document.getElementById('suggestionBox').classList.add('hidden');
             document.getElementById('suggestionBox').innerHTML = '';
 
-            // セット行をクリアして、そのデータのセットをコピー展開
             const container = document.getElementById('setsContainer');
             container.innerHTML = '';
             target.setList.forEach(set => addSetRow(set.weight, set.reps));
@@ -321,6 +410,8 @@
             document.getElementById('exerciseName').value = '';
             document.getElementById('suggestionBox').classList.add('hidden');
             document.getElementById('suggestionBox').innerHTML = '';
+            document.getElementById('formHeaderContainer').innerHTML = '';
+            document.getElementById('saveBtn').textContent = '保存';
             const container = document.getElementById('setsContainer');
             if (!container) return;
             container.innerHTML = `
@@ -343,6 +434,15 @@
             if (!target) return;
             editingId = id;
             document.getElementById('suggestionBox').classList.add('hidden');
+            
+            document.getElementById('formHeaderContainer').innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-semibold text-gray-200 uppercase tracking-wider">編集中</h2>
+                    <button type="button" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
+                </div>
+            `;
+            document.getElementById('saveBtn').textContent = '更新';
+
             document.getElementById('exerciseName').value = target.name;
             const container = document.getElementById('setsContainer');
             container.innerHTML = '';
@@ -350,7 +450,6 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
             document.getElementById('exerciseName').focus();
         }
-
         function formatDate(dateStr) {
             const [y, m, d] = dateStr.split('-');
             return `${parseInt(m)}/${parseInt(d)}`;
@@ -401,6 +500,7 @@
                 `;
             }
         }
+
         function renderWorkouts() {
             const list = document.getElementById('workoutList');
             const empty = document.getElementById('emptyMessage');
@@ -730,7 +830,7 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
+            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '#' + '39;', '"': '&quot;' }[t] || t));
         }
 
         renderWorkouts();
