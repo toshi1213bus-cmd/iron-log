@@ -24,19 +24,17 @@
 
     <!-- ================= 1. トレーニング記録タブ ================= -->
     <div id="tabContentWorkout" class="space-y-6">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
-            <div id="formHeader" class="flex justify-between items-center hidden">
-                <h2 id="formTitle" class="text-sm font-semibold text-gray-200 uppercase tracking-wider"></h2>
-                <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
-            </div>
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg">
+            <!-- 編集時のみここにタイトルとキャンセルボタンが挿入されます（通常時は完全な空白なし） -->
+            <div id="formHeaderContainer"></div>
             
-            <div>
+            <div class="mb-4">
                 <label class="block text-xs text-gray-400 mb-1">種目名</label>
                 <input type="text" id="exerciseName" placeholder="入力" 
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
             </div>
 
-            <div class="space-y-2">
+            <div class="space-y-2 mb-4">
                 <span class="block text-xs text-gray-400">セット</span>
                 <div id="setsContainer" class="space-y-2">
                     <div class="set-row flex items-center gap-2">
@@ -252,9 +250,8 @@
         function resetForm() {
             editingId = null;
             document.getElementById('exerciseName').value = '';
-            document.getElementById('formTitle').textContent = '';
             document.getElementById('saveBtn').textContent = '保存';
-            document.getElementById('formHeader').classList.add('hidden');
+            document.getElementById('formHeaderContainer').innerHTML = '';
             const container = document.getElementById('setsContainer');
             if (!container) return;
             container.innerHTML = `
@@ -276,9 +273,13 @@
             const target = workouts.find(i => i.id === id);
             if (!target) return;
             editingId = id;
-            document.getElementById('formTitle').textContent = '編集中';
+            document.getElementById('formHeaderContainer').innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-sm font-semibold text-gray-200 uppercase tracking-wider">編集中</h2>
+                    <button type="button" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
+                </div>
+            `;
             document.getElementById('saveBtn').textContent = '更新';
-            document.getElementById('formHeader').classList.remove('hidden');
             document.getElementById('exerciseName').value = target.name;
             const container = document.getElementById('setsContainer');
             container.innerHTML = '';
