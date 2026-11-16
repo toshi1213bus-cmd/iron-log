@@ -206,7 +206,7 @@
             }
         }
 
-        // 入力文字に合致する過去の履歴をリアルタイム絞り込み（絵文字なし・日付と種目名のみ）
+        // 入力文字に合致する過去の履歴をリアルタイム絞り込み（前方一致・各種目最新1件のみ）
         function checkExerciseSuggestion() {
             const query = document.getElementById('exerciseName').value.trim().toLowerCase();
             const box = document.getElementById('suggestionBox');
@@ -218,30 +218,34 @@
                 return;
             }
 
-            // ユニークな種目×日付の組み合わせを抽出（または同名種目の履歴）
-            // ここでは入力文字に部分一致する種目を新しい順で最大5件ほど抽出
-            const matched = workouts.filter(i => i.name.toLowerCase().includes(query));
+            // ① 全ワークアウトを新しい順（ID降順）にソート
+            const sortedWorkouts = [...workouts].sort((a, b) => Number(b.id) - Number(a.id));
+
+            const matched = [];
+            const seenNames = new Set(); // 既に抽出した種目名をメモする用（最新1件のみにするため）
+
+            for (const workout of sortedWorkouts) {
+                // ② 「前方一致（startsWith）」で判定
+                if (workout.name.toLowerCase().startsWith(query)) {
+                    // ③ まだ結果リストに入っていない種目名（＝その種目の最新1件目）なら追加
+                    if (!seenNames.has(workout.name)) {
+                        seenNames.add(workout.name);
+                        matched.push(workout);
+                    }
+                }
+            }
+
             if (matched.length === 0) {
                 box.classList.add('hidden');
                 box.innerHTML = '';
                 return;
             }
 
-            // 日付が新しい順にソート
-            matched.sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr));
-
-            // 同名・同日の重複を防ぎつつリスト化
-            const seen = new Set();
+            // 最大5件までに制限
+            const displayItems = matched.slice(0, 5);
             let html = '';
-            let count = 0;
 
-            for (const item of matched) {
-                const key = `${item.dateStr}_${item.name}`;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                count++;
-                if (count > 5) break;
-
+            for (const item of displayItems) {
                 html += `
                     <button type="button" onclick="applySuggestion('${item.id}')" class="w-full px-4 py-3 text-left text-xs text-gray-200 hover:bg-gray-800 hover:text-orange-400 border-b border-gray-800 last:border-b-0 transition flex justify-between items-center">
                         <span class="font-bold">${formatDate(item.dateStr)}  ${escapeHtml(item.name)}</span>
@@ -250,13 +254,8 @@
                 `;
             }
 
-            if (html === '') {
-                box.classList.add('hidden');
-                box.innerHTML = '';
-            } else {
-                box.classList.remove('hidden');
-                box.innerHTML = html;
-            }
+            box.classList.remove('hidden');
+            box.innerHTML = html;
         }
 
         // サジェストをタップした時：過去データを「借りてきて（コピーして）」新規フォームに展開する
@@ -266,7 +265,7 @@
 
             // 種目名を入力欄にセット
             document.getElementById('exerciseName').value = target.name;
-            // サジェスト枠を非閉じる
+            // サジェスト枠を非表示にする
             document.getElementById('suggestionBox').classList.add('hidden');
             document.getElementById('suggestionBox').innerHTML = '';
 
