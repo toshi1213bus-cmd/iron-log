@@ -25,13 +25,13 @@
     <!-- ================= 1. トレーニング記録タブ ================= -->
     <div id="tabContentWorkout" class="space-y-6">
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg">
-            <!-- 編集時のみここにタイトルとキャンセルボタンが挿入されます（通常時は完全な空白なし） -->
-            <div id="formHeaderContainer"></div>
             
-            <div class="mb-4">
+            <div class="mb-4 relative">
                 <label class="block text-xs text-gray-400 mb-1">種目名</label>
-                <input type="text" id="exerciseName" placeholder="入力" 
+                <input type="text" id="exerciseName" placeholder="入力" oninput="checkExerciseSuggestion()"
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
+                <!-- 絵文字なし・日付と種目名だけのクリーンなサジェストリスト -->
+                <div id="suggestionBox" class="hidden absolute left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden"></div>
             </div>
 
             <div class="space-y-2 mb-4">
@@ -206,6 +206,76 @@
             }
         }
 
+        // 入力文字に合致する過去の履歴をリアルタイム絞り込み（絵文字なし・日付と種目名のみ）
+        function checkExerciseSuggestion() {
+            const query = document.getElementById('exerciseName').value.trim().toLowerCase();
+            const box = document.getElementById('suggestionBox');
+            if (!box) return;
+
+            if (!query || editingId !== null) {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+                return;
+            }
+
+            // ユニークな種目×日付の組み合わせを抽出（または同名種目の履歴）
+            // ここでは入力文字に部分一致する種目を新しい順で最大5件ほど抽出
+            const matched = workouts.filter(i => i.name.toLowerCase().includes(query));
+            if (matched.length === 0) {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+                return;
+            }
+
+            // 日付が新しい順にソート
+            matched.sort((a, b) => new Date(b.dateStr) - new Date(a.dateStr));
+
+            // 同名・同日の重複を防ぎつつリスト化
+            const seen = new Set();
+            let html = '';
+            let count = 0;
+
+            for (const item of matched) {
+                const key = `${item.dateStr}_${item.name}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                count++;
+                if (count > 5) break;
+
+                html += `
+                    <button type="button" onclick="applySuggestion('${item.id}')" class="w-full px-4 py-3 text-left text-xs text-gray-200 hover:bg-gray-800 hover:text-orange-400 border-b border-gray-800 last:border-b-0 transition flex justify-between items-center">
+                        <span class="font-bold">${formatDate(item.dateStr)}  ${escapeHtml(item.name)}</span>
+                        <span class="text-gray-500 text-[10px]">${item.setList.length}セット</span>
+                    </button>
+                `;
+            }
+
+            if (html === '') {
+                box.classList.add('hidden');
+                box.innerHTML = '';
+            } else {
+                box.classList.remove('hidden');
+                box.innerHTML = html;
+            }
+        }
+
+        // サジェストをタップした時：過去データを「借りてきて（コピーして）」新規フォームに展開する
+        function applySuggestion(id) {
+            const target = workouts.find(i => i.id === id);
+            if (!target) return;
+
+            // 種目名を入力欄にセット
+            document.getElementById('exerciseName').value = target.name;
+            // サジェスト枠を非閉じる
+            document.getElementById('suggestionBox').classList.add('hidden');
+            document.getElementById('suggestionBox').innerHTML = '';
+
+            // セット行をクリアして、そのデータのセットをコピー展開
+            const container = document.getElementById('setsContainer');
+            container.innerHTML = '';
+            target.setList.forEach(set => addSetRow(set.weight, set.reps));
+        }
+
         function addSetRow(w = '', r = '') {
             const container = document.getElementById('setsContainer');
             if (!container) return;
@@ -250,8 +320,8 @@
         function resetForm() {
             editingId = null;
             document.getElementById('exerciseName').value = '';
-            document.getElementById('saveBtn').textContent = '保存';
-            document.getElementById('formHeaderContainer').innerHTML = '';
+            document.getElementById('suggestionBox').classList.add('hidden');
+            document.getElementById('suggestionBox').innerHTML = '';
             const container = document.getElementById('setsContainer');
             if (!container) return;
             container.innerHTML = `
@@ -273,13 +343,7 @@
             const target = workouts.find(i => i.id === id);
             if (!target) return;
             editingId = id;
-            document.getElementById('formHeaderContainer').innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-sm font-semibold text-gray-200 uppercase tracking-wider">編集中</h2>
-                    <button type="button" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
-                </div>
-            `;
-            document.getElementById('saveBtn').textContent = '更新';
+            document.getElementById('suggestionBox').classList.add('hidden');
             document.getElementById('exerciseName').value = target.name;
             const container = document.getElementById('setsContainer');
             container.innerHTML = '';
