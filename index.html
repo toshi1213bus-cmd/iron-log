@@ -102,7 +102,7 @@
         <div class="space-y-3">
             <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">今月合計</h2>
             <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 shadow">
-                <div id="monthlyCardioSummary" class="text-xs text-orange-300 font-bold">0分 / 約0kcal</div>
+                <div id="monthlyCardioSummary" class="text-xs text-orange-300 font-bold font-mono">0分 / 約0kcal</div>
             </div>
         </div>
 
@@ -332,8 +332,8 @@
                 const latestVal = values[values.length - 1];
                 const trendStr = values.join(' ➔ ');
                 container.innerHTML = `
-                    <div class="text-orange-300 font-bold">${config.label}：${latestVal}</div>
-                    <div class="text-gray-400 font-mono text-[11px] break-all">推移：${trendStr}</div>
+                    <div class="text-orange-300 font-bold">${config.label}：<span class="font-mono">${latestVal}</span></div>
+                    <div class="text-gray-400 font-mono text-[11px] break-all">${trendStr}</div>
                 `;
             }
         }
@@ -374,9 +374,9 @@
 
                 let header = `
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
-                        <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-2.5 flex-wrap">
                             <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-                            <span class="text-xs bg-gray-900 border border-gray-700 text-gray-300 px-2 py-0.5 rounded-lg font-mono">総負荷: ${formattedVolume}kg</span>
+                            <span class="text-xs text-gray-300 font-mono">総負荷: ${formattedVolume}kg</span>
                             <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-orange-300 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
                                 <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
                                 <option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
@@ -393,8 +393,8 @@
                     const setsHtml = item.setList.map((s, idx) => `
                         <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
                             <span class="text-gray-500 w-4">${idx + 1}.</span>
-                            <span class="text-orange-300">${s.weight} kg</span> × 
-                            <span class="text-orange-300">${s.reps} 回</span>
+                            <span class="text-orange-300 font-mono">${s.weight} kg</span> × 
+                            <span class="text-orange-300 font-mono">${s.reps} 回</span>
                         </div>
                     `).join('');
 
@@ -597,9 +597,9 @@
                 const div = document.createElement('div');
                 div.className = 'bg-gray-800 border border-gray-700 rounded-xl p-3 flex justify-between items-center shadow';
                 div.innerHTML = `
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2.5">
                         <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-                        <span class="text-sm font-bold text-white">${dayCardio.minutes}分 <span class="text-xs text-gray-400 font-normal">(約${dayKcal}kcal)</span></span>
+                        <span class="text-xs text-gray-300 font-mono">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
                     </div>
                     <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
                 `;
