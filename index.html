@@ -180,13 +180,13 @@
                 const rawSets = item.setList || [];
                 if (Array.isArray(rawSets)) {
                     setList = rawSets.map(set => ({
-                        weight: Number(set.weight !== undefined ? set.weight : set.体重) || 0,
-                        reps: Number(set.reps !== undefined ? set.reps : set.回数) || 0
+                        weight: Number(set.weight) || 0,
+                        reps: Number(set.reps) || 0
                     }));
                 }
                 uniqueMap.set(id, {
                     id: String(id),
-                    name: String(item.name || item.名前 || '不明な種目'),
+                    name: String(item.name || '不明な種目'),
                     dateStr: String(item.dateStr || '2026-01-01'),
                     setList: setList
                 });
