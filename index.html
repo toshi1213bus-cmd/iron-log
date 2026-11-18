@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPL</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
+
+    <!-- PWA用マニフェスト（スマホのホーム画面起動対応） -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PPL">
+    
+    <!-- Android用（フルスクリーン表示） -->
+    <meta name="mobile-web-app-capable" content="yes">
 </head>
-<style>
-    /* ページ全体およびすべてのフォーム部品に強制適用 */
-    html, body, div, span, input, button, select, textarea {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-        -webkit-appearance: none; /* スマホ特有のデフォルトデザインをリセット */
-    }
-</style>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-4">
 
     <!-- 最上段タブ切り替えバー -->
@@ -104,7 +104,7 @@
             <div class="space-y-2.5">
                 <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月(先月)合計</h2>
                 <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 shadow">
-                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0(0)回 / Pull: 0(0)回 / Leg: 0(0)回 / Other: 0(0)回</div>
+                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0(0)回 / Pull: 0(0)回 / Legs: 0(0)回 / Other: 0(0)回</div>
                 </div>
             </div>
 
