@@ -7,9 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="theme-color" content="#111827">
     <style>
-        /* アプリ全体のすべてのフォント・数字を等幅（Monospace）に完全統一 */
-        body, input, button, select, textarea {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        /* 英数字と日本語のフォントを完全に同じゴシック体（サンセリフ）に統一 */
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif !important;
+            font-variant-numeric: proportional-nums !important;
         }
     </style>
 </head>
@@ -31,7 +32,7 @@
     <!-- ================= 1. トレーニング記録タブ ================= -->
     <div id="tabContentWorkout" class="space-y-5">
         
-        <!-- インターバルタイマー（縦2段・大型化・常駐） -->
+        <!-- インターバルタイマー（常駐） -->
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-md space-y-3">
             <div class="flex items-center justify-center gap-2 text-xl font-bold text-orange-400">
                 <span>⏱</span>
