@@ -27,7 +27,7 @@
         
         <!-- インターバルタイマー（縦2段・大型化・常駐） -->
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-md space-y-3">
-            <div class="flex items-center justify-center gap-2 font-mono text-xl font-bold text-orange-400">
+            <div class="flex items-center justify-center gap-2 text-xl font-bold text-orange-400">
                 <span>⏱</span>
                 <span id="timerDisplay">00:00</span>
             </div>
@@ -97,7 +97,7 @@
             <div class="space-y-2.5">
                 <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月(先月)合計</h2>
                 <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 shadow">
-                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold font-mono tracking-tight">Push: 0(0)回 / Pull: 0(0)回 / Leg: 0(0)回 / Other: 0(0)回</div>
+                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0(0)回 / Pull: 0(0)回 / Leg: 0(0)回 / Other: 0(0)回</div>
                 </div>
             </div>
 
@@ -138,7 +138,7 @@
         <div class="space-y-3">
             <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月(先月)合計</h2>
             <div class="bg-gray-800 border border-gray-700 rounded-xl p-3.5 shadow">
-                <div id="monthlyCardioSummary" class="text-[11px] text-white font-bold font-mono tracking-tight">回数: 0(0)回 / 時間: 0(0)分 / 消費: 約0(0)kcal</div>
+                <div id="monthlyCardioSummary" class="text-[11px] text-white font-bold tracking-tight">回数: 0(0)回 / 時間: 0(0)分 / 消費: 約0(0)kcal</div>
             </div>
         </div>
 
@@ -162,7 +162,7 @@
             </div>
             <div class="space-y-2 pt-4 border-t border-gray-700">
                 <textarea id="importText" rows="4" placeholder="JSON貼り付け" 
-                    class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-orange-500"></textarea>
+                    class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500"></textarea>
                 <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
                     復元実行
                 </button>
@@ -564,8 +564,8 @@
                 const latestVal = values[values.length - 1];
                 const trendStr = values.join(' ➔ ');
                 container.innerHTML = `
-                    <div class="text-gray-300 font-bold">${config.label}：<span class="font-mono text-white">${latestVal}</span></div>
-                    <div class="text-white font-mono text-[11px] break-all">${trendStr}</div>
+                    <div class="text-gray-300 font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
+                    <div class="text-white text-[11px] break-all">${trendStr}</div>
                 `;
             }
         }
@@ -611,7 +611,7 @@
                     <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
                         <div class="flex items-center gap-2.5 flex-wrap">
                             <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-                            <span class="text-xs text-white font-mono font-bold">総負荷: <span class="font-mono text-white">${formattedVolume}</span>kg</span>
+                            <span class="text-xs text-white font-bold">総負荷: <span class="text-white">${formattedVolume}</span>kg</span>
                             <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
                                 <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
                                 <option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
@@ -628,8 +628,8 @@
                     const setsHtml = item.setList.map((s, idx) => `
                         <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
                             <span class="text-gray-500 w-4">${idx + 1}.</span>
-                            <span class="text-white font-mono">${s.weight} kg</span> × 
-                            <span class="text-white font-mono">${s.reps} 回</span>
+                            <span class="text-white">${s.weight} kg</span> × 
+                            <span class="text-white">${s.reps} 回</span>
                         </div>
                     `).join('');
 
@@ -843,11 +843,10 @@
                 const dayKcal = Math.round(dayCardio.minutes * 3.5);
                 const div = document.createElement('div');
                 div.className = 'bg-gray-800 border border-gray-700 rounded-xl p-3 flex justify-between items-center shadow';
-                // 修正：テキスト全体を font-mono で囲みました
                 div.innerHTML = `
                     <div class="flex items-center gap-2.5">
                         <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-                        <span class="text-xs text-white font-mono">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
+                        <span class="text-xs text-white">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
                     </div>
                     <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
                 `;
