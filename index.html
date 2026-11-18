@@ -180,13 +180,13 @@
                 const rawSets = item.setList || [];
                 if (Array.isArray(rawSets)) {
                     setList = rawSets.map(set => ({
-                        weight: Number(set.weight !== undefined ? set.weight : set.体重) || 0,
-                        reps: Number(set.reps !== undefined ? set.reps : set.回数) || 0
+                        weight: Number(set.weight) || 0,
+                        reps: Number(set.reps) || 0
                     }));
                 }
                 uniqueMap.set(id, {
                     id: String(id),
-                    name: String(item.name || item.名前 || '不明な種目'),
+                    name: String(item.name || '不明な種目'),
                     dateStr: String(item.dateStr || '2026-01-01'),
                     setList: setList
                 });
@@ -843,6 +843,7 @@
                 const dayKcal = Math.round(dayCardio.minutes * 3.5);
                 const div = document.createElement('div');
                 div.className = 'bg-gray-800 border border-gray-700 rounded-xl p-3 flex justify-between items-center shadow';
+                // 修正：テキスト全体を font-mono で囲みました
                 div.innerHTML = `
                     <div class="flex items-center gap-2.5">
                         <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
