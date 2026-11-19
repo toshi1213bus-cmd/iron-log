@@ -18,15 +18,15 @@
             有酸素
         </button>
         <button type="button" onclick="switchTab('settings')" id="tabBtnSettings" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
-            設定
+            比較/設定
         </button>
     </div>
 
     <!-- ================= 1. トレーニング記録タブ ================= -->
-    <div id="tabContentWorkout" class="space-y-5">
+    <div id="tabContentWorkout" class="space-y-4">
         
         <!-- インターバルタイマー（常駐） -->
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-md space-y-3">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-md space-y-2.5">
             <div class="flex items-center justify-center gap-2 text-xl font-bold text-orange-400">
                 <span>⏱</span>
                 <span id="timerDisplay">00:00</span>
@@ -40,19 +40,19 @@
         </div>
 
         <!-- 入力フォーム（常駐） -->
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg">
             <div id="formHeaderContainer"></div>
             
-            <div class="mb-4 relative">
-                <label class="block text-xs text-gray-400 mb-1">種目名</label>
+            <div class="mb-2.5 relative">
+                <label class="block text-xs text-gray-400 mb-0.5">種目名</label>
                 <input type="text" id="exerciseName" placeholder="入力" oninput="checkExerciseSuggestion()"
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
                 <div id="suggestionBox" class="hidden absolute left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden"></div>
             </div>
 
-            <div class="space-y-2 mb-4">
+            <div class="space-y-1.5">
                 <span class="block text-xs text-gray-400">セット</span>
-                <div id="setsContainer" class="space-y-2">
+                <div id="setsContainer" class="space-y-1.5">
                     <div class="set-row flex items-center gap-2">
                         <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
                         <input type="number" step="0.5" placeholder="kg" inputmode="decimal" autocapitalize="off" autocomplete="off" autocorrect="off"
@@ -63,14 +63,16 @@
                         <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
                     </div>
                 </div>
-                <button type="button" onclick="addSetRow()" class="w-full py-2.5 border border-dashed border-gray-600 hover:border-orange-400 text-gray-300 hover:text-orange-400 rounded-xl text-sm font-medium transition">
-                    ＋ セット
-                </button>
-            </div>
 
-            <button type="button" id="saveBtn" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
-                保存
-            </button>
+                <div class="pt-1 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+                    <button type="button" onclick="addSetRow()" class="w-full py-2.5 text-gray-300 hover:text-orange-400 hover:bg-gray-800/70 text-sm font-medium transition">
+                        ＋ セット
+                    </button>
+                    <button type="button" id="saveBtn" onclick="saveWorkout()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
+                        保存
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- サブタブ切り替えバー＋下部コンテンツ密着グループ -->
@@ -81,7 +83,7 @@
                     履歴
                 </button>
                 <button type="button" onclick="switchWorkoutSubTab('stats')" id="subTabBtnStats" class="flex-1 py-2 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
-                    今(先月)合計/推移
+                    今月合計/推移
                 </button>
             </div>
 
@@ -96,11 +98,11 @@
                 </div>
             </div>
 
-            <!-- サブコンテンツ2：今(先月)合計/推移 -->
+            <!-- サブコンテンツ2：今月合計/推移 -->
             <div id="subTabContentStats" class="hidden">
                 <!-- 切り替えカード直下の合計（横線なし） -->
                 <div class="p-3.5">
-                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0(0)回 / Pull: 0(0)回 / Legs: 0(0)回 / Other: 0(0)回</div>
+                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0回 / Pull: 0回 / Legs: 0回 / Other: 0回</div>
                 </div>
                 <!-- 合計と基本種目推移の間（横線あり） -->
                 <div class="divide-y divide-gray-700 border-t border-gray-700">
@@ -122,23 +124,23 @@
     </div>
 
     <!-- ================= 2. 有酸素タブ ================= -->
-    <div id="tabContentCardio" class="space-y-5 hidden">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
-            <div>
-                <label class="block text-xs text-gray-400 mb-1">時間 (分)</label>
+    <div id="tabContentCardio" class="space-y-4 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg">
+            <label class="block text-xs text-gray-400 mb-0.5">時間 (分)</label>
+            <div class="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
                 <input type="number" id="cardioMinutes" placeholder="入力" inputmode="numeric"
-                    class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
+                    class="w-full bg-gray-900 px-4 py-3 text-white text-center focus:outline-none">
+                <button type="button" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
+                    保存
+                </button>
             </div>
-            <button type="button" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md transition active:scale-[0.98]">
-                保存
-            </button>
         </div>
 
         <div class="space-y-2.5">
-            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今(先月)合計/履歴</h2>
+            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月合計</h2>
             <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow overflow-hidden">
                 <div class="p-3.5">
-                    <div id="monthlyCardioSummary" class="text-[11px] text-white font-bold tracking-tight">回数: 0(0)回 / 時間: 0(0)分 / 消費: 約0(0)kcal</div>
+                    <div id="monthlyCardioSummary" class="text-[11px] text-white font-bold tracking-tight">回数: 0回 / 時間: 0分 / 消費: 約0kcal</div>
                 </div>
                 <div id="cardioListWrapper" class="border-t border-gray-700 hidden">
                     <div id="cardioList" class="divide-y divide-gray-700"></div>
@@ -151,16 +153,24 @@
         </div>
     </div>
 
-    <!-- ================= 3. 設定タブ ================= -->
-    <div id="tabContentSettings" class="space-y-6 hidden">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-4 shadow-lg space-y-4">
+    <!-- ================= 3. 比較/設定タブ ================= -->
+    <div id="tabContentSettings" class="space-y-4 hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-2.5">
+            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月 / 先月ポイント比較</h2>
+            <div class="bg-gray-900 border border-gray-700 rounded-xl divide-y divide-gray-700">
+                <div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">トレ：今月 0pt / 先月 0pt</div>
+                <div id="compareCardioPoints" class="p-3 text-xs font-bold text-white">有酸素：今月 0pt / 先月 0pt</div>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-3">
             <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力/復元</h2>
-            <div class="space-y-2 pt-2">
+            <div class="space-y-2 pt-1">
                 <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
                     出力 (JSON)
                 </button>
             </div>
-            <div class="space-y-2 pt-4 border-t border-gray-700">
+            <div class="space-y-2 pt-3 border-t border-gray-700">
                 <textarea id="importText" rows="4" placeholder="JSON貼り付け" 
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500"></textarea>
                 <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -479,7 +489,7 @@
             document.getElementById('suggestionBox').classList.add('hidden');
             
             document.getElementById('formHeaderContainer').innerHTML = `
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-2.5">
                     <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">編集中</h2>
                     <button type="button" onclick="cancelEdit()" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
                 </div>
@@ -507,7 +517,7 @@
 
         function updateMonthlyWorkoutSummary() {
             const summaryElem = document.getElementById('monthlyWorkoutSummary');
-            if (!summaryElem) return;
+            const compareWorkoutElem = document.getElementById('compareWorkoutPoints');
 
             const now = new Date();
             const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -516,19 +526,27 @@
             const lastYearMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
             let counts = { PUSH: 0, PULL: 0, LEGS: 0, OTHER: 0 };
-            let lastCounts = { PUSH: 0, PULL: 0, LEGS: 0, OTHER: 0 };
+            let currentWorkoutCount = 0;
+            let lastWorkoutCount = 0;
 
             const activeDates = new Set(workouts.map(i => i.dateStr));
             activeDates.forEach(dateStr => {
                 const ppl = dayPplMap[dateStr] || 'PUSH';
                 if (dateStr.startsWith(currentYearMonth)) {
                     if (counts[ppl] !== undefined) counts[ppl]++;
+                    currentWorkoutCount++;
                 } else if (dateStr.startsWith(lastYearMonth)) {
-                    if (lastCounts[ppl] !== undefined) lastCounts[ppl]++;
+                    lastWorkoutCount++;
                 }
             });
 
-            summaryElem.textContent = `Push: ${counts.PUSH}(${lastCounts.PUSH})回 / Pull: ${counts.PULL}(${lastCounts.PULL})回 / Leg: ${counts.LEGS}(${lastCounts.LEGS})回 / Other: ${counts.OTHER}(${lastCounts.OTHER})回`;
+            if (summaryElem) {
+                summaryElem.textContent = `Push: ${counts.PUSH}回 / Pull: ${counts.PULL}回 / Legs: ${counts.LEGS}回 / Other: ${counts.OTHER}回`;
+            }
+
+            if (compareWorkoutElem) {
+                compareWorkoutElem.textContent = `トレ：今月 ${currentWorkoutCount}pt / 先月 ${lastWorkoutCount}pt`;
+            }
         }
         function updatePickupStats() {
             const targets = {
@@ -565,7 +583,7 @@
                 const latestVal = values[values.length - 1];
                 const trendStr = values.join(' ➔ ');
                 container.innerHTML = `
-                    <div class="text-gray-300 font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
+                    <div class="text-white font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
                     <div class="text-white text-[11px] break-all">${trendStr}</div>
                 `;
             }
@@ -811,6 +829,7 @@
             const moreContainer = document.getElementById('cardioMoreContainer');
             const empty = document.getElementById('emptyCardioMessage');
             const summary = document.getElementById('monthlyCardioSummary');
+            const compareCardioElem = document.getElementById('compareCardioPoints');
             if (!list || !wrapper) return;
             list.innerHTML = '';
             if (moreContainer) moreContainer.innerHTML = '';
@@ -824,16 +843,16 @@
             const lastMonthlyItems = cardios.filter(i => i.dateStr.startsWith(lastYearMonth));
 
             const totalCount = monthlyItems.length;
-            const lastTotalCount = lastMonthlyItems.length;
-
             const totalMin = monthlyItems.reduce((sum, i) => sum + i.minutes, 0);
             const lastTotalMin = lastMonthlyItems.reduce((sum, i) => sum + i.minutes, 0);
-
             const totalKcal = Math.round(totalMin * 3.5);
-            const lastTotalKcal = Math.round(lastTotalMin * 3.5);
 
             if (summary) {
-                summary.textContent = `回数: ${totalCount}(${lastTotalCount})回 / 時間: ${totalMin}(${lastTotalMin})分 / 消費: 約${totalKcal}(${lastTotalKcal})kcal`;
+                summary.textContent = `回数: ${totalCount}回 / 時間: ${totalMin}分 / 消費: 約${totalKcal}kcal`;
+            }
+
+            if (compareCardioElem) {
+                compareCardioElem.textContent = `有酸素：今月 ${totalMin}pt / 先月 ${lastTotalMin}pt`;
             }
 
             if (cardios.length === 0) {
