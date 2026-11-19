@@ -102,21 +102,21 @@
             <div id="subTabContentStats" class="hidden">
                 <!-- 切り替えカード直下の合計（横線なし） -->
                 <div class="p-3.5">
-                    <div id="monthlyWorkoutSummary" class="text-[11px] text-white font-bold tracking-tight">Push: 0回 / Pull: 0回 / Legs: 0回 / Other: 0回</div>
+                    <div id="monthlyWorkoutSummary" class="text-xs text-white font-bold tracking-tight">Push: 0回 / Pull: 0回 / Legs: 0回 / Other: 0回</div>
                 </div>
                 <!-- 合計と基本種目推移の間（横線あり） -->
                 <div class="divide-y divide-gray-700 border-t border-gray-700">
                     <div class="p-3.5 space-y-0.5">
-                        <div id="pickupPush" class="space-y-0.5 text-xs"><div class="text-white">PUSH (ベンチプレス) : データなし</div></div>
+                        <div id="pickupPush" class="space-y-0.5 text-xs"><div class="text-white text-xs">PUSH (ベンチプレス) : データなし</div></div>
                     </div>
                     <div class="p-3.5 space-y-0.5">
-                        <div id="pickupPull" class="space-y-0.5 text-xs"><div class="text-white">PULL (ワイドラット) : データなし</div></div>
+                        <div id="pickupPull" class="space-y-0.5 text-xs"><div class="text-white text-xs">PULL (ワイドラット) : データなし</div></div>
                     </div>
                     <div class="p-3.5 space-y-0.5">
-                        <div id="pickupLegs" class="space-y-0.5 text-xs"><div class="text-white">LEGS (ブルガリアン) : データなし</div></div>
+                        <div id="pickupLegs" class="space-y-0.5 text-xs"><div class="text-white text-xs">LEGS (ブルガリアン) : データなし</div></div>
                     </div>
                     <div class="p-3.5 space-y-0.5">
-                        <div id="pickupOther" class="space-y-0.5 text-xs"><div class="text-white">OTHER (レッグレイズ) : データなし</div></div>
+                        <div id="pickupOther" class="space-y-0.5 text-xs"><div class="text-white text-xs">OTHER (レッグレイズ) : データなし</div></div>
                     </div>
                 </div>
             </div>
@@ -140,7 +140,7 @@
             <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月合計</h2>
             <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow overflow-hidden">
                 <div class="p-3.5">
-                    <div id="monthlyCardioSummary" class="text-[11px] text-white font-bold tracking-tight">回数: 0回 / 時間: 0分 / 消費: 約0kcal</div>
+                    <div id="monthlyCardioSummary" class="text-xs text-white font-bold tracking-tight">回数: 0回 / 時間: 0分 / 消費: 約0kcal</div>
                 </div>
                 <div id="cardioListWrapper" class="border-t border-gray-700 hidden">
                     <div id="cardioList" class="divide-y divide-gray-700"></div>
@@ -561,7 +561,7 @@
                 if (!container) continue;
                 const matchedItems = workouts.filter(item => item.name.trim() === config.name);
                 if (matchedItems.length === 0) {
-                    container.innerHTML = `<div class="text-white text-[11px]">${config.label.slice(0,4)} (${config.name}) : データなし</div>`;
+                    container.innerHTML = `<div class="text-white text-xs">${config.label.slice(0,4)} (${config.name}) : データなし</div>`;
                     continue;
                 }
                 const dateMap = {};
@@ -583,8 +583,8 @@
                 const latestVal = values[values.length - 1];
                 const trendStr = values.join(' ➔ ');
                 container.innerHTML = `
-                    <div class="text-white font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
-                    <div class="text-white text-[11px] break-all">${trendStr}</div>
+                    <div class="text-white text-xs font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
+                    <div class="text-white text-xs break-all">${trendStr}</div>
                 `;
             }
         }
