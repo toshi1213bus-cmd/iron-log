@@ -1,0 +1,277 @@
+/* iron-log theme: 高級感ある硬派（黒 × ゴールド）
+   Tailwindのクラスを上書きするので、JSやHTML本体は変更不要 */
+
+:root {
+  --bg: #0a0a0b;
+  --surface: #131314;
+  --line: #2a2a2c;
+  --text: #ece8dd;
+  --muted: #b8b2a2;
+  --gold: #c9a96a;
+  --gold-hi: #dcc28a;
+  --gold-lo: #b08f55;
+}
+
+body {
+  font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  background: radial-gradient(120% 60% at 50% 0%, #17171a 0%, var(--bg) 60%) fixed;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* ---- 面・線・角丸 ---- */
+body .bg-gray-800 { background: var(--surface); }
+body .bg-gray-900 { background: var(--bg); }
+body .border-gray-700,
+body .border-gray-800 { border-color: var(--line); }
+body .divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }
+body .rounded-2xl { border-radius: 4px; }
+body .rounded-xl,
+body .rounded-lg { border-radius: 3px; }
+body .shadow-md,
+body .shadow-lg,
+body .shadow {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.45);
+}
+
+/* ---- 文字色 ---- */
+body .text-white,
+body .text-gray-100,
+body .text-gray-200 { color: var(--text); }
+body .text-gray-300 { color: #b9b4a6; }
+body .text-gray-400,
+body .text-gray-500 { color: var(--muted); }
+body .text-orange-400 { color: var(--gold); }
+
+/* ---- 見出し（セクションタイトル） ---- */
+body h2.uppercase {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ---- ラベル ---- */
+body label { letter-spacing: 0.12em; font-size: 11px; }
+
+/* ---- タイマー ---- */
+body #timerDisplay {
+  font-family: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+}
+
+/* ---- タブ（選択中は下に金のライン） ---- */
+body .text-orange-400.bg-gray-900 {
+  background: var(--bg);
+  color: var(--gold);
+  box-shadow: inset 0 -2px 0 var(--gold);
+  letter-spacing: 0.12em;
+}
+
+/* ---- 入力欄 ---- */
+body input,
+body textarea,
+body select {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--text);
+}
+body input::placeholder,
+body textarea::placeholder { color: #918d82; }
+body .focus\:border-orange-500:focus,
+body input:focus,
+body textarea:focus,
+body select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(201,169,106,.35);
+}
+
+/* ---- ホバー ---- */
+body .hover\:bg-gray-700:hover { background: #1c1c1e; }
+body .hover\:bg-gray-800:hover,
+body .hover\:bg-gray-800\/70:hover { background: #18181a; }
+body .hover\:text-orange-400:hover { color: var(--gold); }
+body .hover\:text-white:hover { color: var(--text); }
+
+/* ---- メインボタン（保存など）：ゴールド ---- */
+body .bg-orange-500 {
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: #0a0a0b;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+}
+body .hover\:bg-orange-600:hover {
+  background: linear-gradient(180deg, #e6cd95, #bd9a5e);
+}
+
+/* ---- 削除などの✕は控えめな赤 ---- */
+body .hover\:text-red-400:hover { color: #c0605a; }
+
+/* ---- 履歴の日付など ---- */
+body .text-sm.font-bold.text-orange-400 {
+  font-family: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+/* ---- スクロールバー ---- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #2a2a2c; border-radius: 3px; }
+
+/* ---- 操作できる場所を細い金枠で明示 ---- */
+:root { --gold-line: rgba(201,169,106,.6); }
+
+/* 入力欄（種目名・kg・回・貼り付け欄） */
+body input.border,
+body textarea.border {
+  border-color: var(--gold-line);
+}
+body input.border:focus,
+body textarea.border:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+/* 有酸素の分入力・セット追加/保存のまとまり */
+body div.bg-gray-900.border.overflow-hidden {
+  border-color: var(--gold-line);
+}
+
+/* タイマー（3分/2分/1分/✕）・出力・復元実行などのボタン */
+body button.bg-gray-900.border {
+  border-color: var(--gold-line);
+  color: var(--gold);
+  letter-spacing: 0.15em;
+}
+body button.bg-gray-900.border:hover {
+  border-color: var(--gold);
+  background: #1a1a1c;
+}
+
+/* ================= 追加：数字フォント ================= */
+:root { --num: 'Barlow Condensed', 'Noto Sans JP', sans-serif; }
+
+/* 数字は細い条件付きフォント、日本語は自動でNoto Sansにフォールバック */
+body :is(#monthlyWorkoutSummary, #monthlyCardioSummary, #compareWorkoutPoints,
+         #compareCardioPoints, #pickupPush, #pickupPull, #pickupLegs, #pickupOther),
+body :is(#pickupPush, #pickupPull, #pickupLegs, #pickupOther) * {
+  font-family: var(--num);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+body #workoutList span.text-xs,
+body #workoutList div.text-xs,
+body #cardioList span.text-xs {
+  font-family: var(--num);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+body .weight-input,
+body .reps-input,
+body #cardioMinutes {
+  font-family: var(--num);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+/* ================= 追加：▼ → 細いシェブロン ================= */
+body .day-toggle-icon,
+body .ex-toggle-icon {
+  font-size: 0;
+  width: 8px;
+  height: 8px;
+  margin: 0 6px 3px 0;
+  border-right: 1.5px solid var(--gold);
+  border-bottom: 1.5px solid var(--gold);
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+body .day-toggle-icon.is-open,
+body .ex-toggle-icon.is-open {
+  transform: rotate(-135deg);
+  margin-bottom: -3px;
+}
+
+/* ================= 追加：タイマー残り時間バー ================= */
+#timerTrack { height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+#timerBar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi));
+  transition: width .2s linear;
+}
+@keyframes goldPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(201,169,106,0); border-color: var(--line); }
+  50% { box-shadow: 0 0 22px rgba(201,169,106,.45); border-color: var(--gold); }
+}
+body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
+
+/* ================= 追加：トースト ================= */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 12px);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--gold-line);
+  border-radius: 3px;
+  padding: 12px 22px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  box-shadow: 0 10px 28px rgba(0,0,0,.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 100;
+  max-width: 90vw;
+  text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ================= 追加：確認ダイアログ ================= */
+#modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 110;
+}
+.modal-box {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--gold-line);
+  border-radius: 4px;
+  padding: 24px 20px 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.7);
+}
+.modal-box p { text-align: center; font-size: 14px; letter-spacing: 0.1em; color: var(--text); margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  border-radius: 3px;
+  border: 1px solid var(--gold-line);
+  background: var(--bg);
+  color: var(--gold);
+}
+.modal-actions .modal-danger {
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: #0a0a0b;
+  border-color: transparent;
+}
