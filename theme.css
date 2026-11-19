@@ -324,3 +324,18 @@ body #workoutList span.text-xs.ex-toggle-icon {
   font-size: 0;
   letter-spacing: 0;
 }
+
+/* ================= 修正：セット行を左右対称にして中央寄せ ================= */
+/* 左の「1.」と右の✕（非表示でも幅を取る）を同じ幅にして、kg × 回 を真ん中に置く */
+body .set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+body .set-row .set-label { width: auto; text-align: center; }
+body .set-row > button {
+  width: 28px;
+  padding: 0;
+  text-align: center;
+}
