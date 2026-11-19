@@ -275,3 +275,52 @@ body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
   color: #0a0a0b;
   border-color: transparent;
 }
+
+/* ================= 追加：入力フォームのサイズ統一 ================= */
+/* 入力欄はすべて高さ48px・枠1px */
+body input.border,
+body #cardioMinutes,
+body div.bg-gray-900.border.overflow-hidden > input {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body #exerciseName { font-size: 17px; letter-spacing: 0.06em; }
+
+/* プレースホルダー（「入力」「kg」「回」）は全部同じ大きさ・書体 */
+body input::placeholder,
+body textarea::placeholder {
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+
+/* ＋セット／保存（トレーニング・有酸素）は高さ48px・文字サイズも統一 */
+body div.bg-gray-900.border.overflow-hidden { padding-top: 0; }
+body div.bg-gray-900.border.overflow-hidden > button {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+}
+/* 入力欄とボタンの境界線も金に */
+body div.bg-gray-900.border.overflow-hidden > button.border-t { border-color: var(--gold-line); }
+
+/* タイマー・出力・復元ボタンは高さ44px・文字14px */
+body button.bg-gray-900.border {
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+/* ================= 修正：履歴の開閉アイコン（数字フォントの指定に負けていた） ================= */
+body #workoutList span.text-xs.day-toggle-icon,
+body #workoutList span.text-xs.ex-toggle-icon {
+  font-size: 0;
+  letter-spacing: 0;
+}
