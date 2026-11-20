@@ -1,5 +1,5 @@
 /* iron-log theme: 高級感ある硬派（黒 × ゴールド）
-   Tailwindのクラスを上書きするので、JSやHTML本体は変更不要 */
+   Tailwindのクラスを上書きして見た目を作る */
 
 :root {
   --bg: #0a0a0b;
@@ -10,6 +10,8 @@
   --gold: #c9a96a;
   --gold-hi: #dcc28a;
   --gold-lo: #b08f55;
+  --gold-line: rgba(201,169,106,.6);
+  --num: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
 }
 
 body {
@@ -18,8 +20,9 @@ body {
   color: var(--text);
   letter-spacing: 0.02em;
 }
+body.pb-24 { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 
-/* ---- 面・線・角丸 ---- */
+/* ================= 面・線・角丸 ================= */
 body .bg-gray-800 { background: var(--surface); }
 body .bg-gray-900 { background: var(--bg); }
 body .border-gray-700,
@@ -34,7 +37,7 @@ body .shadow {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.45);
 }
 
-/* ---- 文字色 ---- */
+/* ================= 文字色・見出し ================= */
 body .text-white,
 body .text-gray-100,
 body .text-gray-200 { color: var(--text); }
@@ -43,27 +46,43 @@ body .text-gray-400,
 body .text-gray-500 { color: var(--muted); }
 body .text-orange-400 { color: var(--gold); }
 
-/* ---- 見出し（セクションタイトル） ---- */
 body h2.uppercase {
   font-size: 11px;
   letter-spacing: 0.22em;
   color: var(--gold);
   font-weight: 600;
 }
-
-/* ---- ラベル ---- */
 body label { letter-spacing: 0.12em; font-size: 11px; }
 
-/* ---- タイマー ---- */
+/* 履歴・有酸素の日付 */
+body .text-sm.font-bold.text-orange-400 {
+  font-family: var(--num);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+/* ================= タイマー ================= */
 body #timerDisplay {
-  font-family: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+  font-family: var(--num);
   font-weight: 300;
   letter-spacing: 0.1em;
   font-variant-numeric: tabular-nums;
   color: var(--gold);
 }
+#timerTrack { height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+#timerBar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi));
+  transition: width .2s linear;
+}
+@keyframes goldPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(201,169,106,0); border-color: var(--line); }
+  50% { box-shadow: 0 0 22px rgba(201,169,106,.45); border-color: var(--gold); }
+}
+body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
 
-/* ---- タブ（選択中は下に金のライン） ---- */
+/* ================= サブタブ（選択中は下に金のライン） ================= */
 body .text-orange-400.bg-gray-900 {
   background: var(--bg);
   color: var(--gold);
@@ -71,7 +90,7 @@ body .text-orange-400.bg-gray-900 {
   letter-spacing: 0.12em;
 }
 
-/* ---- 入力欄 ---- */
+/* ================= 入力欄 ================= */
 body input,
 body textarea,
 body select {
@@ -80,7 +99,13 @@ body select {
   color: var(--text);
 }
 body input::placeholder,
-body textarea::placeholder { color: #918d82; }
+body textarea::placeholder {
+  color: #918d82;
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
 body .focus\:border-orange-500:focus,
 body input:focus,
 body textarea:focus,
@@ -89,89 +114,25 @@ body select:focus {
   box-shadow: 0 0 0 1px rgba(201,169,106,.35);
 }
 
-/* ---- ホバー ---- */
-body .hover\:bg-gray-700:hover { background: #1c1c1e; }
-body .hover\:bg-gray-800:hover,
-body .hover\:bg-gray-800\/70:hover { background: #18181a; }
-body .hover\:text-orange-400:hover { color: var(--gold); }
-body .hover\:text-white:hover { color: var(--text); }
-
-/* ---- メインボタン（保存など）：ゴールド ---- */
-body .bg-orange-500 {
-  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
-  color: #0a0a0b;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-indent: 0.3em;
-}
-body .hover\:bg-orange-600:hover {
-  background: linear-gradient(180deg, #e6cd95, #bd9a5e);
-}
-
-/* ---- 削除などの✕は控えめな赤 ---- */
-body .hover\:text-red-400:hover { color: #c0605a; }
-
-/* ---- 履歴の日付など ---- */
-body .text-sm.font-bold.text-orange-400 {
-  font-family: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
-  font-size: 16px;
-  letter-spacing: 0.08em;
-}
-
-/* ---- スクロールバー ---- */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: #2a2a2c; border-radius: 3px; }
-
-/* ---- 操作できる場所を細い金枠で明示 ---- */
-:root { --gold-line: rgba(201,169,106,.6); }
-
-/* 入力欄（種目名・kg・回・貼り付け欄） */
+/* 細い金枠＋高さ48pxで統一（種目名・kg・回・貼り付け欄） */
 body input.border,
-body textarea.border {
-  border-color: var(--gold-line);
-}
+body textarea.border { border-color: var(--gold-line); }
 body input.border:focus,
 body textarea.border:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold);
 }
+body input.border,
+body #cardioMinutes,
+body div.bg-gray-900.border.overflow-hidden > input {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body textarea.border { height: auto; }
+body #exerciseName { font-size: 17px; letter-spacing: 0.06em; }
 
-/* 有酸素の分入力・セット追加/保存のまとまり */
-body div.bg-gray-900.border.overflow-hidden {
-  border-color: var(--gold-line);
-}
-
-/* タイマー（3分/2分/1分/✕）・出力・復元実行などのボタン */
-body button.bg-gray-900.border {
-  border-color: var(--gold-line);
-  color: var(--gold);
-  letter-spacing: 0.15em;
-}
-body button.bg-gray-900.border:hover {
-  border-color: var(--gold);
-  background: #1a1a1c;
-}
-
-/* ================= 追加：数字フォント ================= */
-:root { --num: 'Barlow Condensed', 'Noto Sans JP', sans-serif; }
-
-/* 数字は細い条件付きフォント、日本語は自動でNoto Sansにフォールバック */
-body :is(#monthlyWorkoutSummary, #monthlyCardioSummary, #compareWorkoutPoints,
-         #compareCardioPoints, #pickupPush, #pickupPull, #pickupLegs, #pickupOther),
-body :is(#pickupPush, #pickupPull, #pickupLegs, #pickupOther) * {
-  font-family: var(--num);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-}
-body #workoutList span.text-xs,
-body #workoutList div.text-xs,
-body #cardioList span.text-xs {
-  font-family: var(--num);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-}
+/* 数字は細い条件付きフォント（日本語は自動でNoto Sansにフォールバック） */
 body .weight-input,
 body .reps-input,
 body #cardioMinutes {
@@ -180,11 +141,81 @@ body #cardioMinutes {
   font-weight: 500;
   letter-spacing: 0.06em;
 }
+body :is(#monthlyCardioSummary, #compareWorkoutPoints, #compareCardioPoints),
+body #workoutList span.text-xs,
+body #workoutList div.text-xs,
+body #cardioList span.text-xs {
+  font-family: var(--num);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
 
-/* ================= 追加：▼ → 細いシェブロン ================= */
+/* セット行：左の「1.」と右の✕を同じ幅にして kg × 回 を中央に */
+body .set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+body .set-row .set-label { width: auto; text-align: center; }
+body .set-row > button { width: 28px; padding: 0; text-align: center; }
+
+/* ================= ボタン ================= */
+body .hover\:bg-gray-700:hover { background: #1c1c1e; }
+body .hover\:bg-gray-800:hover,
+body .hover\:bg-gray-800\/70:hover { background: #18181a; }
+body .hover\:text-orange-400:hover { color: var(--gold); }
+body .hover\:text-white:hover { color: var(--text); }
+body .hover\:text-red-400:hover { color: #c0605a; }
+
+/* メイン（保存など）：ゴールド */
+body .bg-orange-500 {
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: #0a0a0b;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+}
+body .hover\:bg-orange-600:hover { background: linear-gradient(180deg, #e6cd95, #bd9a5e); }
+
+/* 入力欄とボタンのまとまり（＋セット／保存、有酸素の分／保存） */
+body div.bg-gray-900.border.overflow-hidden {
+  border-color: var(--gold-line);
+  padding-top: 0;
+}
+body div.bg-gray-900.border.overflow-hidden > button {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+}
+body div.bg-gray-900.border.overflow-hidden > button.border-t { border-color: var(--gold-line); }
+
+/* タイマー（3分/2分/1分/✕）・出力・復元：金枠 */
+body button.bg-gray-900.border {
+  border-color: var(--gold-line);
+  color: var(--gold);
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+body button.bg-gray-900.border:hover {
+  border-color: var(--gold);
+  background: #1a1a1c;
+}
+
+/* ================= 履歴の開閉アイコン（細いシェブロン） ================= */
 body .day-toggle-icon,
-body .ex-toggle-icon {
+body .ex-toggle-icon,
+body #workoutList span.text-xs.day-toggle-icon,
+body #workoutList span.text-xs.ex-toggle-icon {
   font-size: 0;
+  letter-spacing: 0;
   width: 8px;
   height: 8px;
   margin: 0 6px 3px 0;
@@ -199,25 +230,11 @@ body .ex-toggle-icon.is-open {
   margin-bottom: -3px;
 }
 
-/* ================= 追加：タイマー残り時間バー ================= */
-#timerTrack { height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
-#timerBar {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi));
-  transition: width .2s linear;
-}
-@keyframes goldPulse {
-  0%, 100% { box-shadow: 0 0 0 rgba(201,169,106,0); border-color: var(--line); }
-  50% { box-shadow: 0 0 22px rgba(201,169,106,.45); border-color: var(--gold); }
-}
-body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
-
-/* ================= 追加：トースト ================= */
+/* ================= トースト・確認ダイアログ ================= */
 #toast {
   position: fixed;
   left: 50%;
-  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   transform: translate(-50%, 12px);
   background: var(--surface);
   color: var(--text);
@@ -236,7 +253,6 @@ body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-/* ================= 追加：確認ダイアログ ================= */
 #modal {
   position: fixed;
   inset: 0;
@@ -276,66 +292,101 @@ body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
   border-color: transparent;
 }
 
-/* ================= 追加：入力フォームのサイズ統一 ================= */
-/* 入力欄はすべて高さ48px・枠1px */
-body input.border,
-body #cardioMinutes,
-body div.bg-gray-900.border.overflow-hidden > input {
-  height: 48px;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-body #exerciseName { font-size: 17px; letter-spacing: 0.06em; }
-
-/* プレースホルダー（「入力」「kg」「回」）は全部同じ大きさ・書体 */
-body input::placeholder,
-body textarea::placeholder {
-  font-family: 'Noto Sans JP', system-ui, sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-}
-
-/* ＋セット／保存（トレーニング・有酸素）は高さ48px・文字サイズも統一 */
-body div.bg-gray-900.border.overflow-hidden { padding-top: 0; }
-body div.bg-gray-900.border.overflow-hidden > button {
-  height: 48px;
-  padding-top: 0;
-  padding-bottom: 0;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
-  text-indent: 0.25em;
-}
-/* 入力欄とボタンの境界線も金に */
-body div.bg-gray-900.border.overflow-hidden > button.border-t { border-color: var(--gold-line); }
-
-/* タイマー・出力・復元ボタンは高さ44px・文字14px */
-body button.bg-gray-900.border {
-  min-height: 44px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-}
-
-/* ================= 修正：履歴の開閉アイコン（数字フォントの指定に負けていた） ================= */
-body #workoutList span.text-xs.day-toggle-icon,
-body #workoutList span.text-xs.ex-toggle-icon {
-  font-size: 0;
-  letter-spacing: 0;
-}
-
-/* ================= 修正：セット行を左右対称にして中央寄せ ================= */
-/* 左の「1.」と右の✕（非表示でも幅を取る）を同じ幅にして、kg × 回 を真ん中に置く */
-body .set-row {
+/* ================= 下タブ ================= */
+#bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 28rem;
   display: grid;
-  grid-template-columns: 28px 1fr auto 1fr 28px;
-  align-items: center;
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 50;
 }
-body .set-row .set-label { width: auto; text-align: center; }
-body .set-row > button {
-  width: 28px;
-  padding: 0;
-  text-align: center;
+#bottomNav button { padding: 14px 0 16px; font-size: 12px; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); }
+#bottomNav button.on { color: var(--gold); box-shadow: inset 0 2px 0 var(--gold); }
+body.kb #bottomNav { display: none; }
+
+/* ================= ホーム ================= */
+.hm-card { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.45); }
+.hm-pad { padding: 14px; }
+.hm-lb { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); }
+.hm-gold { color: var(--gold); }
+.hm-big { font-family: var(--num); font-weight: 300; font-size: 46px; letter-spacing: 0.12em; color: var(--gold); line-height: 1.1; }
+.hm-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.hm-ord { display: flex; gap: 6px; margin-top: 10px; }
+.hm-ord button { flex: 1; font-size: 11px; letter-spacing: 0.12em; padding: 8px 0; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: var(--bg); }
+.hm-ord button.cur { border-color: var(--gold-line); color: var(--gold); }
+.hm-exh { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hm-prog { height: 2px; background: var(--line); margin-top: 10px; }
+.hm-prog div { height: 2px; background: var(--gold); }
+.hm-ex { border-top: 1px solid var(--line); padding: 12px 14px; }
+.hm-row2 { display: flex; align-items: center; min-width: 0; }
+.hm-chk { width: 20px; height: 20px; border: 1px solid var(--gold); border-radius: 3px; flex: none; margin-right: 10px; position: relative; }
+.hm-chk.f { background: var(--gold); }
+.hm-chk.f::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border-right: 2px solid #0a0a0b; border-bottom: 2px solid #0a0a0b; transform: rotate(45deg); }
+.hm-en { font-size: 14px; font-weight: 500; }
+.hm-en.dn { color: var(--muted); }
+.hm-in { flex: none; font-size: 12px; letter-spacing: 0.1em; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; padding: 7px 14px; background: none; }
+.hm-mini { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-left: 30px; }
+.hm-st { font-family: var(--num); font-size: 17px; font-weight: 500; letter-spacing: 0.04em; }
+.hm-ch { flex: none; line-height: 0; }
+
+/* ================= 推移グラフ ================= */
+.tr-row { border-top: 1px solid var(--line); padding: 14px; cursor: pointer; }
+.tr-row:first-child { border-top: 0; }
+.tr-top { display: grid; grid-template-columns: 1fr 84px 52px 12px; align-items: center; gap: 10px; }
+.tr-tag { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
+.tr-mini { line-height: 0; }
+.tr-val { font-family: var(--num); font-size: 24px; font-weight: 500; text-align: right; line-height: 1; }
+.tr-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin-bottom: 3px; }
+.tr-row.open .tr-chev { transform: rotate(-135deg); margin-bottom: -3px; }
+.tr-big { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* 金の折れ線：光と、左から右へ描かれる動き */
+.ln { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: drawLn .9s ease-out forwards; filter: drop-shadow(0 0 3px rgba(201,169,106,.5)); }
+@keyframes drawLn { to { stroke-dashoffset: 0; } }
+
+/* ================= スクロールバー ================= */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #2a2a2c; border-radius: 3px; }
+
+/* ===== 今回の調整：トレーニング画面の縦間隔 ===== */
+#tabContentWorkout > :not([hidden]) ~ :not([hidden]) {
+  margin-top: .75rem;
+}
+
+/* ===== ホーム：種目別アコーディオン ===== */
+.hm-trend-card .tr-row {
+  padding: 14px;
+}
+
+.hm-trend-heading {
+  padding-bottom: 10px;
+}
+
+.tr-name {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.tr-row:active {
+  background: rgba(201,169,106,.045);
+}
+
+.tr-history {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-family: var(--num);
+  font-size: 12px;
 }
