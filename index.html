@@ -15,13 +15,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="PPL">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-4">
+<body class="bg-gray-900 text-gray-100 min-h-screen pb-24 max-w-md mx-auto">
 
     <!-- ================= 0. ホームタブ（extras.js が描画） ================= -->
-    <div id="tabContentHome" class="space-y-4"></div>
+    <div id="tabContentHome"></div>
 
     <!-- ================= 1. トレーニング記録タブ ================= -->
-    <div id="tabContentWorkout" class="space-y-2 hidden">
+    <div id="tabContentWorkout" class="hidden">
 
         <!-- タイマー＋入力フォーム（1枚のカード） -->
         <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-lg">
@@ -89,43 +89,47 @@
     </div>
 
     <!-- ================= 2. 有酸素タブ ================= -->
-    <div id="tabContentCardio" class="space-y-4 hidden">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg">
-            <label class="block text-xs text-gray-400 mb-0.5">時間 (分)</label>
-            <div class="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-                <input type="number" id="cardioMinutes" placeholder="入力" inputmode="numeric"
-                    class="w-full bg-gray-900 px-4 py-3 text-white text-center focus:outline-none">
-                <button type="button" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
-                    保存
-                </button>
-            </div>
-        </div>
-
-        <div class="space-y-2.5">
-            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月合計</h2>
-            <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow overflow-hidden">
-                <div class="p-3.5">
-                    <div id="monthlyCardioSummary" class="text-xs text-white font-bold tracking-tight">回数: 0回 / 時間: 0分 / 消費: 約0kcal</div>
-                </div>
-                <div id="cardioListWrapper" class="border-t border-gray-700 hidden">
-                    <div id="cardioList" class="divide-y divide-gray-700"></div>
-                    <div id="cardioMoreContainer"></div>
+    <div id="tabContentCardio" class="hidden">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl">
+            <div class="p-3.5">
+                <label class="block text-xs text-gray-400 mb-0.5">時間 (分)</label>
+                <div class="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+                    <input type="number" id="cardioMinutes" placeholder="入力" inputmode="numeric"
+                        class="w-full bg-gray-900 px-4 py-3 text-white text-center focus:outline-none">
+                    <button type="button" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
+                        保存
+                    </button>
                 </div>
             </div>
-            <div id="emptyCardioMessage" class="text-center text-gray-500 py-10 hidden">
+            <div class="p-3.5 card-sep">
+                <div id="monthlyCardioSummary" class="text-xs text-white font-bold tracking-tight">今月合計: 0分 / 約0kcal</div>
+            </div>
+            <div id="cardioListWrapper" class="card-sep hidden">
+                <div id="cardioList" class="divide-y divide-gray-700"></div>
+                <div id="cardioMoreContainer"></div>
+            </div>
+            <div id="emptyCardioMessage" class="card-sep text-center text-gray-500 py-10 hidden">
                 有酸素の記録がまだありません。
             </div>
         </div>
     </div>
 
-    <!-- ================= 3. 比較/設定タブ ================= -->
-    <div id="tabContentSettings" class="space-y-4 hidden">
+    <!-- ================= 3. 月間/設定タブ ================= -->
+    <div id="tabContentSettings" class="hidden">
+        <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg"></div>
+
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-2.5">
             <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月 / 先月ポイント比較</h2>
             <div class="bg-gray-900 border border-gray-700 rounded-xl divide-y divide-gray-700">
                 <div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">トレ：今月 0pt / 先月 0pt</div>
                 <div id="compareCardioPoints" class="p-3 text-xs font-bold text-white">有酸素：今月 0pt / 先月 0pt</div>
             </div>
+        </div>
+
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
+            <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">種目の編集</h2>
+            <div id="menuSummary"></div>
+            <button type="button" onclick="openMenuEditor()" class="hm-go alt">編集</button>
         </div>
 
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-3">
@@ -150,7 +154,7 @@
         <button type="button" data-t="home" onclick="switchTab('home')">ホーム</button>
         <button type="button" data-t="workout" onclick="switchTab('workout')">トレーニング</button>
         <button type="button" data-t="cardio" onclick="switchTab('cardio')">有酸素</button>
-        <button type="button" data-t="settings" onclick="switchTab('settings')">比較/設定</button>
+        <button type="button" data-t="settings" onclick="switchTab('settings')">月間/設定</button>
     </nav>
 
     <script>
@@ -196,6 +200,7 @@
         let workouts = sanitizeWorkouts(JSON.parse(localStorage.getItem('simple_workouts')) || []);
         let cardios = sanitizeCardios(JSON.parse(localStorage.getItem('simple_cardios')) || []);
         let dayPplMap = JSON.parse(localStorage.getItem('simple_day_ppl')) || {};
+        let menuData = JSON.parse(localStorage.getItem('simple_menu')) || null;
         let editingId = null;
         let visibleDaysCount = 5;
         let visibleCardioDaysCount = 5;
@@ -284,6 +289,15 @@
 
         /* タブ切り替え switchTab は extras.js に移動しました */
 
+        /* メニューで「非表示」にした種目は、入力候補に出さない（履歴のデータは残る） */
+        function isHiddenExercise(name) {
+            if (!menuData) return false;
+            const lists = Object.values(menuData);
+            const off = lists.some(m => m && Array.isArray(m.off) && m.off.includes(name));
+            const on = lists.some(m => m && Array.isArray(m.on) && m.on.includes(name));
+            return off && !on;
+        }
+
         function checkExerciseSuggestion() {
             const query = document.getElementById('exerciseName').value.trim().toLowerCase();
             const box = document.getElementById('suggestionBox');
@@ -300,6 +314,7 @@
             const seenNames = new Set();
 
             for (const workout of sortedWorkouts) {
+                if (isHiddenExercise(workout.name)) continue;
                 if (workout.name.toLowerCase().startsWith(query)) {
                     if (!seenNames.has(workout.name)) {
                         seenNames.add(workout.name);
@@ -441,7 +456,7 @@
             renderWorkouts();
         }
 
-        /* 「比較/設定」タブのトレーニングポイント（今月/先月の記録日数）だけを計算 */
+        /* 「月間/設定」タブのトレーニングポイント（今月/先月の記録日数）だけを計算 */
         function updateMonthlyWorkoutSummary() {
             const compareWorkoutElem = document.getElementById('compareWorkoutPoints');
             if (!compareWorkoutElem) return;
@@ -673,13 +688,12 @@
             const monthlyItems = cardios.filter(i => i.dateStr.startsWith(currentYearMonth));
             const lastMonthlyItems = cardios.filter(i => i.dateStr.startsWith(lastYearMonth));
 
-            const totalCount = monthlyItems.length;
             const totalMin = monthlyItems.reduce((sum, i) => sum + i.minutes, 0);
             const lastTotalMin = lastMonthlyItems.reduce((sum, i) => sum + i.minutes, 0);
             const totalKcal = Math.round(totalMin * 3.5);
 
             if (summary) {
-                summary.textContent = `回数: ${totalCount}回 / 時間: ${totalMin}分 / 消費: 約${totalKcal}kcal`;
+                summary.textContent = `今月合計: ${totalMin}分 / 約${totalKcal}kcal`;
             }
 
             if (compareCardioElem) {
@@ -728,7 +742,8 @@
             const exportObj = {
                 workouts: workouts,
                 cardios: cardios,
-                dayPplMap: dayPplMap
+                dayPplMap: dayPplMap,
+                menu: menuData
             };
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
             const a = document.createElement('a');
@@ -739,16 +754,18 @@
             a.remove();
         }
 
-        function importFromJsonText() {
+        async function importFromJsonText() {
             const text = document.getElementById('importText').value.trim();
             if (!text) {
                 alert('JSONテキストが入力されていません。');
                 return;
             }
+            if (!(await askConfirm('今の記録を上書きして復元します。よろしいですか？', '復元'))) return;
             try {
                 const imported = JSON.parse(text);
                 let rawWorkouts = [];
                 let rawCardios = [];
+                menuData = null;
 
                 if (Array.isArray(imported)) {
                     rawWorkouts = imported;
@@ -756,6 +773,7 @@
                     rawWorkouts = imported.workouts || [];
                     rawCardios = imported.cardios || [];
                     dayPplMap = imported.dayPplMap || {};
+                    menuData = imported.menu || null;
                 }
 
                 workouts = sanitizeWorkouts(rawWorkouts);
@@ -764,6 +782,8 @@
                 localStorage.setItem('simple_workouts', JSON.stringify(workouts));
                 localStorage.setItem('simple_cardios', JSON.stringify(cardios));
                 localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+                if (menuData) localStorage.setItem('simple_menu', JSON.stringify(menuData));
+                else localStorage.removeItem('simple_menu');
                 resetForm();
                 renderWorkouts();
                 alert('データを正常に復元しました！');
