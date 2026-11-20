@@ -82,14 +82,6 @@ body #timerDisplay {
 }
 body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
 
-/* ================= サブタブ（選択中は下に金のライン） ================= */
-body .text-orange-400.bg-gray-900 {
-  background: var(--bg);
-  color: var(--gold);
-  box-shadow: inset 0 -2px 0 var(--gold);
-  letter-spacing: 0.12em;
-}
-
 /* ================= 入力欄 ================= */
 body input,
 body textarea,
@@ -336,16 +328,13 @@ body.kb #bottomNav { display: none; }
 .hm-st { font-family: var(--num); font-size: 17px; font-weight: 500; letter-spacing: 0.04em; }
 .hm-ch { flex: none; line-height: 0; }
 
-/* ================= 推移グラフ ================= */
-.tr-row { border-top: 1px solid var(--line); padding: 14px; cursor: pointer; }
-.tr-row:first-child { border-top: 0; }
-.tr-top { display: grid; grid-template-columns: 1fr 84px 52px 12px; align-items: center; gap: 10px; }
-.tr-tag { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
-.tr-mini { line-height: 0; }
-.tr-val { font-family: var(--num); font-size: 24px; font-weight: 500; text-align: right; line-height: 1; }
-.tr-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin-bottom: 3px; }
-.tr-row.open .tr-chev { transform: rotate(-135deg); margin-bottom: -3px; }
-.tr-big { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+/* ホーム：種目タップで展開 */
+.card-sep { border-top: 1px solid var(--gold-line); }
+.hm-ex { cursor: pointer; }
+.hm-act { display: flex; align-items: center; gap: 12px; }
+.hm-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin: 0 4px 3px 0; }
+.hm-ex.open .hm-chev { transform: rotate(-135deg); margin-bottom: -3px; }
+.hm-big2 { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 /* 金の折れ線：光と、左から右へ描かれる動き */
 .ln { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: drawLn .9s ease-out forwards; filter: drop-shadow(0 0 3px rgba(201,169,106,.5)); }
@@ -354,39 +343,3 @@ body.kb #bottomNav { display: none; }
 /* ================= スクロールバー ================= */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: #2a2a2c; border-radius: 3px; }
-
-/* ===== 今回の調整：トレーニング画面の縦間隔 ===== */
-#tabContentWorkout > :not([hidden]) ~ :not([hidden]) {
-  margin-top: .75rem;
-}
-
-/* ===== ホーム：種目別アコーディオン ===== */
-.hm-trend-card .tr-row {
-  padding: 14px;
-}
-
-.hm-trend-heading {
-  padding-bottom: 10px;
-}
-
-.tr-name {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 500;
-  margin-top: 3px;
-}
-
-.tr-row:active {
-  background: rgba(201,169,106,.045);
-}
-
-.tr-history {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin-top: 8px;
-  color: var(--muted);
-  font-family: var(--num);
-  font-size: 12px;
-}
