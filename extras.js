@@ -1,4 +1,4 @@
-/* PPL extras.js */
+/* iron-log extras: index.html のスクリプトの後ろに読み込む */
 (function () {
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
   const pad = n => String(n).padStart(2, '0');
@@ -44,7 +44,7 @@
     renderCardios();
   };
 
-  /* ===== 履歴の開閉 ===== */
+  /* ===== 履歴の開閉（シェブロン） ===== */
   function toggle(h, sel) {
     const hidden = h.nextElementSibling.classList.toggle('hidden');
     h.querySelector(sel).classList.toggle('is-open', !hidden);
@@ -52,7 +52,7 @@
   window.toggleDayAccordion = h => toggle(h, '.day-toggle-icon');
   window.toggleExerciseAccordion = h => toggle(h, '.ex-toggle-icon');
 
-  /* ===== タイマー ===== */
+  /* ===== タイマー：残り時間バー・終了時の発光・振動 ===== */
   const disp = document.getElementById('timerDisplay');
   const card = disp.closest('.bg-gray-800');
   disp.parentElement.insertAdjacentHTML('afterend', '<div id="timerTrack"><div id="timerBar"></div></div>');
@@ -69,7 +69,7 @@
   window.playSingleBeep = function () { origBeep(); buzz(150); };
   document.addEventListener('click', e => { if (e.target.closest('button')) buzz(10); });
 
-  /* ===== 保存 ===== */
+  /* ===== 保存：トースト＋振動 ===== */
   function wrapSave(name, key) {
     const orig = window[name];
     window[name] = function () {
@@ -81,7 +81,7 @@
   wrapSave('saveWorkout', 'simple_workouts');
   wrapSave('saveCardio', 'simple_cardios');
 
-  /* ===== 折れ線グラフ ===== */
+  /* ===== 折れ線グラフ（金の線・面のグラデ・最新点の光・描画アニメ） ===== */
   let gid = 0;
   function line(v, w, h, dates) {
     const n = v.length;
@@ -113,16 +113,14 @@
     return s + '</svg>';
   }
 
-  /* ===== 推移の計算式 ===== */
+  /* ===== 現行の推移と同じ計算式（重量あり＝Σ(重量+回数×0.1)、重量なし＝回数合計） ===== */
   function metric(sets) {
     if (!sets.some(s => s.weight > 0)) return sets.reduce((a, s) => a + s.reps, 0);
     return Number(sets.reduce((a, s) => a + s.weight + s.reps * 0.1, 0).toFixed(1));
   }
   function series(name) {
     const map = {};
-    workouts.filter(w => w.name.trim() === name).forEach(w => {
-      (map[w.dateStr] = map[w.dateStr] || []).push(...w.setList);
-    });
+    workouts.filter(w => w.name.trim() === name).forEach(w => { (map[w.dateStr] = map[w.dateStr] || []).push(...w.setList); });
     return Object.keys(map).sort().slice(-5).map(d => ({ d, v: metric(map[d]) }));
   }
   const fmtSet = s => (s.weight ? s.weight + 'kg × ' + s.reps + '回' : s.reps + '回');
@@ -141,57 +139,14 @@
     const last = days.filter(d => d < today).pop();
     return last ? TYPES[(TYPES.indexOf(pplOf(last)) + 1) % 4] : 'PUSH';
   }
-  window.homeType = function (t) { override = { day: dstr(new Date()), type: t }; renderHome(); };
+  window.homeType = function (t) { override = { day: dstr(new Date()), type: t }; homeOpen = null; renderHome(); };
   window.homeFill = function (id) {
     if (editingId !== null) resetForm();
     switchTab('workout');
     applySuggestion(id);
   };
 
-  /* ===== 記録済みの全種目を取得 ===== */
-  function allExerciseNames() {
-    const latest = new Map();
-    workouts.forEach((w, index) => {
-      const name = String(w.name || '').trim();
-      if (!name) return;
-      const old = latest.get(name);
-      if (!old || w.dateStr > old.date || (w.dateStr === old.date && index > old.index)) {
-        latest.set(name, { date: w.dateStr, index });
-      }
-    });
-    return [...latest.entries()]
-      .sort((a, b) => b[1].date.localeCompare(a[1].date) || b[1].index - a[1].index)
-      .map(([name]) => name);
-  }
-
-  let trOpen = null;
-  function renderExerciseTrends() {
-    const names = allExerciseNames();
-    if (!names.length) {
-      return '<div class="hm-card"><div class="hm-pad"><div class="hm-lb">種目別の推移</div><div class="hm-sub">トレーニングを記録すると、ここに種目が追加されます。</div></div></div>';
-    }
-    const rows = names.map((name, i) => {
-      const s = series(name), v = s.map(x => x.v), last = v[v.length - 1];
-      const open = trOpen === name;
-      const body = open
-        ? '<div class="tr-big">' +
-          (v.length > 1
-            ? line(v, 320, 124, s.map(x => x.d))
-            : '<div class="hm-sub">2回以上の記録でグラフが表示されます。</div>') +
-          '<div class="tr-history">' + s.map(x => '<span>' + fmtD(x.d) + '　' + x.v + '</span>').join('') + '</div>' +
-          '</div>'
-        : '';
-      return '<div class="tr-row' + (open ? ' open' : '') + '" data-exercise="' + escapeHtml(name) + '">' +
-        '<div class="tr-top">' +
-          '<div><div class="hm-sub">種目</div><div class="tr-name">' + escapeHtml(name) + '</div></div>' +
-          '<div class="tr-mini">' + line(v, 84, 30) + '</div>' +
-          '<div class="tr-val">' + (last === undefined ? '<span class="hm-sub">—</span>' : last) + '</div>' +
-          '<div class="tr-chev"></div>' +
-        '</div>' + body + '</div>';
-    }).join('');
-    return '<div class="hm-card hm-trend-card"><div class="hm-pad hm-trend-heading"><div class="hm-lb">種目別の推移</div><div class="hm-sub">種目をタップすると直近5回分のグラフを表示</div></div>' + rows + '</div>';
-  }
-
+  let homeOpen = null, homeItems = [];
   function renderHome() {
     const el = document.getElementById('tabContentHome');
     if (!el) return;
@@ -206,38 +161,41 @@
 
     const pd = days.filter(d => d < today && pplOf(d) === type).pop();
     if (!pd) {
-      h += '<div class="hm-card"><div class="hm-pad hm-sub">まだ ' + type + ' の記録がありません。</div></div>';
-    } else {
-      const items = workouts.filter(w => w.dateStr === pd);
-      const todays = workouts.filter(w => w.dateStr === today);
-      const done = items.filter(it => todays.some(t => t.name === it.name)).length;
-      h += '<div class="hm-card"><div class="hm-pad" style="padding-bottom:12px"><div class="hm-exh"><div class="hm-lb">今日のメニュー（前回 ' + fmtD(pd) +
-        '）</div><div class="hm-lb hm-gold">' + done + ' / ' + items.length + ' 完了</div></div><div class="hm-prog"><div style="width:' +
-        Math.round(done / items.length * 100) + '%"></div></div></div>';
-      items.forEach(it => {
-        const t = todays.find(x => x.name === it.name);
-        const b = bestSet((t || it).setList);
-        const s = series(it.name.trim());
-        h += '<div class="hm-ex"><div class="hm-exh"><div class="hm-row2"><span class="hm-chk' + (t ? ' f' : '') + '"></span><div class="hm-en' + (t ? ' dn' : '') + '">' +
-          escapeHtml(it.name) + '</div></div>' + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(\'' + it.id + '\')">入力</button>') +
-          '</div><div class="hm-mini"><div class="hm-st">' + (t ? '今日 ' : '前回 ') + (b ? fmtSet(b) : '') + '</div><div class="hm-ch">' + line(s.map(x => x.v), 110, 34) + '</div></div></div>';
-      });
-      h += '</div>';
+      homeItems = [];
+      el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">まだ ' + type + ' の記録がありません。</div></div>';
+      return;
     }
-    h += renderExerciseTrends();
-    el.innerHTML = h;
+    const items = workouts.filter(w => w.dateStr === pd);
+    homeItems = items;
+    const todays = workouts.filter(w => w.dateStr === today);
+    const done = items.filter(it => todays.some(t => t.name === it.name)).length;
+    h += '<div class="hm-card"><div class="hm-pad" style="padding-bottom:12px"><div class="hm-exh"><div class="hm-lb">今日のメニュー（前回 ' + fmtD(pd) +
+      '）</div><div class="hm-lb hm-gold">' + done + ' / ' + items.length + ' 完了</div></div><div class="hm-prog"><div style="width:' +
+      Math.round(done / items.length * 100) + '%"></div></div></div>';
+    items.forEach((it, i) => {
+      const t = todays.find(x => x.name === it.name);
+      const b = bestSet((t || it).setList);
+      const s = series(it.name.trim());
+      const open = homeOpen === it.name;
+      h += '<div class="hm-ex' + (open ? ' open' : '') + '" data-i="' + i + '"><div class="hm-exh"><div class="hm-row2"><span class="hm-chk' + (t ? ' f' : '') + '"></span><div class="hm-en' + (t ? ' dn' : '') + '">' +
+        escapeHtml(it.name) + '</div></div><div class="hm-act">' + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(\'' + it.id + '\')">入力</button>') +
+        '<span class="hm-chev"></span></div></div><div class="hm-mini"><div class="hm-st">' + (t ? '今日 ' : '前回 ') + (b ? fmtSet(b) : '') +
+        '</div><div class="hm-ch">' + line(s.map(x => x.v), 110, 34) + '</div></div>' +
+        (open ? '<div class="hm-big2">' + (s.length > 1 ? line(s.map(x => x.v), 320, 124, s.map(x => x.d)) : '<div class="hm-sub">2回以上の記録でグラフが出ます。</div>') + '</div>' : '') +
+        '</div>';
+    });
+    el.innerHTML = h + '</div>';
   }
-
-  /* ===== 種目をタップしてグラフ開閉 ===== */
   document.addEventListener('click', e => {
-    const r = e.target.closest('.tr-row[data-exercise]');
-    if (!r) return;
-    const name = r.dataset.exercise;
-    trOpen = trOpen === name ? null : name;
+    const r = e.target.closest('.hm-ex');
+    if (!r || e.target.closest('.hm-in')) return;
+    const it = homeItems[parseInt(r.dataset.i, 10)];
+    if (!it) return;
+    homeOpen = homeOpen === it.name ? null : it.name;
     renderHome();
   });
 
-  /* ===== 今日の部位を保存時に記録 ===== */
+  /* ===== 今日の部位を最初の保存時に記録（ローテーション判定用） ===== */
   const saveInner = window.saveWorkout;
   window.saveWorkout = function () {
     const today = dstr(new Date()), type = todayType();
@@ -250,31 +208,14 @@
       renderWorkouts();
     }
   };
-
-  /* ===== トレーニング画面を履歴だけにする ===== */
-  function simplifyWorkoutScreen() {
-    const historyBtn = document.getElementById('subTabBtnHistory');
-    if (historyBtn && historyBtn.parentElement) historyBtn.parentElement.remove();
-    const stats = document.getElementById('subTabContentStats');
-    if (stats) stats.remove();
-    const history = document.getElementById('subTabContentHistory');
-    if (history) history.classList.remove('hidden');
-  }
-
   const renderInner = window.renderWorkouts;
-  window.renderWorkouts = function () {
-    renderInner();
-    renderHome();
-  };
+  window.renderWorkouts = function () { renderInner(); renderHome(); };
 
   /* ===== 下タブ ===== */
   const TABS = { home: 'tabContentHome', workout: 'tabContentWorkout', cardio: 'tabContentCardio', settings: 'tabContentSettings' };
   window.switchTab = function (name) {
     if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-    Object.keys(TABS).forEach(k => {
-      const el = document.getElementById(TABS[k]);
-      if (el) el.classList.toggle('hidden', k !== name);
-    });
+    Object.keys(TABS).forEach(k => document.getElementById(TABS[k]).classList.toggle('hidden', k !== name));
     document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.t === name));
     if (name === 'home') renderHome();
     window.scrollTo(0, 0);
@@ -283,7 +224,6 @@
   document.addEventListener('focusin', e => { if (isField(e.target)) document.body.classList.add('kb'); });
   document.addEventListener('focusout', () => setTimeout(() => { if (!isField(document.activeElement)) document.body.classList.remove('kb'); }, 100));
 
-  simplifyWorkoutScreen();
   renderWorkouts();
   switchTab('home');
 })();
