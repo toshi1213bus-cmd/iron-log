@@ -16,11 +16,20 @@
 
 body {
   font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
-  background: radial-gradient(120% 60% at 50% 0%, #17171a 0%, var(--bg) 60%) fixed;
+  background: var(--bg);
   color: var(--text);
   letter-spacing: 0.02em;
 }
 body.pb-24 { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* ================= 縁なし（フルスクリーン）：カードの枠・影・角丸をなくし、区切りは金の細線 ================= */
+body .bg-gray-800.border.rounded-2xl {
+  background: transparent;
+  border-width: 0 0 1px 0;
+  border-color: var(--gold-line);
+  border-radius: 0;
+  box-shadow: none;
+}
 
 /* ================= 面・線・角丸 ================= */
 body .bg-gray-800 { background: var(--surface); }
@@ -304,7 +313,7 @@ body .ex-toggle-icon.is-open {
 body.kb #bottomNav { display: none; }
 
 /* ================= ホーム ================= */
-.hm-card { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.45); }
+.hm-card { border-bottom: 1px solid var(--gold-line); }
 .hm-pad { padding: 14px; }
 .hm-lb { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); }
 .hm-gold { color: var(--gold); }
@@ -340,6 +349,50 @@ body.kb #bottomNav { display: none; }
 .ln { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: drawLn .9s ease-out forwards; filter: drop-shadow(0 0 3px rgba(201,169,106,.5)); }
 @keyframes drawLn { to { stroke-dashoffset: 0; } }
 
+/* ================= カレンダー ================= */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-head button { width: 44px; height: 36px; font-size: 22px; line-height: 1; color: var(--gold); }
+.cal-head button:disabled { color: #4d4b47; }
+.cal-title { font-family: var(--num); font-size: 20px; font-weight: 500; letter-spacing: 0.1em; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
+.cal-w { font-size: 11px; color: var(--muted); padding: 4px 0 6px; letter-spacing: 0.1em; }
+.cal-d { padding: 5px 0 4px; border: 1px solid transparent; border-radius: 3px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--num); font-size: 16px; line-height: 1; }
+.cal-d.today { border-color: var(--gold-line); color: var(--gold); }
+.cal-m { height: 8px; display: flex; gap: 3px; align-items: center; }
+.cal-dot, .cal-ring { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; }
+.cal-dot { background: var(--gold); }
+.cal-ring { border: 1.5px solid var(--gold); }
+.cal-legend { display: flex; gap: 16px; justify-content: center; margin-top: 10px; font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+.cal-legend span { display: flex; align-items: center; gap: 6px; }
+
 /* ================= スクロールバー ================= */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: #2a2a2c; border-radius: 3px; }
+
+/* ================= 種目の編集 ================= */
+.ms-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+.ms-t { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
+.ms-n { font-family: var(--num); font-size: 16px; color: var(--text); letter-spacing: 0.05em; }
+#menuEditor { position: fixed; inset: 0; max-width: 28rem; margin: 0 auto; background: var(--bg); z-index: 120; display: flex; flex-direction: column; }
+.me-head { padding: 14px 16px 0; border-bottom: 1px solid var(--gold-line); }
+.me-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px -16px 0; }
+.me-tabs button { padding: 12px 0; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
+.me-tabs button.cur { color: var(--gold); box-shadow: inset 0 -2px 0 var(--gold); }
+.me-body { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+.me-sec { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
+.me-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.me-name { font-size: 14px; font-weight: 500; min-width: 0; word-break: break-all; }
+.me-name.dn { color: var(--muted); }
+.me-ops { display: flex; gap: 6px; flex: none; }
+.me-ops button { min-width: 40px; height: 36px; padding: 0 10px; font-size: 12px; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; }
+.me-ops button:disabled { color: #4d4b47; border-color: var(--line); }
+.me-ops .me-del { color: var(--muted); }
+.me-pad { padding: 10px 16px; }
+.me-add { display: flex; gap: 8px; padding: 0 16px; }
+.me-add input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 3px; font-size: 15px; }
+.me-add button { flex: none; width: 72px; height: 44px; font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; }
+.me-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; }
+.me-chip { padding: 8px 12px; font-size: 13px; color: var(--text); border: 1px solid var(--line); border-radius: 3px; }
+.me-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gold-line); background: var(--bg); }
+.me-foot button { height: 48px; font-size: 14px; font-weight: 700; letter-spacing: 0.25em; text-indent: 0.25em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
+.me-foot .primary { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: #0a0a0b; border-color: transparent; }
