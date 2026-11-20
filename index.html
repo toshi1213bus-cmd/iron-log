@@ -6,27 +6,17 @@
     <title>PPL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css">
     <meta name="theme-color" content="#0a0a0b">
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 pb-24 max-w-md mx-auto space-y-4">
 
-    <!-- 最上段タブ切り替えバー -->
-    <div class="flex bg-gray-800 border border-gray-700 rounded-2xl p-1 shadow-md">
-        <button type="button" onclick="switchTab('workout')" id="tabBtnWorkout" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition">
-            トレーニング
-        </button>
-        <button type="button" onclick="switchTab('cardio')" id="tabBtnCardio" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
-            有酸素
-        </button>
-        <button type="button" onclick="switchTab('settings')" id="tabBtnSettings" class="flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
-            比較/設定
-        </button>
-    </div>
+    <!-- ================= 0. ホームタブ（extras.js が描画） ================= -->
+    <div id="tabContentHome" class="space-y-4"></div>
 
     <!-- ================= 1. トレーニング記録タブ ================= -->
-    <div id="tabContentWorkout" class="space-y-4">
-        
+    <div id="tabContentWorkout" class="space-y-4 hidden">
+
         <!-- インターバルタイマー（常駐） -->
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-md space-y-2.5">
             <div class="flex items-center justify-center text-6xl leading-none font-bold text-orange-400">
@@ -43,7 +33,7 @@
         <!-- 入力フォーム（常駐） -->
         <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg">
             <div id="formHeaderContainer"></div>
-            
+
             <div class="mb-2.5 relative">
                 <label class="block text-xs text-gray-400 mb-0.5">種目名</label>
                 <input type="text" id="exerciseName" placeholder="入力" oninput="checkExerciseSuggestion()"
@@ -84,7 +74,7 @@
                     履歴
                 </button>
                 <button type="button" onclick="switchWorkoutSubTab('stats')" id="subTabBtnStats" class="flex-1 py-2 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition">
-                    今月合計/推移
+                    推移
                 </button>
             </div>
 
@@ -99,27 +89,9 @@
                 </div>
             </div>
 
-            <!-- サブコンテンツ2：今月合計/推移 -->
+            <!-- サブコンテンツ2：推移（extras.js が4種目の折れ線を描画） -->
             <div id="subTabContentStats" class="hidden">
-                <!-- 切り替えカード直下の合計（横線なし） -->
-                <div class="p-3.5">
-                    <div id="monthlyWorkoutSummary" class="text-xs text-white font-bold tracking-tight">Push: 0回 / Pull: 0回 / Legs: 0回 / Other: 0回</div>
-                </div>
-                <!-- 合計と基本種目推移の間（横線あり） -->
-                <div class="divide-y divide-gray-700 border-t border-gray-700">
-                    <div class="p-3.5 space-y-0.5">
-                        <div id="pickupPush" class="space-y-0.5 text-xs"><div class="text-white text-xs">PUSH (ベンチプレス) : データなし</div></div>
-                    </div>
-                    <div class="p-3.5 space-y-0.5">
-                        <div id="pickupPull" class="space-y-0.5 text-xs"><div class="text-white text-xs">PULL (ワイドラット) : データなし</div></div>
-                    </div>
-                    <div class="p-3.5 space-y-0.5">
-                        <div id="pickupLegs" class="space-y-0.5 text-xs"><div class="text-white text-xs">LEGS (ブルガリアン) : データなし</div></div>
-                    </div>
-                    <div class="p-3.5 space-y-0.5">
-                        <div id="pickupOther" class="space-y-0.5 text-xs"><div class="text-white text-xs">OTHER (レッグレイズ) : データなし</div></div>
-                    </div>
-                </div>
+                <div id="trendList"></div>
             </div>
         </div>
     </div>
@@ -172,7 +144,7 @@
                 </button>
             </div>
             <div class="space-y-2 pt-3 border-t border-gray-700">
-                <textarea id="importText" rows="4" placeholder="JSON貼り付け" 
+                <textarea id="importText" rows="4" placeholder="JSON貼り付け"
                     class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500"></textarea>
                 <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
                     復元実行
@@ -180,6 +152,14 @@
             </div>
         </div>
     </div>
+
+    <!-- ================= 下タブ（画面下に固定） ================= -->
+    <nav id="bottomNav">
+        <button type="button" data-t="home" onclick="switchTab('home')">ホーム</button>
+        <button type="button" data-t="workout" onclick="switchTab('workout')">トレーニング</button>
+        <button type="button" data-t="cardio" onclick="switchTab('cardio')">有酸素</button>
+        <button type="button" data-t="settings" onclick="switchTab('settings')">比較/設定</button>
+    </nav>
 
     <script>
         function sanitizeWorkouts(rawWorkouts) {
@@ -263,7 +243,7 @@
                 }
                 targetEndTime = null;
                 document.getElementById('timerDisplay').textContent = '00:00';
-                
+
                 if (!alarmInterval) {
                     playSingleBeep();
                     alarmInterval = setInterval(playSingleBeep, 400);
@@ -274,7 +254,7 @@
             const totalSec = Math.ceil(diff / 1000);
             const m = Math.floor(totalSec / 60);
             const s = totalSec % 60;
-            document.getElementById('timerDisplay').textContent = 
+            document.getElementById('timerDisplay').textContent =
                 String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
         }
 
@@ -310,33 +290,7 @@
             }
         }
 
-        function switchTab(tabName) {
-            const wContent = document.getElementById('tabContentWorkout');
-            const cContent = document.getElementById('tabContentCardio');
-            const sContent = document.getElementById('tabContentSettings');
-            const wBtn = document.getElementById('tabBtnWorkout');
-            const cBtn = document.getElementById('tabBtnCardio');
-            const sBtn = document.getElementById('tabBtnSettings');
-
-            wContent.classList.add('hidden');
-            cContent.classList.add('hidden');
-            sContent.classList.add('hidden');
-
-            wBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
-            cBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
-            sBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-gray-400 hover:text-white transition';
-
-            if (tabName === 'workout') {
-                wContent.classList.remove('hidden');
-                wBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
-            } else if (tabName === 'cardio') {
-                cContent.classList.remove('hidden');
-                cBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
-            } else if (tabName === 'settings') {
-                sContent.classList.remove('hidden');
-                sBtn.className = 'flex-1 py-2.5 text-xs font-bold rounded-xl text-orange-400 bg-gray-900 shadow transition';
-            }
-        }
+        /* タブ切り替え switchTab は extras.js に移動しました */
 
         function switchWorkoutSubTab(subTabName) {
             const statsContent = document.getElementById('subTabContentStats');
@@ -488,7 +442,7 @@
             if (!target) return;
             editingId = id;
             document.getElementById('suggestionBox').classList.add('hidden');
-            
+
             document.getElementById('formHeaderContainer').innerHTML = `
                 <div class="flex justify-between items-center mb-2.5">
                     <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">編集中</h2>
@@ -506,8 +460,8 @@
         }
 
         function formatDate(dateStr) {
-            const [y, m, d] = dateStr.split('-');
-            return `${parseInt(m)}/${parseInt(d)}`;
+            const parts = dateStr.split('-');
+            return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
         }
 
         function updateDayPpl(dateStr, selectElem) {
@@ -516,80 +470,25 @@
             renderWorkouts();
         }
 
+        /* 「比較/設定」タブのトレーニングポイント（今月/先月の記録日数）だけを計算 */
         function updateMonthlyWorkoutSummary() {
-            const summaryElem = document.getElementById('monthlyWorkoutSummary');
             const compareWorkoutElem = document.getElementById('compareWorkoutPoints');
+            if (!compareWorkoutElem) return;
 
             const now = new Date();
             const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastYearMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-            let counts = { PUSH: 0, PULL: 0, LEGS: 0, OTHER: 0 };
             let currentWorkoutCount = 0;
             let lastWorkoutCount = 0;
-
-            const activeDates = new Set(workouts.map(i => i.dateStr));
-            activeDates.forEach(dateStr => {
-                const ppl = dayPplMap[dateStr] || 'PUSH';
-                if (dateStr.startsWith(currentYearMonth)) {
-                    if (counts[ppl] !== undefined) counts[ppl]++;
-                    currentWorkoutCount++;
-                } else if (dateStr.startsWith(lastYearMonth)) {
-                    lastWorkoutCount++;
-                }
+            new Set(workouts.map(i => i.dateStr)).forEach(dateStr => {
+                if (dateStr.startsWith(currentYearMonth)) currentWorkoutCount++;
+                else if (dateStr.startsWith(lastYearMonth)) lastWorkoutCount++;
             });
 
-            if (summaryElem) {
-                summaryElem.textContent = `Push: ${counts.PUSH}回 / Pull: ${counts.PULL}回 / Legs: ${counts.LEGS}回 / Other: ${counts.OTHER}回`;
-            }
-
-            if (compareWorkoutElem) {
-                compareWorkoutElem.textContent = `トレ：今月 ${currentWorkoutCount}pt / 先月 ${lastWorkoutCount}pt`;
-            }
+            compareWorkoutElem.textContent = `トレ：今月 ${currentWorkoutCount}pt / 先月 ${lastWorkoutCount}pt`;
         }
-        function updatePickupStats() {
-            const targets = {
-                pickupPush: { label: 'PUSH最新負荷量', name: 'ベンチプレス', type: 'weight' },
-                pickupPull: { label: 'PULL最新負荷量', name: 'ワイドラットプル', type: 'weight' },
-                pickupLegs: { label: 'LEGS最新負荷量', name: 'ブルガリアンスクワット', type: 'weight' },
-                pickupOther: { label: 'OTHER最新回数', name: 'レッグレイズ', type: 'reps' }
-            };
-
-            for (const [elemId, config] of Object.entries(targets)) {
-                const container = document.getElementById(elemId);
-                if (!container) continue;
-                const matchedItems = workouts.filter(item => item.name.trim() === config.name);
-                if (matchedItems.length === 0) {
-                    container.innerHTML = `<div class="text-white text-xs">${config.label.slice(0,4)} (${config.name}) : データなし</div>`;
-                    continue;
-                }
-                const dateMap = {};
-                matchedItems.forEach(item => {
-                    if (!dateMap[item.dateStr]) dateMap[item.dateStr] = [];
-                    dateMap[item.dateStr].push(...item.setList);
-                });
-                const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
-                const values = sortedDates.map(dateStr => {
-                    const sets = dateMap[dateStr];
-                    if (config.type === 'weight') {
-                        let dayTotal = 0;
-                        sets.forEach(s => { dayTotal += (s.weight + (s.reps * 0.1)); });
-                        return Number(dayTotal.toFixed(1));
-                    } else {
-                        return sets.reduce((sum, s) => sum + s.reps, 0);
-                    }
-                });
-                const latestVal = values[values.length - 1];
-                const trendStr = values.join(' ➔ ');
-                container.innerHTML = `
-                    <div class="text-white text-xs font-bold">${config.label}：<span class="text-white">${latestVal}</span></div>
-                    <div class="text-white text-xs break-all">${trendStr}</div>
-                `;
-            }
-        }
-
         function renderWorkouts() {
             const wrapper = document.getElementById('workoutListWrapper');
             const list = document.getElementById('workoutList');
@@ -604,7 +503,6 @@
             if (workouts.length === 0) {
                 wrapper.classList.add('hidden');
                 if (empty) empty.classList.remove('hidden');
-                updatePickupStats();
                 renderCardios();
                 return;
             }
@@ -653,7 +551,7 @@
                     const setsHtml = item.setList.map((s, idx) => `
                         <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
                             <span class="text-gray-500 w-4">${idx + 1}.</span>
-                            <span class="text-white">${s.weight} kg</span> × 
+                            <span class="text-white">${s.weight} kg</span> ×
                             <span class="text-white">${s.reps} 回</span>
                         </div>
                     `).join('');
@@ -692,7 +590,6 @@
                 moreContainer.appendChild(moreBtn);
             }
 
-            updatePickupStats();
             renderCardios();
         }
 
@@ -706,29 +603,8 @@
             renderCardios();
         }
 
-        function toggleDayAccordion(headerElem) {
-            const content = headerElem.nextElementSibling;
-            const icon = headerElem.querySelector('.day-toggle-icon');
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                icon.textContent = '▲';
-            } else {
-                content.classList.add('hidden');
-                icon.textContent = '▼';
-            }
-        }
-
-        function toggleExerciseAccordion(headerElem) {
-            const content = headerElem.nextElementSibling;
-            const icon = headerElem.querySelector('.ex-toggle-icon');
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                icon.textContent = '▲';
-            } else {
-                content.classList.add('hidden');
-                icon.textContent = '▼';
-            }
-        }
+        /* 履歴の開閉（toggleDayAccordion / toggleExerciseAccordion）と
+           削除確認（deleteWorkout / deleteCardio）は extras.js に移動しました */
 
         function saveWorkout() {
             const nameInput = document.getElementById('exerciseName');
@@ -778,15 +654,6 @@
             nameInput.focus();
         }
 
-        function deleteWorkout(id) {
-            if (confirm('この記録を削除しますか？')) {
-                if (editingId === id) resetForm();
-                workouts = workouts.filter(i => i.id !== id);
-                localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-                renderWorkouts();
-            }
-        }
-
         function saveCardio() {
             const minInput = document.getElementById('cardioMinutes');
             const minutes = parseInt(minInput.value);
@@ -814,14 +681,6 @@
             localStorage.setItem('simple_cardios', JSON.stringify(cardios));
             minInput.value = '';
             renderCardios();
-        }
-
-        function deleteCardio(id) {
-            if (confirm('この有酸素記録を削除しますか？')) {
-                cardios = cardios.filter(i => i.id !== id);
-                localStorage.setItem('simple_cardios', JSON.stringify(cardios));
-                renderCardios();
-            }
         }
 
         function renderCardios() {
@@ -919,7 +778,7 @@
                 const imported = JSON.parse(text);
                 let rawWorkouts = [];
                 let rawCardios = [];
-                
+
                 if (Array.isArray(imported)) {
                     rawWorkouts = imported;
                 } else if (imported && typeof imported === 'object') {
@@ -927,7 +786,7 @@
                     rawCardios = imported.cardios || [];
                     dayPplMap = imported.dayPplMap || {};
                 }
-                
+
                 workouts = sanitizeWorkouts(rawWorkouts);
                 cardios = sanitizeCardios(rawCardios);
 
@@ -944,11 +803,11 @@
         }
 
         function escapeHtml(str) {
-            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '#' + '39;', '"': '&quot;' }[t] || t));
+            return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
         }
 
         renderWorkouts();
     </script>
-<script src="extras.js"></script>
+    <script src="extras.js"></script>
 </body>
 </html>
