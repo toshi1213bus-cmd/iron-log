@@ -489,7 +489,7 @@ color: var(--gold);
 background: rgba(0,0,0,.35);
 border-top: 1px solid var(--gold);
 border-bottom: 1px solid var(--gold);
-opacity: .45;
+opacity: .65;
 pointer-events: none;
 user-select: none;
 z-index: 40;
