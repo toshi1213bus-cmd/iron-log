@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PPL</title>
+<script>
+/* 保存済みテーマを描画前に適用（起動時のちらつき防止） */
+try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 'forest' || _t === 'gold') document.documentElement.setAttribute('data-theme', _t); } catch (e) {}
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=6">
+<link rel="stylesheet" href="theme.css?v=8">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -107,10 +111,10 @@
 <div id="tabContentSettings" class="hidden">
 <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg"></div>
 <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-2.5">
-<h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">今月 / 先月 ポイント比較</h2>
+<h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">月間サマリー（＋今週のトレ日数・有酸素分）</h2>
 <div class="bg-gray-900 border border-gray-700 rounded-xl divide-y divide-gray-700">
-<div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">トレ：今月 0pt / 先月 0pt</div>
-<div id="compareCardioPoints" class="p-3 text-xs font-bold text-white">有酸素：今月 0pt / 先月 0pt</div>
+<div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">今月トレ 0日（先月 0日）／ 今週 0日</div>
+<div id="compareCardioPoints" class="p-3 text-xs font-bold text-white">今月有酸素 0分・約0kcal（先月 0分）／ 今週 0分</div>
 </div>
 </div>
 <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
@@ -135,6 +139,28 @@
 <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
 復元実行
 </button>
+</div>
+</div>
+<!-- テーマ切替（3分割ボタン。選択中は塗り） -->
+<div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
+<h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">テーマ</h2>
+<div class="th-grid">
+<button type="button" class="th-btn" data-theme="gold" aria-pressed="true" onclick="setTheme('gold')">黒金</button>
+<button type="button" class="th-btn" data-theme="ocean" aria-pressed="false" onclick="setTheme('ocean')">深海ブルー</button>
+<button type="button" class="th-btn" data-theme="forest" aria-pressed="false" onclick="setTheme('forest')">森林グリーン</button>
+</div>
+</div>
+<!-- ヘルプ（アコーディオン。初期は閉じる） -->
+<div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5">
+<button type="button" id="helpToggle" onclick="toggleHelp()" aria-expanded="false" aria-controls="helpBody" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+ヘルプ<span class="help-chev"></span>
+</button>
+<div id="helpBody" class="help-body hidden">
+<div class="help-item"><div class="help-t">保存とバックアップ</div><div class="help-d">記録はブラウザ内に自動保存されます。ブラウザのキャッシュ削除や端末変更に備えて、JSON/TXT出力でバックアップを残してください。</div></div>
+<div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除も一覧や履歴から行えます。</div></div>
+<div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。月間サマリーでは今月・先月の比較に加え、月曜始まりの今週の実績も確認できます。</div></div>
+<div class="help-item"><div class="help-t">グラフと達成表示</div><div class="help-d">種目ごとの推移や推定1RMなどのグラフを確認でき、その日のメニューを完了すると達成表示が出ます。</div></div>
+<div class="help-item"><div class="help-t">テーマと注意点</div><div class="help-d">見た目のテーマは設定から変更できます（グラフの色は固定）。外部サーバーへ自動送信しないため、端末ごとに管理されます。</div></div>
 </div>
 </div>
 </div>
@@ -514,385 +540,386 @@ else if (dateStr.startsWith(lastYearMonth)) lastWorkoutCount++;
 compareWorkoutElem.textContent = `トレ：今月 ${currentWorkoutCount}pt / 先月 ${lastWorkoutCount}pt`;
 }
 function renderWorkouts() {
-  const wrapper = document.getElementById('workoutListWrapper');
-  const list = document.getElementById('workoutList');
-  const moreContainer = document.getElementById('workoutMoreContainer');
-  const empty = document.getElementById('emptyMessage');
-  if (!list || !wrapper) return;
-  list.innerHTML = '';
-  if (moreContainer) moreContainer.innerHTML = '';
-  updateMonthlyWorkoutSummary();
-  if (workouts.length === 0) {
-    wrapper.classList.add('hidden');
-    if (empty) empty.classList.remove('hidden');
-    return;
-  }
-  wrapper.classList.remove('hidden');
-  if (empty) empty.classList.add('hidden');
-  const grouped = {};
-  workouts.forEach(item => {
-    if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
-    grouped[item.dateStr].push(item);
-  });
-  const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
-  const displayDates = sortedDates.slice(0, visibleDaysCount);
-  displayDates.forEach(dateStr => {
-    const dayItems = grouped[dateStr];
-    let totalVolume = 0;
-    dayItems.forEach(item => {
-      item.setList.forEach(set => { totalVolume += (set.weight * set.reps); });
-    });
-    const formattedVolume = Math.round(totalVolume).toLocaleString();
-    const currentPpl = dayPplMap[dateStr] || 'PUSH';
-    const row = document.createElement('div');
-    row.className = 'p-4';
-    let header = `
-      <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
-        <div class="flex items-center gap-2.5 flex-wrap">
-          <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-          <span class="text-xs text-white font-bold">総負荷: <span class="text-white">${formattedVolume}</span>kg</span>
-          <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
-            <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
-            <option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
-            <option value="LEGS" ${currentPpl === 'LEGS' ? 'selected' : ''}>LEGS</option>
-            <option value="OTHER" ${currentPpl === 'OTHER' ? 'selected' : ''}>OTHER</option>
-          </select>
-        </div>
-        <span class="text-xs text-gray-400 day-toggle-icon">▼</span>
-      </div>
-    `;
-    let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
-    dayItems.forEach(item => {
-      const setsHtml = item.setList.map((s, idx) => `
-        <div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
-          <span class="text-gray-500 w-4">${idx + 1}.</span>
-          <span class="text-white">${s.weight} kg</span> ×
-          <span class="text-white">${s.reps} 回</span>
-        </div>
-      `).join('');
-      body += `
-        <div class="bg-gray-900 border border-gray-700 rounded-xl p-3">
-          <div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
-              <span class="text-xs text-gray-500">(${item.setList.length}セット)</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-400 ex-toggle-icon">▼</span>
-              <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-white px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium">編集</button>
-              <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
-            </div>
-          </div>
-          <div class="ex-content hidden mt-2 pt-2 border-t border-gray-800 space-y-1">
-            ${setsHtml}
-          </div>
-        </div>
-      `;
-    });
-    body += '</div>';
-    row.innerHTML = header + body;
-    list.appendChild(row);
-  });
-  if (sortedDates.length > visibleDaysCount && moreContainer) {
-    const moreBtn = document.createElement('button');
-    moreBtn.type = 'button';
-    moreBtn.onclick = loadMoreDays;
-    moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-bold border-t border-gray-700 transition active:scale-[0.98]';
-    moreBtn.textContent = '＋';
-    moreContainer.appendChild(moreBtn);
-  }
-  /* 有酸素の描画はここでは呼ばない（extras.js が必要な画面を1回ずつ更新する） */
+const wrapper = document.getElementById('workoutListWrapper');
+const list = document.getElementById('workoutList');
+const moreContainer = document.getElementById('workoutMoreContainer');
+const empty = document.getElementById('emptyMessage');
+if (!list || !wrapper) return;
+list.innerHTML = '';
+if (moreContainer) moreContainer.innerHTML = '';
+updateMonthlyWorkoutSummary();
+if (workouts.length === 0) {
+wrapper.classList.add('hidden');
+if (empty) empty.classList.remove('hidden');
+return;
+}
+wrapper.classList.remove('hidden');
+if (empty) empty.classList.add('hidden');
+const grouped = {};
+workouts.forEach(item => {
+if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
+grouped[item.dateStr].push(item);
+});
+const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+const displayDates = sortedDates.slice(0, visibleDaysCount);
+displayDates.forEach(dateStr => {
+const dayItems = grouped[dateStr];
+let totalVolume = 0;
+dayItems.forEach(item => {
+item.setList.forEach(set => { totalVolume += (set.weight * set.reps); });
+});
+const formattedVolume = Math.round(totalVolume).toLocaleString();
+const currentPpl = dayPplMap[dateStr] || 'PUSH';
+const row = document.createElement('div');
+row.className = 'p-4';
+let header = `
+<div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleDayAccordion(this)">
+<div class="flex items-center gap-2.5 flex-wrap">
+<span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
+<span class="text-xs text-white font-bold">総負荷: <span class="text-white">${formattedVolume}</span>kg</span>
+<select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
+<option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
+<option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
+<option value="LEGS" ${currentPpl === 'LEGS' ? 'selected' : ''}>LEGS</option>
+<option value="OTHER" ${currentPpl === 'OTHER' ? 'selected' : ''}>OTHER</option>
+</select>
+</div>
+<span class="text-xs text-gray-400 day-toggle-icon">▼</span>
+</div>
+`;
+let body = '<div class="day-content hidden mt-3 pt-3 border-t border-gray-700 space-y-2">';
+dayItems.forEach(item => {
+const setsHtml = item.setList.map((s, idx) => `
+<div class="text-xs text-gray-300 font-semibold flex items-center gap-2">
+<span class="text-gray-500 w-4">${idx + 1}.</span>
+<span class="text-white">${s.weight} kg</span> ×
+<span class="text-white">${s.reps} 回</span>
+</div>
+`).join('');
+body += `
+<div class="bg-gray-900 border border-gray-700 rounded-xl p-3">
+<div class="flex justify-between items-center cursor-pointer select-none" onclick="toggleExerciseAccordion(this)">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold text-white">${escapeHtml(item.name)}</span>
+<span class="text-xs text-gray-500">(${item.setList.length}セット)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-gray-400 ex-toggle-icon">▼</span>
+<button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-white px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium">編集</button>
+<button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
+</div>
+</div>
+<div class="ex-content hidden mt-2 pt-2 border-t border-gray-800 space-y-1">
+${setsHtml}
+</div>
+</div>
+`;
+});
+body += '</div>';
+row.innerHTML = header + body;
+list.appendChild(row);
+});
+if (sortedDates.length > visibleDaysCount && moreContainer) {
+const moreBtn = document.createElement('button');
+moreBtn.type = 'button';
+moreBtn.onclick = loadMoreDays;
+moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-bold border-t border-gray-700 transition active:scale-[0.98]';
+moreBtn.textContent = '＋';
+moreContainer.appendChild(moreBtn);
+}
+/* 有酸素の描画はここでは呼ばない（extras.js が必要な画面を1回ずつ更新する） */
 }
 function loadMoreDays() {
-  visibleDaysCount += 5;
-  renderWorkouts();
+visibleDaysCount += 5;
+renderWorkouts();
 }
 function loadMoreCardioDays() {
-  visibleCardioDaysCount += 5;
-  renderCardios();
+visibleCardioDaysCount += 5;
+renderCardios();
 }
 /* 全画面を更新（復元のあとなど）。extras.js が window.refreshAll を差し替えて、1回ずつだけ描く */
 function refreshAll() { renderWorkouts(); renderCardios(); }
 /* 履歴の開閉（toggleDayAccordion / toggleExerciseAccordion）と
-   削除確認（deleteWorkout / deleteCardio）は extras.js に移動しました */
+削除確認（deleteWorkout / deleteCardio）は extras.js に移動しました */
 function saveWorkout() {
-  const nameInput = document.getElementById('exerciseName');
-  const name = nameInput.value.trim();
-  if (!name) {
-    alert('種目名を入力してください');
-    nameInput.focus();
-    return;
-  }
-  if (name.length > LIMITS.name) {
-    alert('種目名は' + LIMITS.name + '文字以内で入力してください');
-    nameInput.focus();
-    return;
-  }
-  const container = document.getElementById('setsContainer');
-  const rows = container.querySelectorAll('.set-row');
-  const setList = [];
-  let tooBig = false;
-  rows.forEach(row => {
-    const w = parseFloat(row.querySelector('.weight-input').value);
-    const r = parseInt(row.querySelector('.reps-input').value);
-    if (w > LIMITS.weight || r > LIMITS.reps) { tooBig = true; return; }
-    if (isValidSet(w, r)) {
-      setList.push({ weight: w, reps: r });
-    }
-  });
-  if (tooBig) {
-    alert('重量は' + LIMITS.weight + 'kg以下、回数は' + LIMITS.reps + '回以下で入力してください');
-    return;
-  }
-  if (setList.length === 0) {
-    alert('有効な重量と回数を入力してください');
-    return;
-  }
-  const snap = JSON.stringify(workouts);
-  if (editingId) {
-    const target = workouts.find(i => i.id === editingId);
-    if (target) {
-      target.name = name;
-      target.setList = setList;
-    }
-  } else {
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
-    if (existing) {
-      existing.setList = existing.setList.concat(setList);
-    } else {
-      workouts.push({ id: Date.now().toString(), name, dateStr, setList });
-    }
-  }
-  if (!safeSave('simple_workouts', workouts)) {
-    workouts = JSON.parse(snap);
-    renderWorkouts();
-    return;
-  }
-  resetForm();
-  renderWorkouts();
-  nameInput.focus();
+const nameInput = document.getElementById('exerciseName');
+const name = nameInput.value.trim();
+if (!name) {
+alert('種目名を入力してください');
+nameInput.focus();
+return;
+}
+if (name.length > LIMITS.name) {
+alert('種目名は' + LIMITS.name + '文字以内で入力してください');
+nameInput.focus();
+return;
+}
+const container = document.getElementById('setsContainer');
+const rows = container.querySelectorAll('.set-row');
+const setList = [];
+let tooBig = false;
+rows.forEach(row => {
+const w = parseFloat(row.querySelector('.weight-input').value);
+const r = parseInt(row.querySelector('.reps-input').value);
+if (w > LIMITS.weight || r > LIMITS.reps) { tooBig = true; return; }
+if (isValidSet(w, r)) {
+setList.push({ weight: w, reps: r });
+}
+});
+if (tooBig) {
+alert('重量は' + LIMITS.weight + 'kg以下、回数は' + LIMITS.reps + '回以下で入力してください');
+return;
+}
+if (setList.length === 0) {
+alert('有効な重量と回数を入力してください');
+return;
+}
+const snap = JSON.stringify(workouts);
+if (editingId) {
+const target = workouts.find(i => i.id === editingId);
+if (target) {
+target.name = name;
+target.setList = setList;
+}
+} else {
+const now = new Date();
+const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+const existing = workouts.find(i => i.dateStr === dateStr && i.name === name);
+if (existing) {
+existing.setList = existing.setList.concat(setList);
+} else {
+workouts.push({ id: Date.now().toString(), name, dateStr, setList });
+}
+}
+if (!safeSave('simple_workouts', workouts)) {
+workouts = JSON.parse(snap);
+renderWorkouts();
+return;
+}
+resetForm();
+renderWorkouts();
+nameInput.focus();
 }
 function saveCardio() {
-  const minInput = document.getElementById('cardioMinutes');
-  const minutes = parseInt(minInput.value);
-  if (isNaN(minutes) || minutes <= 0) {
-    alert('有効な時間を入力してください');
-    minInput.focus();
-    return;
-  }
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const snap = JSON.stringify(cardios);
-  const existingCardio = cardios.find(i => i.dateStr === dateStr);
-  if (existingCardio) {
-    existingCardio.minutes += minutes;
-  } else {
-    cardios.push({
-      id: Date.now().toString(),
-      minutes: minutes,
-      dateStr: dateStr
-    });
-  }
-  if (!safeSave('simple_cardios', cardios)) {
-    cardios = JSON.parse(snap);
-    renderCardios();
-    return;
-  }
-  minInput.value = '';
-  renderCardios();
+const minInput = document.getElementById('cardioMinutes');
+const minutes = parseInt(minInput.value);
+if (isNaN(minutes) || minutes <= 0) {
+alert('有効な時間を入力してください');
+minInput.focus();
+return;
+}
+const now = new Date();
+const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+const snap = JSON.stringify(cardios);
+const existingCardio = cardios.find(i => i.dateStr === dateStr);
+if (existingCardio) {
+existingCardio.minutes += minutes;
+} else {
+cardios.push({
+id: Date.now().toString(),
+minutes: minutes,
+dateStr: dateStr
+});
+}
+if (!safeSave('simple_cardios', cardios)) {
+cardios = JSON.parse(snap);
+renderCardios();
+return;
+}
+minInput.value = '';
+renderCardios();
 }
 function renderCardios() {
-  const wrapper = document.getElementById('cardioListWrapper');
-  const list = document.getElementById('cardioList');
-  const moreContainer = document.getElementById('cardioMoreContainer');
-  const empty = document.getElementById('emptyCardioMessage');
-  const summary = document.getElementById('monthlyCardioSummary');
-  const compareCardioElem = document.getElementById('compareCardioPoints');
-  if (!list || !wrapper) return;
-  list.innerHTML = '';
-  if (moreContainer) moreContainer.innerHTML = '';
-  const now = new Date();
-  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastYearMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
-  const monthlyItems = cardios.filter(i => i.dateStr.startsWith(currentYearMonth));
-  const lastMonthlyItems = cardios.filter(i => i.dateStr.startsWith(lastYearMonth));
-  const totalMin = monthlyItems.reduce((sum, i) => sum + i.minutes, 0);
-  const lastTotalMin = lastMonthlyItems.reduce((sum, i) => sum + i.minutes, 0);
-  const totalKcal = Math.round(totalMin * 3.5);
-  if (summary) {
-    summary.textContent = `今月合計: ${totalMin}分 / 約${totalKcal}kcal`;
-  }
-  if (compareCardioElem) {
-    compareCardioElem.textContent = `有酸素：今月 ${totalMin}pt / 先月 ${lastTotalMin}pt`;
-  }
-  if (cardios.length === 0) {
-    wrapper.classList.add('hidden');
-    if (empty) empty.classList.remove('hidden');
-    return;
-  }
-  wrapper.classList.remove('hidden');
-  if (empty) empty.classList.add('hidden');
-  const sortedDates = [...new Set(cardios.map(i => i.dateStr))].sort((a, b) => new Date(b) - new Date(a));
-  const displayDates = sortedDates.slice(0, visibleCardioDaysCount);
-  displayDates.forEach(dateStr => {
-    const dayCardio = cardios.find(i => i.dateStr === dateStr);
-    if (!dayCardio) return;
-    const dayKcal = Math.round(dayCardio.minutes * 3.5);
-    const div = document.createElement('div');
-    div.className = 'p-3.5 flex justify-between items-center';
-    div.innerHTML = `
-      <div class="flex items-center gap-2.5">
-        <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
-        <span class="text-xs text-white">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
-      </div>
-      <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
-    `;
-    list.appendChild(div);
-  });
-  if (sortedDates.length > visibleCardioDaysCount && moreContainer) {
-    const moreBtn = document.createElement('button');
-    moreBtn.type = 'button';
-    moreBtn.onclick = loadMoreCardioDays;
-    moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-bold border-t border-gray-700 transition active:scale-[0.98]';
-    moreBtn.textContent = '＋';
-    moreContainer.appendChild(moreBtn);
-  }
+const wrapper = document.getElementById('cardioListWrapper');
+const list = document.getElementById('cardioList');
+const moreContainer = document.getElementById('cardioMoreContainer');
+const empty = document.getElementById('emptyCardioMessage');
+const summary = document.getElementById('monthlyCardioSummary');
+const compareCardioElem = document.getElementById('compareCardioPoints');
+if (!list || !wrapper) return;
+list.innerHTML = '';
+if (moreContainer) moreContainer.innerHTML = '';
+const now = new Date();
+const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const lastYearMonth = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+const monthlyItems = cardios.filter(i => i.dateStr.startsWith(currentYearMonth));
+const lastMonthlyItems = cardios.filter(i => i.dateStr.startsWith(lastYearMonth));
+const totalMin = monthlyItems.reduce((sum, i) => sum + i.minutes, 0);
+const lastTotalMin = lastMonthlyItems.reduce((sum, i) => sum + i.minutes, 0);
+const totalKcal = Math.round(totalMin * 3.5);
+if (summary) {
+summary.textContent = `今月合計: ${totalMin}分 / 約${totalKcal}kcal`;
+}
+/* 月間サマリー（比較の2行）は extras.js の updateSummary が描く */
+if (compareCardioElem) {
+compareCardioElem.textContent = `今月有酸素 ${totalMin}分・約${totalKcal}kcal（先月 ${lastTotalMin}分）`;
+}
+if (cardios.length === 0) {
+wrapper.classList.add('hidden');
+if (empty) empty.classList.remove('hidden');
+return;
+}
+wrapper.classList.remove('hidden');
+if (empty) empty.classList.add('hidden');
+const sortedDates = [...new Set(cardios.map(i => i.dateStr))].sort((a, b) => new Date(b) - new Date(a));
+const displayDates = sortedDates.slice(0, visibleCardioDaysCount);
+displayDates.forEach(dateStr => {
+const dayCardio = cardios.find(i => i.dateStr === dateStr);
+if (!dayCardio) return;
+const dayKcal = Math.round(dayCardio.minutes * 3.5);
+const div = document.createElement('div');
+div.className = 'p-3.5 flex justify-between items-center';
+div.innerHTML = `
+<div class="flex items-center gap-2.5">
+<span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
+<span class="text-xs text-white">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
+</div>
+<button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
+`;
+list.appendChild(div);
+});
+if (sortedDates.length > visibleCardioDaysCount && moreContainer) {
+const moreBtn = document.createElement('button');
+moreBtn.type = 'button';
+moreBtn.onclick = loadMoreCardioDays;
+moreBtn.className = 'w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 text-sm font-bold border-t border-gray-700 transition active:scale-[0.98]';
+moreBtn.textContent = '＋';
+moreContainer.appendChild(moreBtn);
+}
 }
 function exportData() {
-  const exportObj = {
-    workouts: workouts,
-    cardios: cardios,
-    dayPplMap: dayPplMap,
-    menu: menuData,
-    menuTpl: window.tplExport ? window.tplExport() : null
-  };
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
-  const a = document.createElement('a');
-  a.href = dataStr;
-  a.download = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+const exportObj = {
+workouts: workouts,
+cardios: cardios,
+dayPplMap: dayPplMap,
+menu: menuData,
+menuTpl: window.tplExport ? window.tplExport() : null
+};
+const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
+const a = document.createElement('a');
+a.href = dataStr;
+a.download = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
+document.body.appendChild(a);
+a.click();
+a.remove();
 }
 /* TXT出力：トレーニング記録（日付・部位・種目・セット）だけを読みやすく整形 */
 function buildTxtLog() {
-  const grouped = {};
-  workouts.forEach(item => {
-    if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
-    grouped[item.dateStr].push(item);
-  });
-  const lines = [];
-  Object.keys(grouped).sort().forEach(dateStr => {
-    lines.push(dateStr + ' ' + (dayPplMap[dateStr] || 'PUSH'));
-    grouped[dateStr].forEach(item => {
-      lines.push(item.name);
-      item.setList.forEach((s, idx) => {
-        lines.push('  ' + (idx + 1) + '. ' + s.weight + 'kg × ' + s.reps + '回');
-      });
-    });
-    lines.push('');
-  });
-  return lines.join('\n');
+const grouped = {};
+workouts.forEach(item => {
+if (!grouped[item.dateStr]) grouped[item.dateStr] = [];
+grouped[item.dateStr].push(item);
+});
+const lines = [];
+Object.keys(grouped).sort().forEach(dateStr => {
+lines.push(dateStr + ' ' + (dayPplMap[dateStr] || 'PUSH'));
+grouped[dateStr].forEach(item => {
+lines.push(item.name);
+item.setList.forEach((s, idx) => {
+lines.push(' ' + (idx + 1) + '. ' + s.weight + 'kg × ' + s.reps + '回');
+});
+});
+lines.push('');
+});
+return lines.join('\n');
 }
 function exportTxt() {
-  if (workouts.length === 0) {
-    alert('出力する記録がありません');
-    return;
-  }
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent('\uFEFF' + buildTxtLog());
-  const a = document.createElement('a');
-  a.href = dataStr;
-  a.download = `ppl_workout_log_${today}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+if (workouts.length === 0) {
+alert('出力する記録がありません');
+return;
+}
+const now = new Date();
+const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent('\uFEFF' + buildTxtLog());
+const a = document.createElement('a');
+a.href = dataStr;
+a.download = `ppl_workout_log_${today}.txt`;
+document.body.appendChild(a);
+a.click();
+a.remove();
 }
 async function importFromJsonText() {
-  const text = document.getElementById('importText').value.trim();
-  if (!text) {
-    alert('JSONテキストが入力されていません。');
-    return;
-  }
-  /* 1) 先に全部検証する（ここまでは何も変更しない） */
-  let imported;
-  try {
-    imported = JSON.parse(text);
-  } catch (err) {
-    alert('JSONの形式が正しくありません。入力内容を確認してください。');
-    return;
-  }
-  let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null;
-  if (Array.isArray(imported)) {
-    rawWorkouts = imported;
-  } else if (imported && typeof imported === 'object' && Array.isArray(imported.workouts)) {
-    rawWorkouts = imported.workouts;
-    rawCardios = Array.isArray(imported.cardios) ? imported.cardios : [];
-    rawPpl = imported.dayPplMap || {};
-    rawMenu = (imported.menu && typeof imported.menu === 'object') ? imported.menu : null;
-    rawTpl = (imported.menuTpl && typeof imported.menuTpl === 'object' && !Array.isArray(imported.menuTpl)) ? imported.menuTpl : null;
-  } else {
-    alert('バックアップの形式が違います。記録は変更していません。');
-    return;
-  }
-  const wStat = { skipped: 0 }, cStat = { skipped: 0 };
-  const newWorkouts = sanitizeWorkouts(rawWorkouts, wStat);
-  const newCardios = sanitizeCardios(rawCardios, cStat);
-  const skipped = wStat.skipped + cStat.skipped;
-  if (rawWorkouts.length > 0 && newWorkouts.length === 0) {
-    alert('読み込める記録がありませんでした。記録は変更していません。');
-    return;
-  }
-  /* 2) 件数を見せて確認（除外があればその件数も） */
-  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件で上書きします。` +
-    (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') + 'よろしいですか？';
-  if (!(await askConfirm(msg, '復元'))) return;
-  /* 3) 上書き前の状態（メモリ・保存領域とも）を退避し、失敗したら両方元に戻す */
-  const prev = { workouts, cardios, dayPplMap, menuData };
-  const prevRaw = {};
-  STORE_KEYS.forEach(k => { prevRaw[k] = localStorage.getItem(k); });
-  try {
-    localStorage.setItem('simple_pre_restore', JSON.stringify({ workouts, cardios, dayPplMap, menu: menuData }));
-    workouts = newWorkouts;
-    cardios = newCardios;
-    dayPplMap = sanitizeDayPpl(rawPpl);
-    menuData = rawMenu;
-    localStorage.setItem('simple_workouts', JSON.stringify(workouts));
-    localStorage.setItem('simple_cardios', JSON.stringify(cardios));
-    localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
-    if (menuData) localStorage.setItem('simple_menu', JSON.stringify(menuData));
-    else localStorage.removeItem('simple_menu');
-    /* テンプレート：新形式はそのまま、旧形式は各部位の1枠目へ取り込む */
-    if (window.tplImport) window.tplImport(rawTpl, rawMenu);
-    resetForm();
-    refreshAll();
-    alert('データを正常に復元しました！' + (skipped > 0 ? '（除外 ' + skipped + '件）' : ''), skipped > 0 ? 5000 : undefined);
-    document.getElementById('importText').value = '';
-  } catch (err) {
-    workouts = prev.workouts;
-    cardios = prev.cardios;
-    dayPplMap = prev.dayPplMap;
-    menuData = prev.menuData;
-    STORE_KEYS.forEach(k => {
-      try {
-        if (prevRaw[k] === null) localStorage.removeItem(k);
-        else localStorage.setItem(k, prevRaw[k]);
-      } catch (e) {}
-    });
-    if (window.tplReload) window.tplReload();
-    refreshAll();
-    alert('復元に失敗しました。元のデータに戻しました。');
-  }
+const text = document.getElementById('importText').value.trim();
+if (!text) {
+alert('JSONテキストが入力されていません。');
+return;
+}
+/* 1) 先に全部検証する（ここまでは何も変更しない） */
+let imported;
+try {
+imported = JSON.parse(text);
+} catch (err) {
+alert('JSONの形式が正しくありません。入力内容を確認してください。');
+return;
+}
+let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null;
+if (Array.isArray(imported)) {
+rawWorkouts = imported;
+} else if (imported && typeof imported === 'object' && Array.isArray(imported.workouts)) {
+rawWorkouts = imported.workouts;
+rawCardios = Array.isArray(imported.cardios) ? imported.cardios : [];
+rawPpl = imported.dayPplMap || {};
+rawMenu = (imported.menu && typeof imported.menu === 'object') ? imported.menu : null;
+rawTpl = (imported.menuTpl && typeof imported.menuTpl === 'object' && !Array.isArray(imported.menuTpl)) ? imported.menuTpl : null;
+} else {
+alert('バックアップの形式が違います。記録は変更していません。');
+return;
+}
+const wStat = { skipped: 0 }, cStat = { skipped: 0 };
+const newWorkouts = sanitizeWorkouts(rawWorkouts, wStat);
+const newCardios = sanitizeCardios(rawCardios, cStat);
+const skipped = wStat.skipped + cStat.skipped;
+if (rawWorkouts.length > 0 && newWorkouts.length === 0) {
+alert('読み込める記録がありませんでした。記録は変更していません。');
+return;
+}
+/* 2) 件数を見せて確認（除外があればその件数も） */
+const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件で上書きします。` +
+(skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') + 'よろしいですか？';
+if (!(await askConfirm(msg, '復元'))) return;
+/* 3) 上書き前の状態（メモリ・保存領域とも）を退避し、失敗したら両方元に戻す */
+const prev = { workouts, cardios, dayPplMap, menuData };
+const prevRaw = {};
+STORE_KEYS.forEach(k => { prevRaw[k] = localStorage.getItem(k); });
+try {
+localStorage.setItem('simple_pre_restore', JSON.stringify({ workouts, cardios, dayPplMap, menu: menuData }));
+workouts = newWorkouts;
+cardios = newCardios;
+dayPplMap = sanitizeDayPpl(rawPpl);
+menuData = rawMenu;
+localStorage.setItem('simple_workouts', JSON.stringify(workouts));
+localStorage.setItem('simple_cardios', JSON.stringify(cardios));
+localStorage.setItem('simple_day_ppl', JSON.stringify(dayPplMap));
+if (menuData) localStorage.setItem('simple_menu', JSON.stringify(menuData));
+else localStorage.removeItem('simple_menu');
+/* テンプレート：新形式はそのまま、旧形式は各部位の1枠目へ取り込む */
+if (window.tplImport) window.tplImport(rawTpl, rawMenu);
+resetForm();
+refreshAll();
+alert('データを正常に復元しました！' + (skipped > 0 ? '（除外 ' + skipped + '件）' : ''), skipped > 0 ? 5000 : undefined);
+document.getElementById('importText').value = '';
+} catch (err) {
+workouts = prev.workouts;
+cardios = prev.cardios;
+dayPplMap = prev.dayPplMap;
+menuData = prev.menuData;
+STORE_KEYS.forEach(k => {
+try {
+if (prevRaw[k] === null) localStorage.removeItem(k);
+else localStorage.setItem(k, prevRaw[k]);
+} catch (e) {}
+});
+if (window.tplReload) window.tplReload();
+refreshAll();
+alert('復元に失敗しました。元のデータに戻しました。');
+}
 }
 function escapeHtml(str) {
-  return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
+return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t));
 }
 /* 起動時の描画は extras.js が1回だけ行う */
 </script>
-<script src="extras.js?v=6"></script>
+<script src="extras.js?v=8"></script>
 </body>
 </html>
