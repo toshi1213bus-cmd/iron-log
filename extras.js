@@ -196,18 +196,19 @@ window.toggleDayAccordion = h => {
 };
 window.toggleExerciseAccordion = h => toggle(h, '.ex-toggle-icon');
 
-/* ===== 履歴の「グラフ推移」（その日以前の記録日のうち直近5回分の総負荷 Σ weight × reps）
+/* ===== 履歴の「グラフ推移」（対象日の部位と同じ部位の記録日だけを集め、その日以前の直近5回分の総負荷 Σ weight × reps）
+   ・部位（PUSH/PULL/LEGS/OTHER）を履歴やカレンダーの日付シートで変えると、開いているグラフもその新しい部位の直近5回分に追従する
    ・日付ヘッダーの PUSH/PULL/LEGS/OTHER の横にボタン。大きさはホームの展開グラフと同じ（320×138・日付あり）
    ・グラフを開く → その日の種目一覧（.day-content）を閉じる。種目一覧を開く → グラフを閉じる ===== */
 const graphOpen = new Set();
 function graphHtml(d) {
-  const per = {};
+  const t = pplOf(d), per = {};
   workouts.forEach(w => {
-    if (w.dateStr <= d) per[w.dateStr] = (per[w.dateStr] || 0) + w.setList.reduce((a, x) => a + x.weight * x.reps, 0);
+    if (w.dateStr <= d && pplOf(w.dateStr) === t) per[w.dateStr] = (per[w.dateStr] || 0) + w.setList.reduce((a, x) => a + x.weight * x.reps, 0);
   });
   const ds = Object.keys(per).sort().slice(-5);
-  if (ds.length < 2) return '<div class="hm-sub">2回以上の記録でグラフが出ます。</div>';
-  return '<div class="hm-leg"><span class="lg-g">総負荷</span></div>' + line(ds.map(x => Math.round(per[x])), 320, 138, ds);
+  if (ds.length < 2) return '<div class="hm-sub">' + t + ' が2回以上の記録でグラフが出ます。</div>';
+  return '<div class="hm-leg"><span class="lg-g">' + t + ' 総負荷</span></div>' + line(ds.map(x => Math.round(per[x])), 320, 138, ds);
 }
 function hideGraph(row) {
   const g = row.querySelector('.day-graph'), b = row.querySelector('.gr-btn');
@@ -696,7 +697,12 @@ window.resetForm = function (keep) {
   closePad();
   renderFormHeader();
 };
-window.cancelEdit = function () { window.resetForm(true); };
+/* キャンセル：フォームをリセットし、アクティブ要素のフォーカス（とテンキー）も外してキーボードが勝手に立ち上がらないようにする */
+window.cancelEdit = function () {
+  window.resetForm(true); /* 中で closePad() も呼ぶ */
+  const a = document.activeElement;
+  if (a && a !== document.body && a.blur) a.blur();
+};
 /* 編集の開始：日付指定（formDate）は消さない */
 const editCore = window.editWorkout;
 window.editWorkout = function (id) {
@@ -721,6 +727,17 @@ window.checkExerciseSuggestion = function () {
     renderFormHeader();
   }
   return suggestCore.apply(this, arguments);
+};
+/* 手入力 → サジェストから過去記録を選んだときも「入力中」＋「キャンセル」を出す（編集中は対象外） */
+const applyCore = window.applySuggestion;
+window.applySuggestion = function (id) {
+  applyCore.apply(this, arguments);
+  if (editingId !== null) return;
+  const inp = document.getElementById('exerciseName');
+  homeInput = true;
+  homeInputName = inp ? inp.value.trim() : null;
+  hideSuggest();
+  renderFormHeader();
 };
 window.homeFill = function (i) {
   const name = homeNames[i];

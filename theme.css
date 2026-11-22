@@ -217,6 +217,8 @@ body .set-row {
 }
 body .set-row .set-label { width: auto; text-align: center; }
 body .set-row > button { width: 28px; padding: 0; text-align: center; }
+/* 最後のセット行と＋セットの間：上の「セット」見出し→1行目の見た目の間隔（9px）に揃える */
+body #setsContainer + div { margin-top: 9px; }
 
 /* ================= ボタン ================= */
 body .hover\:bg-gray-700:hover { background: var(--hover-2); }
@@ -629,34 +631,3 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
 
 /* ================= 追加: 履歴表示件数（− 5件 / ＋ 5件） ================= */
 .pager-btn:disabled { opacity: .35; pointer-events: none; }
-
-/* ================= タイマー下線の統一＆セット行上下余白の均等化 ================= */
-/* 1. タイマー領域の下余白をなくし、残り時間バーを金細線の位置に重ねて引き上げる */
-#tabContentWorkout > div.bg-gray-800 > div:first-child {
-  position: relative;
-  padding-top: 14px;
-  padding-bottom: 12px;
-}
-#timerTrack {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 2px;
-  background: transparent;
-  z-index: 2;
-}
-#tabContentWorkout > div.bg-gray-800 > div.card-sep {
-  padding-top: 14px;
-  padding-bottom: 14px;
-}
-
-/* 2. ［kg］［回］の上（セット見出しとの間）と下（＋セットボタンとの間）のスペースを同じにする */
-#tabContentWorkout .card-sep > .space-y-1\.5 {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-#tabContentWorkout .card-sep > .space-y-1\.5 > * {
-  margin-top: 0 !important;
-}
