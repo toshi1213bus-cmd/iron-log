@@ -254,6 +254,47 @@ if (tmCenter) {
 }
 document.addEventListener('click', e => { if (e.target.closest('button')) buzz(10); });
 
+/* ===== タイマー：数字の背後の円形・放射状の目盛りリング（計器風）
+   残り時間 ÷ セット時間 に合わせて目盛りが点灯。START で12時の位置から時計回りに消えていく（待機中＝全点灯／0秒・アラーム中＝全消灯）
+   数字の大きさ・タイマーの動作・音・バイブには触らない（index.html の変数 targetEndTime / lastTimerSec / alarmInterval を読むだけ） ===== */
+const RING_N = 60;
+let ringTicks = [], ringLit = -1;
+function buildRing() {
+  if (!tmCenter) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'tm-ring');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('aria-hidden', 'true');
+  const rc = document.createElementNS(NS, 'circle');
+  rc.setAttribute('class', 'tm-rc');
+  rc.setAttribute('cx', '50'); rc.setAttribute('cy', '50'); rc.setAttribute('r', '39');
+  svg.appendChild(rc);
+  for (let i = 0; i < RING_N; i++) {
+    const a = i / RING_N * Math.PI * 2, major = i % 5 === 0, r0 = major ? 42 : 45, r1 = 48.5;
+    const t = document.createElementNS(NS, 'line');
+    t.setAttribute('class', 'tm-tk' + (major ? ' mj' : ''));
+    t.setAttribute('x1', (50 + Math.sin(a) * r0).toFixed(2)); t.setAttribute('y1', (50 - Math.cos(a) * r0).toFixed(2));
+    t.setAttribute('x2', (50 + Math.sin(a) * r1).toFixed(2)); t.setAttribute('y2', (50 - Math.cos(a) * r1).toFixed(2));
+    svg.appendChild(t);
+    ringTicks.push(t);
+  }
+  tmCenter.insertBefore(svg, tmCenter.firstChild);
+}
+function paintRing() {
+  if (!ringTicks.length || !isShown('tabContentWorkout')) return;
+  let frac = 0;
+  if (targetEndTime && lastTimerSec > 0) frac = Math.max(0, Math.min(1, (targetEndTime - Date.now()) / (lastTimerSec * 1000)));
+  else if (!alarmInterval && lastTimerSec > 0) frac = 1;
+  const lit = frac > 0 ? Math.max(1, Math.ceil(frac * RING_N - 1e-9)) : 0;
+  if (lit === ringLit) return;
+  ringLit = lit;
+  const off = RING_N - lit;
+  ringTicks.forEach((t, i) => { const on = i >= off; t.classList.toggle('on', on); t.classList.toggle('hd', on && i === off); });
+}
+safe(buildRing);
+setInterval(() => safe(paintRing), 100);
+
 /* ===== 専用テンキー（kg／回／有酸素の分。OSのキーボードは出さない） =====
    ・入力欄は readonly。タップで金枠ハイライト＋画面下にテンキー
    ・.5 は kg のときだけ有効（付与／すでに付いていれば外すトグル）
@@ -1001,6 +1042,7 @@ function showTab(name, extra) {
   if (alarmInterval) stopTimer();
   closePad(); /* 下タブが前面にあっても、移動先にテンキーを残さない */
   if (name !== 'workout') closeHistory(); /* 別ページへ移動したら履歴の種目一覧・セット内訳・グラフを閉じる */
+  if (name !== 'home') homeOpen = null; /* ホームの種目の展開（グラフ）も閉じる。次にホームへ戻ったときは閉じた状態で描く */
   const paging = resetPaging(); /* 履歴の表示件数は基準に戻す（トレーニング＝4件、有酸素＝5件） */
   Object.keys(TABS).forEach(k => {
     const el = document.getElementById(TABS[k]);
@@ -1011,6 +1053,7 @@ function showTab(name, extra) {
   const e = extra || {};
   requestRender({ w: !!e.w || paging.w, c: !!e.c || paging.c, view: name });
   fitTimer(); /* トレーニング画面が見えるようになったとき、タイマーの文字サイズを合わせる */
+  safe(paintRing); /* 目盛りリングも最新の状態に */
   window.scrollTo(0, 0);
 }
 window.switchTab = function (name) { showTab(name); };

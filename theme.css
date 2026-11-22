@@ -22,6 +22,7 @@
   --placeholder: #918d82;
   --scroll: #2a2a2c;
   --num: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+  --np-red: #c0605a; /* テンキー・押下時の落ち着いた赤（既存の警告赤と同じ色） */
 }
 
 /* ===== テーマ：深海ブルー ===== */
@@ -87,7 +88,7 @@ body.pb-24 { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 body .bg-gray-800.border.rounded-2xl {
   background: transparent;
   border-width: 0 0 1px 0;
-  border-color: var(--gold-line);
+  border-color: var(--line);
   border-radius: 0;
   box-shadow: none;
 }
@@ -361,7 +362,7 @@ body .ex-toggle-icon.is-open {
 #bottomNav button.on { color: var(--gold); box-shadow: inset 0 2px 0 var(--gold); }
 
 /* ================= ホーム ================= */
-.hm-card { border-bottom: 1px solid var(--gold-line); }
+.hm-card { border-bottom: 1px solid var(--line); }
 .hm-pad { padding: 14px; }
 .hm-lb { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); }
 .hm-gold { color: var(--gold); }
@@ -385,7 +386,7 @@ body .ex-toggle-icon.is-open {
 .hm-st { font-family: var(--num); font-size: 17px; font-weight: 500; letter-spacing: 0.04em; }
 .hm-ch { flex: none; line-height: 0; }
 /* ホーム：種目タップで展開 */
-.card-sep { border-top: 1px solid var(--gold-line); }
+.card-sep { border-top: 1px solid var(--line); }
 .hm-ex { cursor: pointer; }
 .hm-act { display: flex; align-items: center; gap: 12px; }
 .hm-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin: 0 4px 3px 0; }
@@ -420,7 +421,7 @@ body .ex-toggle-icon.is-open {
 .ms-t { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
 .ms-n { font-family: var(--num); font-size: 16px; color: var(--text); letter-spacing: 0.05em; }
 #menuEditor { position: fixed; inset: 0; max-width: 28rem; margin: 0 auto; background: var(--bg); z-index: 120; display: flex; flex-direction: column; }
-.me-head { padding: 14px 16px 0; border-bottom: 1px solid var(--gold-line); }
+.me-head { padding: 14px 16px 0; border-bottom: 1px solid var(--line); }
 .me-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px -16px 0; }
 .me-tabs button { padding: 12px 0; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
 .me-tabs button.cur { color: var(--gold); box-shadow: inset 0 -2px 0 var(--gold); }
@@ -439,21 +440,33 @@ body .ex-toggle-icon.is-open {
 .me-add button { flex: none; width: 72px; height: 44px; font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; }
 .me-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; }
 .me-chip { padding: 8px 12px; font-size: 13px; color: var(--text); border: 1px solid var(--line); border-radius: 3px; }
-.me-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gold-line); background: var(--bg); }
+.me-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--bg); }
 .me-foot button { height: 48px; font-size: 14px; font-weight: 700; letter-spacing: 0.25em; text-indent: 0.25em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
 .me-foot .primary { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: var(--on-gold); border-color: transparent; }
 
 /* ================= 追加: PR達成！！（ホームの種目名のすぐ右） ================= */
 .hm-pr { flex: none; margin-left: 8px; white-space: nowrap; font-family: var(--num); font-size: 14px; font-weight: 600; letter-spacing: 0.15em; color: var(--gold); }
 
-/* ================= 追加: タイマー（左＋/− ・中央 時間 ・右 START/STOP） ================= */
+/* ================= 追加: タイマー（左＋/− ・中央 時間＋円形目盛りリング ・右 START/STOP） =================
+   数字（#timerDisplay）の大きさは extras.js の fitTimer が中央の幅から決める。列幅 68px・gap 8px は従来のまま（数字は大きくならない・小さくならない） */
 .tm-row { display: grid; grid-template-columns: 68px 1fr 68px; align-items: stretch; gap: 8px; }
 body .tm-wrap { padding: 14px 14px 8px; } /* 下は金の細線の近くまで */
-.tm-col { display: flex; flex-direction: column; justify-content: space-between; gap: 5px; } /* ボタンは上下に均等配置（大きさは .tm-btn のまま） */
-.tm-center { display: flex; align-items: center; justify-content: center; min-width: 0; white-space: nowrap; }
-.tm-btn { width: 100%; height: 31px; padding: 0; line-height: 1; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--gold); font-size: 14px; font-weight: 700; letter-spacing: 0.05em; transition: background .15s, border-color .15s; }
+.tm-col { display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 4px; } /* 丸ボタンを四隅（左上＋・左下−・右上START・右下STOP）へ */
+.tm-center { position: relative; display: flex; align-items: center; justify-content: center; min-width: 0; white-space: nowrap; }
+.tm-center #timerDisplay { position: relative; z-index: 1; } /* 数字は常にリングの手前 */
+/* 背後の放射状目盛りリング（extras.js が SVG を差し込む）。高さは行に合わせ、行を押し広げない */
+.tm-ring { position: absolute; left: 50%; top: 50%; height: 100%; width: auto; aspect-ratio: 1 / 1; transform: translate(-50%, -50%); pointer-events: none; z-index: 0; overflow: visible; }
+.tm-ring .tm-tk { stroke: var(--line); stroke-width: 1.2; stroke-linecap: butt; }
+.tm-ring .tm-tk.mj { stroke-width: 1.8; }
+.tm-ring .tm-tk.on { stroke: rgba(var(--gold-rgb), .5); }
+.tm-ring .tm-tk.hd { stroke: var(--gold); }
+.tm-ring .tm-rc { fill: none; stroke: var(--line); stroke-width: .8; }
+/* 丸型メーター風ボタン：細い円枠＋内側の目盛り刻み */
+.tm-btn { position: relative; flex: none; width: 40px; height: 40px; padding: 0; line-height: 1; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 50%; color: var(--gold); font-family: var(--num); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; transition: background .15s, border-color .15s, transform .12s ease, box-shadow .18s ease; }
+.tm-row > .tm-col:first-child .tm-btn { font-size: 20px; font-weight: 500; letter-spacing: 0; }
+.tm-btn::before { content: ''; position: absolute; inset: 2px; border-radius: 50%; pointer-events: none; background: repeating-conic-gradient(rgba(var(--gold-rgb), .7) 0 1.5deg, transparent 1.5deg 15deg); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); }
 .tm-btn:hover { border-color: var(--gold); background: var(--hover-1); }
-.tm-btn:active { transform: scale(0.98); }
+.tm-btn:active { transform: scale(0.97); box-shadow: 0 0 8px rgba(var(--gold-rgb), .45); }
 
 /* ================= 追加: メニューテンプレート（月間/設定：各部位に4枠） ================= */
 .ms-row { align-items: center; gap: 8px; padding: 4px 0; }
@@ -556,8 +569,8 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
   grid-template-columns: repeat(4, 1fr);
   gap: 6px;
   padding: 8px;
-  background: var(--surface);
-  border-top: 1px solid var(--gold-line);
+  background: #fff; /* ボタンの後ろは白 */
+  border-top: 1px solid var(--line);
   z-index: 49; /* 下タブ(z-index:50)より後ろ */
   visibility: hidden;
   transition: transform .2s ease, visibility 0s .2s;
@@ -572,11 +585,13 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
   font-size: 22px;
   font-weight: 500;
   color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--gold-line);
+  background: var(--bg); /* 枠の中は黒のまま */
+  border: 1px solid var(--np-red);
   border-radius: 3px;
+  transition: transform .12s ease, box-shadow .18s ease, background .12s;
 }
-.np-k:active { background: var(--hover-1); }
+/* タップの瞬間：わずかに沈み込み、赤枠がふわっと光る */
+.np-k:active { background: var(--hover-1); transform: scale(0.97); box-shadow: 0 0 10px rgba(192, 96, 90, .65), inset 0 0 6px rgba(192, 96, 90, .3); }
 .np-k.np-fn { color: var(--gold); }
 .np-k:disabled { color: var(--disabled); border-color: var(--line); pointer-events: none; }
 .np-k.np-w2 { grid-column: span 2; }
@@ -586,9 +601,9 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
   font-weight: 700;
   letter-spacing: 0.25em;
   text-indent: 0.25em;
-  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
-  color: var(--on-gold);
-  border-color: transparent;
+  background: var(--np-red); /* 完了：枠内も同じ落ち着いた赤 */
+  color: #fff;
+  border-color: var(--np-red);
 }
 
 /* ================= 追加: 日付ボトムシート ================= */
@@ -601,16 +616,16 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  border-top: 1px solid var(--gold-line);
+  border-top: 1px solid var(--line);
   border-radius: 4px 4px 0 0;
   animation: sheetUp .22s ease-out;
 }
 @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.sh-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--gold-line); }
+.sh-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .sh-x { margin-left: auto; width: 36px; height: 32px; font-size: 16px; color: var(--muted); }
 .sh-body { flex: 1; overflow-y: auto; padding: 4px 14px 14px; }
 .sh-sec { padding: 14px 0 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
-.sh-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gold-line); background: var(--bg); }
+.sh-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--bg); }
 .sh-foot button { min-height: 44px; padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
 
 /* ================= 追加: 調子ラベル（ホーム種目行の「今日／前回」の横） =================
@@ -633,3 +648,22 @@ body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px
 
 /* ================= 追加: 履歴表示件数（− 5件 / ＋ 5件） ================= */
 .pager-btn:disabled { opacity: .35; pointer-events: none; }
+
+/* ================= 追加: ボタンを押した瞬間のわずかな沈み込み＋枠の発光（テンキー・タイマーは上で個別に指定済み） ================= */
+.hm-in, .hm-ord button, .me-ops button, .me-add button, .me-foot button, .sh-foot button, .modal-actions button, .th-btn, .ms-slot, .gr-btn,
+body .act-row > button, body button.bg-gray-900.border, body button.bg-orange-500 {
+  transition: transform .12s ease, box-shadow .18s ease;
+}
+.hm-in:active, .hm-ord button:active, .me-ops button:active, .me-add button:active, .me-foot button:active, .sh-foot button:active, .modal-actions button:active, .th-btn:active, .ms-slot:active, .gr-btn:active,
+body .act-row > button:active, body button.bg-gray-900.border:active, body button.bg-orange-500:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), .45);
+}
+
+/* ================= 追加: タブ切替のふわっとしたフェード（0.15s・わずかに下から浮き上がる）
+   非表示→表示になるたびに自動で再生される。transform は使わない（画面固定の COMPLETE!! スタンプの位置がずれるため。top で動かす） ================= */
+@keyframes tabFadeIn { from { opacity: 0; top: 6px; } to { opacity: 1; top: 0; } }
+#tabContentHome, #tabContentWorkout, #tabContentCardio, #tabContentSettings { position: relative; animation: tabFadeIn .15s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  #tabContentHome, #tabContentWorkout, #tabContentCardio, #tabContentSettings { animation: none; }
+}
