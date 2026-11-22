@@ -997,13 +997,9 @@ document.addEventListener('click', e => {
 /* ===== 下タブ ===== */
 const TABS = { home: 'tabContentHome', workout: 'tabContentWorkout', cardio: 'tabContentCardio', settings: 'tabContentSettings' };
 /* 画面の切り替え。extra … 同時に描き直すもの（起動時の { w, c } など） */
-let curTab = null, tabInTimer = null;
 function showTab(name, extra) {
-  const changed = curTab !== null && curTab !== name; /* 別の画面へ移るときだけふわっと表示（起動時・同じタブの再タップは動かさない） */
-  curTab = name;
   if (alarmInterval) stopTimer();
   closePad(); /* 下タブが前面にあっても、移動先にテンキーを残さない */
-  if (name !== 'home') homeOpen = null; /* ホームを離れたら開いていた種目（グラフ）を閉じた状態に戻す。次にホームへ戻ったときは閉じている */
   if (name !== 'workout') closeHistory(); /* 別ページへ移動したら履歴の種目一覧・セット内訳・グラフを閉じる */
   const paging = resetPaging(); /* 履歴の表示件数は基準に戻す（トレーニング＝4件、有酸素＝5件） */
   Object.keys(TABS).forEach(k => {
@@ -1011,26 +1007,13 @@ function showTab(name, extra) {
     if (el) el.classList.toggle('hidden', k !== name);
   });
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.t === name));
-  fadeInTab(changed ? document.getElementById(TABS[name]) : null);
   /* 件数を戻した履歴と、見えるようになった画面（ホーム／月間・設定）を、最新の内容で1回だけ描く */
   const e = extra || {};
   requestRender({ w: !!e.w || paging.w, c: !!e.c || paging.c, view: name });
   fitTimer(); /* トレーニング画面が見えるようになったとき、タイマーの文字サイズを合わせる */
   window.scrollTo(0, 0);
 }
-/* タブ切替のフェード：移動先の画面に .tab-in を 0.15 秒だけ付ける（動きは theme.css の tabIn）。
-   終わったら必ず外す（外さないと、同じ画面を描き直すたびに再生される） */
-function fadeInTab(el) {
-  clearTimeout(tabInTimer);
-  Object.keys(TABS).forEach(k => { const t = document.getElementById(TABS[k]); if (t) t.classList.remove('tab-in'); });
-  if (!el) return;
-  void el.offsetWidth; /* 付け直しで確実に最初から再生する */
-  el.classList.add('tab-in');
-  tabInTimer = setTimeout(() => el.classList.remove('tab-in'), 200);
-}
 window.switchTab = function (name) { showTab(name); };
-/* iOS Safari でも :active（ボタンの押し込み）が効くようにする */
-document.addEventListener('touchstart', function () {}, { passive: true });
 
 /* 起動：1手順ずつ実行し、要素が無いなどで1つ失敗しても後続の初期化を止めない
    （保存済みテーマを適用 → 履歴・有酸素・月間サマリー・ホームを showTab で1回ずつ描く） */
