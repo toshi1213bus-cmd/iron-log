@@ -1,0 +1,635 @@
+/* iron-log theme: 高級感ある硬派（既定は黒 × ゴールド。深海ブルー／森林グリーンに切替可）
+   Tailwindのクラスを上書きして見た目を作る。色はすべてCSS変数（グラフの色だけは固定） */
+:root {
+  --bg: #0a0a0b;
+  --surface: #131314;
+  --line: #2a2a2c;
+  --text: #ece8dd;
+  --text-3: #b9b4a6;
+  --muted: #b8b2a2;
+  --gold: #c9a96a;
+  --gold-hi: #dcc28a;
+  --gold-lo: #b08f55;
+  --gold-hi-h: #e6cd95;
+  --gold-lo-h: #bd9a5e;
+  --gold-line: rgba(201,169,106,.6);
+  --gold-rgb: 201,169,106;
+  --on-gold: #0a0a0b;
+  --hover-1: #1a1a1c;
+  --hover-2: #1c1c1e;
+  --hover-3: #18181a;
+  --disabled: #4d4b47;
+  --placeholder: #918d82;
+  --scroll: #2a2a2c;
+  --num: 'Barlow Condensed', 'Noto Sans JP', sans-serif;
+}
+
+/* ===== テーマ：深海ブルー ===== */
+:root[data-theme="ocean"] {
+  --bg: #060d16;
+  --surface: #0c1826;
+  --line: #1d3247;
+  --text: #e3eef6;
+  --text-3: #b3c7d6;
+  --muted: #9db4c4;
+  --gold: #5cc8e6;
+  --gold-hi: #9fe3f5;
+  --gold-lo: #2f9fc4;
+  --gold-hi-h: #b4ebf8;
+  --gold-lo-h: #3fb0d6;
+  --gold-line: rgba(92,200,230,.6);
+  --gold-rgb: 92,200,230;
+  --on-gold: #04121c;
+  --hover-1: #102234;
+  --hover-2: #0f2031;
+  --hover-3: #0d1c2b;
+  --disabled: #3a5064;
+  --placeholder: #7d97aa;
+  --scroll: #1d3247;
+}
+
+/* ===== テーマ：森林グリーン ===== */
+:root[data-theme="forest"] {
+  --bg: #0a110d;
+  --surface: #121c16;
+  --line: #25372c;
+  --text: #e4eee6;
+  --text-3: #b5c7ba;
+  --muted: #a3b5a8;
+  --gold: #72d6a0;
+  --gold-hi: #a8ebc6;
+  --gold-lo: #3f9b68;
+  --gold-hi-h: #bbf2d3;
+  --gold-lo-h: #4fae7a;
+  --gold-line: rgba(114,214,160,.6);
+  --gold-rgb: 114,214,160;
+  --on-gold: #06140c;
+  --hover-1: #16251c;
+  --hover-2: #15231b;
+  --hover-3: #121f17;
+  --disabled: #3f5446;
+  --placeholder: #86998b;
+  --scroll: #25372c;
+}
+
+body {
+  font-family: 'Noto Sans JP', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+/* body自身の Tailwind クラス（bg-gray-900 / text-gray-100）に勝たせてテーマを効かせる */
+body.bg-gray-900 { background: var(--bg); }
+body.text-gray-100 { color: var(--text); }
+body.pb-24 { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+
+/* ================= 縁なし（フルスクリーン）：カードの枠・影・角丸をなくし、区切りは金の細線 ================= */
+body .bg-gray-800.border.rounded-2xl {
+  background: transparent;
+  border-width: 0 0 1px 0;
+  border-color: var(--gold-line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* ================= 面・線・角丸 ================= */
+body .bg-gray-800 { background: var(--surface); }
+body .bg-gray-900 { background: var(--bg); }
+body .border-gray-700,
+body .border-gray-800 { border-color: var(--line); }
+body .divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }
+body .rounded-2xl { border-radius: 4px; }
+body .rounded-xl,
+body .rounded-lg { border-radius: 3px; }
+body .shadow-md,
+body .shadow-lg,
+body .shadow {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 28px rgba(0,0,0,.45);
+}
+
+/* ================= 文字色・見出し ================= */
+body .text-white,
+body .text-gray-100,
+body .text-gray-200 { color: var(--text); }
+body .text-gray-300 { color: var(--text-3); }
+body .text-gray-400,
+body .text-gray-500 { color: var(--muted); }
+body .text-orange-400 { color: var(--gold); }
+body h2.uppercase {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  font-weight: 600;
+}
+body label { letter-spacing: 0.12em; font-size: 11px; }
+/* 履歴・有酸素の日付 */
+body .text-sm.font-bold.text-orange-400 {
+  font-family: var(--num);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+/* ================= タイマー ================= */
+body #timerDisplay {
+  font-family: var(--num);
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gold);
+  padding-left: 0.1em; /* 右端の字間と釣り合わせる（拡大の計算は extras.js の fitTimer） */
+}
+@keyframes goldPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(var(--gold-rgb),0); border-color: var(--line); }
+  50% { box-shadow: 0 0 22px rgba(var(--gold-rgb),.45); border-color: var(--gold); }
+}
+body .timer-done { animation: goldPulse 1.2s ease-in-out infinite; }
+
+/* ================= 入力欄 ================= */
+body input,
+body textarea,
+body select {
+  background: var(--bg);
+  border-color: var(--line);
+  color: var(--text);
+}
+body input::placeholder,
+body textarea::placeholder {
+  color: var(--placeholder);
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+}
+body .focus\:border-orange-500:focus,
+body input:focus,
+body textarea:focus,
+body select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb),.35);
+}
+/* 細い金枠＋高さ48pxで統一（種目名・kg・回・貼り付け欄） */
+body input.border,
+body textarea.border { border-color: var(--gold-line); }
+body input.border:focus,
+body textarea.border:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+body input.border,
+body #cardioMinutes,
+body div.bg-gray-900.border.overflow-hidden > input {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body textarea.border { height: auto; }
+body #exerciseName { font-size: 17px; letter-spacing: 0.06em; }
+/* 数字は細い条件付きフォント（日本語は自動でNoto Sansにフォールバック） */
+body .weight-input,
+body .reps-input,
+body #cardioMinutes {
+  font-family: var(--num);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+body :is(#monthlyCardioSummary, #compareWorkoutPoints, #compareCardioPoints),
+body #workoutList span.text-xs,
+body #workoutList div.text-xs,
+body #cardioList span.text-xs {
+  font-family: var(--num);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+/* セット行：左の「1.」と右の✕を同じ幅にして kg × 回 を中央に */
+body .set-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 1fr 28px;
+  align-items: center;
+  gap: 8px;
+}
+body .set-row .set-label { width: auto; text-align: center; }
+body .set-row > button { width: 28px; padding: 0; text-align: center; }
+/* 入力フォームの間隔：種目名 → 1行目 → 追加/保存 は10px で均等。セットを増やしたときの行間は4pxと狭め */
+body #setsContainer + div { margin-top: 10px; }
+body #setsContainer > .set-row + .set-row { margin-top: 4px; }
+
+/* ================= ボタン ================= */
+body .hover\:bg-gray-700:hover { background: var(--hover-2); }
+body .hover\:bg-gray-800:hover,
+body .hover\:bg-gray-800\/70:hover { background: var(--hover-3); }
+body .hover\:text-orange-400:hover { color: var(--gold); }
+body .hover\:text-white:hover { color: var(--text); }
+body .hover\:text-red-400:hover { color: #c0605a; }
+/* メイン（保存など）：ゴールド */
+body .bg-orange-500 {
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: var(--on-gold);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+}
+body .hover\:bg-orange-600:hover { background: linear-gradient(180deg, var(--gold-hi-h), var(--gold-lo-h)); }
+/* 入力欄とボタンのまとまり（＋セット／保存、有酸素の分／保存） */
+body div.bg-gray-900.border.overflow-hidden {
+  border-color: var(--gold-line);
+  padding-top: 0;
+}
+body div.bg-gray-900.border.overflow-hidden > button {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+}
+body div.bg-gray-900.border.overflow-hidden > button.border-t { border-color: var(--gold-line); }
+/* タイマー（3分/2分/1分/✕）・出力・復元・編集：金枠 */
+body button.bg-gray-900.border {
+  border-color: var(--gold-line);
+  color: var(--gold);
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+body button.bg-gray-900.border:hover {
+  border-color: var(--gold);
+  background: var(--hover-1);
+}
+
+/* ================= 履歴の開閉アイコン（細いシェブロン） ================= */
+body .day-toggle-icon,
+body .ex-toggle-icon,
+body #workoutList span.text-xs.day-toggle-icon,
+body #workoutList span.text-xs.ex-toggle-icon {
+  font-size: 0;
+  letter-spacing: 0;
+  width: 8px;
+  height: 8px;
+  margin: 0 6px 3px 0;
+  border-right: 1.5px solid var(--gold);
+  border-bottom: 1.5px solid var(--gold);
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+body .day-toggle-icon.is-open,
+body .ex-toggle-icon.is-open {
+  transform: rotate(-135deg);
+  margin-bottom: -3px;
+}
+
+/* ================= トースト・確認ダイアログ ================= */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 12px);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--gold-line);
+  border-radius: 3px;
+  padding: 12px 22px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  box-shadow: 0 10px 28px rgba(0,0,0,.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+  z-index: 100;
+  max-width: 90vw;
+  text-align: center;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 110;
+}
+.modal-box {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--gold-line);
+  border-radius: 4px;
+  padding: 24px 20px 16px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.7);
+}
+.modal-box p { text-align: center; font-size: 14px; letter-spacing: 0.1em; color: var(--text); margin-bottom: 20px; }
+.modal-actions { display: flex; gap: 10px; }
+.modal-actions button {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  border-radius: 3px;
+  border: 1px solid var(--gold-line);
+  background: var(--bg);
+  color: var(--gold);
+}
+.modal-actions .modal-danger {
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: var(--on-gold);
+  border-color: transparent;
+}
+
+/* ================= 下タブ ================= */
+#bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 28rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 50;
+}
+#bottomNav button { padding: 14px 0 16px; font-size: 12px; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); }
+#bottomNav button.on { color: var(--gold); box-shadow: inset 0 2px 0 var(--gold); }
+
+/* ================= ホーム ================= */
+.hm-card { border-bottom: 1px solid var(--gold-line); }
+.hm-pad { padding: 14px; }
+.hm-lb { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); }
+.hm-gold { color: var(--gold); }
+.hm-big { font-family: var(--num); font-weight: 300; font-size: 46px; letter-spacing: 0.12em; color: var(--gold); line-height: 1.1; }
+.hm-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.hm-ord { display: flex; gap: 6px; margin-top: 10px; }
+.hm-ord button { flex: 1; font-size: 11px; letter-spacing: 0.12em; padding: 8px 0; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); background: var(--bg); }
+.hm-ord button.cur { border-color: var(--gold-line); color: var(--gold); }
+.hm-exh { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.hm-prog { height: 2px; background: var(--line); margin-top: 10px; }
+.hm-prog div { height: 2px; background: var(--gold); }
+.hm-ex { border-top: 1px solid var(--line); padding: 12px 14px; }
+.hm-row2 { display: flex; align-items: center; min-width: 0; }
+.hm-chk { width: 20px; height: 20px; border: 1px solid var(--gold); border-radius: 3px; flex: none; margin-right: 10px; position: relative; }
+.hm-chk.f { background: var(--gold); }
+.hm-chk.f::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border-right: 2px solid var(--on-gold); border-bottom: 2px solid var(--on-gold); transform: rotate(45deg); }
+.hm-en { font-size: 14px; font-weight: 500; }
+.hm-en.dn { color: var(--muted); }
+.hm-in { flex: none; font-size: 12px; letter-spacing: 0.1em; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; padding: 7px 14px; background: none; }
+.hm-mini { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-left: 30px; }
+.hm-st { font-family: var(--num); font-size: 17px; font-weight: 500; letter-spacing: 0.04em; }
+.hm-ch { flex: none; line-height: 0; }
+/* ホーム：種目タップで展開 */
+.card-sep { border-top: 1px solid var(--gold-line); }
+.hm-ex { cursor: pointer; }
+.hm-act { display: flex; align-items: center; gap: 12px; }
+.hm-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin: 0 4px 3px 0; }
+.hm-ex.open .hm-chev { transform: rotate(-135deg); margin-bottom: -3px; }
+.hm-big2 { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+/* 金の折れ線：光と、左から右へ描かれる動き（グラフの色はテーマで変えない） */
+.ln { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: drawLn .9s ease-out forwards; filter: drop-shadow(0 0 3px rgba(201,169,106,.5)); }
+@keyframes drawLn { to { stroke-dashoffset: 0; } }
+
+/* ================= カレンダー ================= */
+.cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal-head button { width: 44px; height: 36px; font-size: 22px; line-height: 1; color: var(--gold); }
+.cal-head button:disabled { color: var(--disabled); }
+.cal-title { font-family: var(--num); font-size: 20px; font-weight: 500; letter-spacing: 0.1em; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 4px; text-align: center; }
+.cal-w { font-size: 11px; color: var(--muted); padding: 4px 0 6px; letter-spacing: 0.1em; }
+.cal-d { padding: 5px 0 4px; border: 1px solid transparent; border-radius: 3px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--num); font-size: 16px; line-height: 1; }
+.cal-d.today { border-color: var(--gold-line); color: var(--gold); }
+.cal-m { height: 8px; display: flex; gap: 3px; align-items: center; }
+.cal-dot, .cal-ring { display: inline-block; width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box; }
+.cal-dot { background: var(--gold); }
+.cal-ring { border: 1.5px solid var(--gold); }
+.cal-legend { display: flex; gap: 16px; justify-content: center; margin-top: 10px; font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+.cal-legend span { display: flex; align-items: center; gap: 6px; }
+
+/* ================= スクロールバー ================= */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--scroll); border-radius: 3px; }
+
+/* ================= 種目の編集 ================= */
+.ms-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+.ms-t { font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
+.ms-n { font-family: var(--num); font-size: 16px; color: var(--text); letter-spacing: 0.05em; }
+#menuEditor { position: fixed; inset: 0; max-width: 28rem; margin: 0 auto; background: var(--bg); z-index: 120; display: flex; flex-direction: column; }
+.me-head { padding: 14px 16px 0; border-bottom: 1px solid var(--gold-line); }
+.me-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px -16px 0; }
+.me-tabs button { padding: 12px 0; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
+.me-tabs button.cur { color: var(--gold); box-shadow: inset 0 -2px 0 var(--gold); }
+.me-body { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+.me-sec { padding: 16px 16px 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
+.me-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.me-name { font-size: 14px; font-weight: 500; min-width: 0; word-break: break-all; }
+.me-name.dn { color: var(--muted); }
+.me-ops { display: flex; gap: 6px; flex: none; }
+.me-ops button { min-width: 40px; height: 36px; padding: 0 10px; font-size: 12px; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; }
+.me-ops button:disabled { color: var(--disabled); border-color: var(--line); }
+.me-ops .me-del { color: var(--muted); }
+.me-pad { padding: 10px 16px; }
+.me-add { display: flex; gap: 8px; padding: 0 16px; }
+.me-add input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--gold-line); border-radius: 3px; font-size: 15px; }
+.me-add button { flex: none; width: 72px; height: 44px; font-size: 13px; font-weight: 700; letter-spacing: 0.15em; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 3px; }
+.me-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; }
+.me-chip { padding: 8px 12px; font-size: 13px; color: var(--text); border: 1px solid var(--line); border-radius: 3px; }
+.me-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gold-line); background: var(--bg); }
+.me-foot button { height: 48px; font-size: 14px; font-weight: 700; letter-spacing: 0.25em; text-indent: 0.25em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
+.me-foot .primary { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: var(--on-gold); border-color: transparent; }
+
+/* ================= 追加: PR達成！！（ホームの種目名のすぐ右） ================= */
+.hm-pr { flex: none; margin-left: 8px; white-space: nowrap; font-family: var(--num); font-size: 14px; font-weight: 600; letter-spacing: 0.15em; color: var(--gold); }
+
+/* ================= 追加: タイマー（左＋/− ・中央 時間 ・右 START/STOP） ================= */
+.tm-row { display: grid; grid-template-columns: 68px 1fr 68px; align-items: stretch; gap: 8px; }
+body .tm-wrap { padding: 14px 14px 8px; } /* 下は金の細線の近くまで */
+.tm-col { display: flex; flex-direction: column; justify-content: space-between; gap: 5px; } /* ボタンは上下に均等配置（大きさは .tm-btn のまま） */
+.tm-center { display: flex; align-items: center; justify-content: center; min-width: 0; white-space: nowrap; }
+.tm-btn { width: 100%; height: 31px; padding: 0; line-height: 1; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--gold); font-size: 14px; font-weight: 700; letter-spacing: 0.05em; transition: background .15s, border-color .15s; }
+.tm-btn:hover { border-color: var(--gold); background: var(--hover-1); }
+.tm-btn:active { transform: scale(0.98); }
+
+/* ================= 追加: メニューテンプレート（月間/設定：各部位に4枠） ================= */
+.ms-row { align-items: center; gap: 8px; padding: 4px 0; }
+.ms-t { flex: none; width: 52px; }
+.ms-slots { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.ms-slot { height: 36px; padding: 0 2px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; letter-spacing: 0.02em; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--gold); }
+.ms-slot.on { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border-color: transparent; color: var(--on-gold); font-weight: 700; }
+
+/* ================= 追加: 「＋ セット」と「保存」を横幅2分割で横並び（高さ48pxは従来どおり）。追加は金枠・金文字 ================= */
+.act-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+body .act-row > button { height: 48px; padding: 0; font-size: 14px; font-weight: 700; letter-spacing: 0.25em; text-indent: 0.25em; border-radius: 3px; }
+body .act-row > .act-add { background: var(--bg); border: 1px solid var(--gold-line); color: var(--gold); }
+body .act-row > .act-add:hover { border-color: var(--gold); background: var(--hover-1); }
+
+/* ================= 追加: 保存ボタンの連打防止（保存直後だけ押せない） ================= */
+body button.is-busy,
+body .bg-orange-500:disabled {
+  opacity: .55;
+  filter: saturate(.7);
+  pointer-events: none;
+}
+
+/* ================= 追加: トーストの見た目 ================= */
+#toast { z-index: 130; display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 160px; }
+#toast.ok::before {
+  content: '';
+  flex: none;
+  width: 5px; height: 10px;
+  border-right: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  transform: rotate(45deg) translateY(-2px);
+}
+#toast.err { border-color: #c0605a; }
+
+/* ================= 追加: 展開グラフの凡例と推定1RM（赤の実線）。グラフの色は固定 ================= */
+.hm-leg { display: flex; justify-content: flex-end; gap: 14px; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+.hm-leg span { display: inline-flex; align-items: center; gap: 5px; }
+.hm-leg span::before { content: ''; display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
+.hm-leg .lg-g::before { background: #c9a96a; }
+.hm-leg .lg-r { color: #e58984; }
+.hm-leg .lg-r::before { background: #d96b66; }
+.ln-rm { stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: drawLn .9s ease-out forwards; filter: drop-shadow(0 0 3px rgba(217, 107, 102, .45)); }
+
+/* ================= 追加: COMPLETE!! スタンプ（今日のメニュー全完了時のみ。画面中央に斜め配置） ================= */
+#homeStamp {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-18deg);
+  width: min(360px, 86vw);
+  padding: 10px 0;
+  text-align: center;
+  font-family: var(--num);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  line-height: 1.2;
+  color: var(--gold);
+  background: rgba(0,0,0,.35);
+  border-top: 1px solid var(--gold);
+  border-bottom: 1px solid var(--gold);
+  opacity: .22;
+  pointer-events: none;
+  user-select: none;
+  z-index: 40;
+}
+
+/* ================= 追加: テーマ切替（3分割ボタン）とヘルプ（アコーディオン） ================= */
+.th-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 4px; }
+.th-btn { height: 44px; min-width: 0; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--gold); }
+.th-btn.on { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border-color: transparent; color: var(--on-gold); }
+.help-chev { display: inline-block; width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin: 0 0 3px 8px; }
+.help-chev.is-open { transform: rotate(-135deg); margin-bottom: -3px; }
+.help-body { padding-top: 12px; }
+.help-item { padding: 10px 2px; border-top: 1px solid var(--line); }
+.help-item:first-child { border-top: 0; padding-top: 2px; }
+.help-t { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: var(--gold); margin-bottom: 4px; }
+.help-d { font-size: 12px; line-height: 1.7; color: var(--muted); letter-spacing: 0.03em; }
+
+/* ================= 追加: 専用テンキー（kg／回／有酸素の分）。既存の変数・金枠をそのまま使う ================= */
+body .weight-input,
+body .reps-input,
+body #cardioMinutes { caret-color: transparent; cursor: pointer; }
+body input.border.np-active,
+body input.np-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 10px rgba(var(--gold-rgb), .35);
+}
+body #cardioMinutes.np-active { box-shadow: inset 0 0 0 1px var(--gold); }
+body.np-open.pb-24 { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16px); }
+#numpad {
+  position: fixed;
+  left: 50%;
+  bottom: var(--nav-h, 56px); /* 下タブ(#bottomNav)の上に載せる */
+  transform: translate(-50%, calc(100% + var(--nav-h, 56px)));
+  width: 100%;
+  max-width: 28rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border-top: 1px solid var(--gold-line);
+  z-index: 49; /* 下タブ(z-index:50)より後ろ */
+  visibility: hidden;
+  transition: transform .2s ease, visibility 0s .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#numpad.show { transform: translate(-50%, 0); visibility: visible; transition: transform .2s ease, visibility 0s; }
+.np-k {
+  height: 48px;
+  font-family: var(--num);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--gold-line);
+  border-radius: 3px;
+}
+.np-k:active { background: var(--hover-1); }
+.np-k.np-fn { color: var(--gold); }
+.np-k:disabled { color: var(--disabled); border-color: var(--line); pointer-events: none; }
+.np-k.np-w2 { grid-column: span 2; }
+.np-k.np-ok {
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+  background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo));
+  color: var(--on-gold);
+  border-color: transparent;
+}
+
+/* ================= 追加: 日付ボトムシート ================= */
+.cal-d[data-d] { cursor: pointer; }
+#daySheet { position: fixed; inset: 0; z-index: 105; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); }
+.sheet-box {
+  width: 100%;
+  max-width: 28rem;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-top: 1px solid var(--gold-line);
+  border-radius: 4px 4px 0 0;
+  animation: sheetUp .22s ease-out;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sh-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--gold-line); }
+.sh-x { margin-left: auto; width: 36px; height: 32px; font-size: 16px; color: var(--muted); }
+.sh-body { flex: 1; overflow-y: auto; padding: 4px 14px 14px; }
+.sh-sec { padding: 14px 0 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
+.sh-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--gold-line); background: var(--bg); }
+.sh-foot button { min-height: 44px; padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
+
+/* ================= 追加: 調子ラベル（ホーム種目行の「今日／前回」の横） =================
+   上昇・好調＝金文字＋金枠／停滞注意・下降＝赤文字＋赤枠／プラトー＝赤文字＋金枠／記録なし＝白系・枠なし */
+.hm-st { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.hm-tr { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; white-space: nowrap; color: var(--text); }
+.hm-tr.hot, .hm-tr.up, .hm-tr.flat, .hm-tr.down, .hm-tr.plat { border: 1px solid var(--gold); border-radius: 3px; padding: 0 8px; }
+.hm-tr.hot, .hm-tr.up { color: var(--gold); }
+.hm-tr.hot { font-weight: 600; letter-spacing: 0.15em; }
+.hm-tr.flat, .hm-tr.down, .hm-tr.plat { color: #c0605a; }
+.hm-tr.flat, .hm-tr.down { border-color: #c0605a; }
+.hm-tr.none { color: var(--text); }
+/* プラトー検知！！ ＋ 対処案（種目カードを開いているときだけ）：1行に収める */
+.hm-trw { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.hm-tip { font-size: 11px; letter-spacing: 0; color: var(--text-3); white-space: nowrap; }
+
+/* ================= 追加: 履歴の「グラフ推移」ボタン（PUSH/PULL/LEGS/OTHER のセレクトと同じ見た目） ================= */
+.gr-btn { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; color: var(--text); font-size: 12px; line-height: 1rem; font-weight: 700; padding: 4px 8px; }
+.gr-btn:focus, .gr-btn.on { outline: none; border-color: var(--gold); }
+
+/* ================= 追加: 履歴表示件数（− 5件 / ＋ 5件） ================= */
+.pager-btn:disabled { opacity: .35; pointer-events: none; }
