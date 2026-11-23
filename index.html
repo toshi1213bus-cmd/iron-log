@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=14">
+<link rel="stylesheet" href="theme.css?v=16">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -19,7 +19,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="PPL">
 </head>
-<body class="bg-gray-900 text-gray-100 min-h-screen pb-24 max-w-md mx-auto">
+<body class="min-h-screen max-w-md mx-auto">
 
 <!-- ================= 0. ホームタブ（extras.js が描画） ================= -->
 <div id="tabContentHome"></div>
@@ -27,7 +27,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 <!-- ================= 1. トレーニング記録タブ ================= -->
 <div id="tabContentWorkout" class="hidden">
   <!-- タイマー＋入力フォーム（1枚のカード） -->
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-lg">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl">
     <!-- インターバルタイマー（左：＋/− ・中央：時間 ・右：START/STOP） -->
     <div class="tm-wrap">
       <div id="timerRow" class="tm-row">
@@ -49,19 +49,11 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
     <div class="p-3.5 card-sep">
       <div id="formHeaderContainer"></div>
       <div class="mb-2.5 relative">
-        <input type="text" id="exerciseName" placeholder="種目名入力" maxlength="60" oninput="checkExerciseSuggestion()" class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-orange-500">
+        <input type="text" id="exerciseName" placeholder="種目名入力" maxlength="60" oninput="checkExerciseSuggestion()" class="w-full border px-4 text-center focus:outline-none">
         <div id="suggestionBox" class="hidden absolute left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden"></div>
       </div>
       <div>
-        <div id="setsContainer">
-          <div class="set-row flex items-center gap-2">
-            <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
-            <input type="text" readonly placeholder="kg" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-            <span class="text-gray-500 font-bold">×</span>
-            <input type="text" readonly placeholder="回" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-            <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-          </div>
-        </div>
+        <div id="setsContainer"></div>
         <div class="act-row">
           <button type="button" onclick="addSetRowByButton()" class="act-add transition">
             ＋ セット
@@ -75,7 +67,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   </div>
 
   <!-- 履歴（常時表示） -->
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl shadow-md overflow-hidden">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
     <div id="workoutListWrapper" class="hidden">
       <div id="workoutList" class="divide-y divide-gray-700"></div>
       <div id="workoutMoreContainer"></div>
@@ -92,7 +84,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
     <div class="p-3.5">
       <div id="cardioDateBanner"></div>
       <div class="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-        <input type="text" readonly id="cardioMinutes" placeholder="時間 (分) 入力" inputmode="none" class="w-full bg-gray-900 px-4 py-3 text-white text-center focus:outline-none">
+        <input type="text" readonly id="cardioMinutes" placeholder="時間 (分) 入力" inputmode="none" class="w-full px-4 text-center focus:outline-none">
         <button type="button" id="saveCardioBtn" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
           保存
         </button>
@@ -113,8 +105,8 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 
 <!-- ================= 3. 月間/設定タブ ================= -->
 <div id="tabContentSettings" class="hidden">
-  <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg"></div>
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-2.5">
+  <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
     <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">月間サマリー（＋今週のトレ日数・有酸素分）</h2>
     <div class="bg-gray-900 border border-gray-700 rounded-xl divide-y divide-gray-700">
       <div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">今月トレ 0日（先月 0日）／ 今週 0日</div>
@@ -128,7 +120,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       編集
     </button>
   </div>
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 shadow-lg space-y-3">
+  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-3">
     <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力/復元</h2>
     <div class="grid grid-cols-2 gap-2 pt-1">
       <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -139,7 +131,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       </button>
     </div>
     <div class="space-y-2 pt-3 border-t border-gray-700">
-      <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-orange-500"></textarea>
+      <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
       <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
         復元実行
       </button>
@@ -495,15 +487,20 @@ function playSingleBeep() {
    フォームの状態（editingId / formDate / homeInput / homeInputName）はここの関数だけが変える
    ・resetForm … 入力欄と状態を初期化（保存後はすべて、キャンセル／編集の終了では日付指定を残す）
    ・editWorkout … 編集の開始（日付指定は残す） ／ applySuggestion … 過去の記録から入力（「入力中」） */
-const FIRST_ROW_HTML = `
-    <div class="set-row flex items-center gap-2">
-      <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">1.</span>
-      <input type="text" readonly placeholder="kg" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-      <span class="text-gray-500 font-bold">×</span>
-      <input type="text" readonly placeholder="回" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-      <button type="button" onclick="removeSetRow(this)" style="visibility: hidden;" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-    </div>
-  `;
+/* セット行のひな形（最初の行・「＋ セット」・過去の記録からの入力で共通）。入力欄は readonly（専用テンキーで入力）。
+   見た目の色・角丸・高さは theme.css が持つ（ここには色系クラスを置かない） */
+const SET_INPUT_ATTR = 'type="text" readonly inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off"';
+function setRowHtml(num, w, r, hideX) {
+  return '<div class="set-row">' +
+    '<span class="set-label text-xs font-bold text-gray-400">' + num + '.</span>' +
+    '<input ' + SET_INPUT_ATTR + ' placeholder="kg" value="' + w + '" class="weight-input w-full border px-3 text-center focus:outline-none">' +
+    '<span class="text-gray-500 font-bold">×</span>' +
+    '<input ' + SET_INPUT_ATTR + ' placeholder="回" value="' + r + '" class="reps-input w-full border px-3 text-center focus:outline-none">' +
+    '<button type="button" onclick="removeSetRow(this)"' + (hideX ? ' style="visibility: hidden;"' : '') + ' class="text-gray-500 hover:text-red-400 p-2">✕</button>' +
+    '</div>';
+}
+const FIRST_ROW_HTML = setRowHtml(1, '', '', true);
+(function () { const c = document.getElementById('setsContainer'); if (c) c.innerHTML = FIRST_ROW_HTML; })();
 /* フォーム上部（#formHeaderContainer）は状態から組み立てる
    ・編集中 → 「編集中（キャンセル）」（日付指定は裏で保持し、編集が終わると戻る）
    ・日付指定（formDate）がある → 「○/○ の記録を追加（解除）」
@@ -672,21 +669,17 @@ function addSetRow(w = '', r = '') {
     if (lastInp && lastInp.value) w = lastInp.value;
   }
   const div = document.createElement('div');
-  div.className = 'set-row flex items-center gap-2';
-  div.innerHTML = `
-    <span class="set-label text-xs font-bold text-gray-400 w-6 text-center">${num}.</span>
-    <input type="text" readonly placeholder="kg" value="${w}" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="weight-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-    <span class="text-gray-500 font-bold">×</span>
-    <input type="text" readonly placeholder="回" value="${r}" inputmode="none" autocapitalize="off" autocomplete="off" autocorrect="off" class="reps-input w-full bg-gray-900 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-center focus:outline-none focus:border-orange-500">
-    <button type="button" onclick="removeSetRow(this)" class="text-gray-500 hover:text-red-400 p-2">✕</button>
-  `;
-  container.appendChild(div);
+  div.innerHTML = setRowHtml(num, w, r, false);
+  const row = div.firstElementChild;
+  container.appendChild(row);
   updateNums();
+  return row;
 }
 /* 「＋ セット」ボタン：行を足し、テンキーが開いていれば追加した行の kg へ移す（開いていなければ何もしない）
    ※履歴や候補からの自動追加は addSetRow を直接呼ぶのでテンキーは動かさない */
 function addSetRowByButton() {
-  addSetRow();
+  const row = addSetRow();
+  if (row) row.classList.add('row-in'); /* 追加した行だけ、ふわっと現れる（theme.css の rowIn） */
   if (window.Numpad) window.Numpad.followNewRow();
 }
 function removeSetRow(btn) {
@@ -895,8 +888,10 @@ async function deleteCardio(id) {
   requestRender('c');
 }
 /* 履歴・日付シートの部位（PUSH/PULL/LEGS/OTHER）変更。失敗しても画面は保存結果（元の値）に揃える */
-function updateDayPpl(dateStr, selectElem) {
-  transact(['dayPpl'], () => { dayPplMap[dateStr] = selectElem.value; });
+function updateDayPpl(dateStr, v) {
+  const val = (v && typeof v === 'object') ? v.value : v; /* 部位名（PUSH/PULL/LEGS/OTHER）。要素が渡されても value を使う */
+  if (!PPL_TYPES.includes(val)) return;
+  transact(['dayPpl'], () => { dayPplMap[dateStr] = val; });
   requestRender('w');
 }
 
@@ -991,12 +986,7 @@ function drawWorkoutList() {
         <div class="flex items-center gap-2.5 flex-wrap">
           <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
           <span class="text-xs text-white font-bold">総負荷: <span class="text-white">${formattedVolume}</span>kg</span>
-          <select onclick="event.stopPropagation()" onchange="updateDayPpl('${dateStr}', this)" class="text-xs bg-gray-900 border border-gray-700 text-gray-200 font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-orange-500">
-            <option value="PUSH" ${currentPpl === 'PUSH' ? 'selected' : ''}>PUSH</option>
-            <option value="PULL" ${currentPpl === 'PULL' ? 'selected' : ''}>PULL</option>
-            <option value="LEGS" ${currentPpl === 'LEGS' ? 'selected' : ''}>LEGS</option>
-            <option value="OTHER" ${currentPpl === 'OTHER' ? 'selected' : ''}>OTHER</option>
-          </select>
+          <button type="button" class="ppl-btn" aria-haspopup="dialog" onclick="event.stopPropagation(); pickPpl('${dateStr}')">${currentPpl}</button>
         </div>
         <span class="text-xs text-gray-400 day-toggle-icon">▼</span>
       </div>
@@ -1019,7 +1009,7 @@ function drawWorkoutList() {
             </div>
             <div class="flex items-center gap-2">
               <span class="text-xs text-gray-400 ex-toggle-icon">▼</span>
-              <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="text-xs text-gray-400 hover:text-white px-2 py-1 bg-gray-800 border border-gray-700 rounded-lg font-medium">編集</button>
+              <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="ex-edit">編集</button>
               <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
             </div>
           </div>
@@ -1202,6 +1192,6 @@ async function importFromJsonText() {
 }
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=14"></script>
+<script src="extras.js?v=16"></script>
 </body>
 </html>
