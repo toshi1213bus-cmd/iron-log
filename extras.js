@@ -7,8 +7,9 @@
      askConfirm / alert    … 確認ダイアログ・トースト
      todayType / menuAddExercise / tplExport / tplImport … 部位・メニュー（PARTS.menu もここで登録）
      Numpad                … テンキーの窓口（close / followNewRow / release）
+   ■ PR演出：prSnap / prCheck / showPRModal（保存時の判定と、金色の NEW RECORD!! モーダル＋バイブ。初回記録は出さない）
    ■ ホームの種目行を開くと「詳細」ボタンが出て、種目別の詳細ページ（全画面）へ移動できる（openDetail）
-     switchTab / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
+     switchTab / switchSettingsSub / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
    ===================================================================== */
 (function () {
 const pad = pad2, dstr = toDateStr, fmtD = formatDate; /* index.html の共通関数 */
@@ -108,45 +109,143 @@ window.toggleHelp = function () {
   if (chev) chev.classList.toggle('is-open', open);
 };
 
-/* ===== 月間サマリー（今月／先月／今週。週は月曜始まり） ===== */
-function updateSummary() {
-  const wEl = document.getElementById('compareWorkoutPoints');
-  const cEl = document.getElementById('compareCardioPoints');
-  if (!wEl && !cEl) return;
-  const n = new Date();
-  const ym = n.getFullYear() + '-' + pad(n.getMonth() + 1);
-  const lm = new Date(n.getFullYear(), n.getMonth() - 1, 1);
-  const lym = lm.getFullYear() + '-' + pad(lm.getMonth() + 1);
-  const dow = (n.getDay() + 6) % 7;
-  const mon = new Date(n.getFullYear(), n.getMonth(), n.getDate() - dow);
-  const sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6);
-  const ws = dstr(mon), we = dstr(sun);
-  let tm = 0, lmN = 0, wk = 0;
-  new Set(workouts.map(w => w.dateStr)).forEach(d => {
-    if (d.startsWith(ym)) tm++;
-    else if (d.startsWith(lym)) lmN++;
-    if (d >= ws && d <= we) wk++;
-  });
-  let cm = 0, cl = 0, cw = 0;
-  cardios.forEach(c => {
-    if (c.dateStr.startsWith(ym)) cm += c.minutes;
-    else if (c.dateStr.startsWith(lym)) cl += c.minutes;
-    if (c.dateStr >= ws && c.dateStr <= we) cw += c.minutes;
-  });
-  if (wEl) wEl.textContent = '今月トレ ' + tm + '日（先月 ' + lmN + '日）／ 今週 ' + wk + '日';
-  if (cEl) cEl.textContent = '今月有酸素 ' + cm + '分・約' + Math.round(cm * 3.5) + 'kcal（先月 ' +
-    cl + '分）／ 今週 ' + cw + '分';
+/* ===== 月間/分析（月間/設定タブの上サブタブ）
+   週は月曜始まり、月は YYYY-MM 単位。既存の workouts / dayPplMap（pplOf）/ cardios から毎回算出し、新しい保存キーは作らない。
+   差分は「+1日／-400kg／+30分」の形だけ（％は使わない）。0件・比較元なしでも NaN は出さず「記録なし」または差分で表示する ===== */
+let anMode = 'days'; /* 月間推移グラフの表示：'days'＝トレ回数 ／ 'cardio'＝有酸素 */
+const nf = n => Math.round(n).toLocaleString();
+const sgn = (v, u) => v === 0 ? '±0' + u : (v > 0 ? '+' : '-') + Math.abs(v).toLocaleString() + u;
+function bdg(cur, prev, u) {
+  if (!cur && !prev) return '<span class="an-bd none">記録なし</span>';
+  const v = Math.round(cur - prev);
+  return '<span class="an-bd ' + (v > 0 ? 'up' : v < 0 ? 'down' : 'same') + '">' + sgn(v, u) + '</span>';
 }
+/* 日付ごとの総負荷（OTHER の日も含む） */
+function volByDay() {
+  const m = {};
+  workouts.forEach(w => { m[w.dateStr] = (m[w.dateStr] || 0) + w.setList.reduce((a, s) => a + s.weight * s.reps, 0); });
+  return m;
+}
+/* 期間 test(dateStr) 内のトレ集計：全体と PUSH/PULL/LEGS/OTHER 別の日数・総負荷（部位別を丸めてから全体へ足す＝内訳と合計が必ず合う） */
+function trainIn(vol, test) {
+  const r = { days: 0, vol: 0, by: {} };
+  PPL_TYPES.forEach(t => { r.by[t] = { days: 0, vol: 0 }; });
+  Object.keys(vol).forEach(d => {
+    if (!test(d)) return;
+    const t = r.by[pplOf(d)] ? pplOf(d) : 'OTHER';
+    r.by[t].days++;
+    r.by[t].vol += vol[d];
+  });
+  PPL_TYPES.forEach(t => { const b = r.by[t]; b.vol = Math.round(b.vol); r.days += b.days; r.vol += b.vol; });
+  return r;
+}
+function cardioIn(test) {
+  let min = 0;
+  cardios.forEach(c => { if (test(c.dateStr)) min += c.minutes; });
+  return { min: min, kcal: Math.round(min * 3.5) };
+}
+function anCell(k, v, u, bd) {
+  return '<div class="dt-cell"><div class="hm-lb">' + k + '</div><div class="dt-v">' + v + '<span class="dt-u">' + u + '</span></div>' + bd + '</div>';
+}
+function anSection(title, rng, note, cur, prev, cc, cp) {
+  let h = '<div class="bg-gray-800 border border-gray-700 rounded-2xl"><div class="dt-sec dt-sec-row"><span>' + title + '</span><span class="an-rng">' + rng +
+    '</span></div><div class="hm-sub dt-pad">' + note + '</div>' +
+    '<div class="dt-grid">' + anCell('全部位 トレ回数', cur.days, '日', bdg(cur.days, prev.days, '日')) +
+    anCell('全部位 総負荷量', nf(cur.vol), 'kg', bdg(cur.vol, prev.vol, 'kg')) + '</div>' +
+    '<div class="an-hd"><span class="hm-lb">部位別</span><span class="hm-lb">回数</span><span class="hm-lb">総負荷量</span></div>';
+  PPL_TYPES.forEach(t => {
+    const a = cur.by[t], b = prev.by[t];
+    h += '<div class="an-part"><span class="an-t">' + t + '</span>' +
+      '<div class="an-c"><span class="dt-v">' + a.days + '<span class="dt-u">日</span></span>' + bdg(a.days, b.days, '日') + '</div>' +
+      '<div class="an-c"><span class="dt-v">' + nf(a.vol) + '<span class="dt-u">kg</span></span>' + bdg(a.vol, b.vol, 'kg') + '</div></div>';
+  });
+  h += '<div class="an-hd"><span class="hm-lb">有酸素</span></div>' +
+    '<div class="dt-grid">' + anCell('合計時間', nf(cc.min), '分', bdg(cc.min, cp.min, '分')) +
+    anCell('消費（約）', nf(cc.kcal), 'kcal', bdg(cc.kcal, cp.kcal, 'kcal')) + '</div></div>';
+  return h;
+}
+/* 直近6か月（当月を含む）の月別：トレ実施日数（new Set(dateStr) の日数）と有酸素の合計分 */
+function anSeries() {
+  const n = new Date(), days = new Set(workouts.map(w => w.dateStr)), out = [];
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(n.getFullYear(), n.getMonth() - i, 1), ym = dt.getFullYear() + '-' + pad(dt.getMonth() + 1);
+    let dn = 0, min = 0;
+    days.forEach(d => { if (d.slice(0, 7) === ym) dn++; });
+    cardios.forEach(c => { if (c.dateStr.slice(0, 7) === ym) min += c.minutes; });
+    out.push({ ym: ym, days: dn, min: min });
+  }
+  return out;
+}
+function anGraphHtml() {
+  const s = anSeries(), cardio = anMode === 'cardio', v = s.map(x => cardio ? x.min : x.days);
+  if (v.filter(x => x > 0).length < 2) return '<div class="hm-sub">2か月以上の記録で推移グラフを表示</div>';
+  return '<div class="hm-leg"><span class="lg-g">' + (cardio ? '有酸素 合計時間（分）' : 'トレーニング日数（日）') + '</span></div>' +
+    line(v, 320, 138, s.map(x => x.ym), null, ym => parseInt(ym.slice(5), 10) + '月');
+}
+/* グラフだけ描き直す（切替ボタン）。分析カード全体や画面のスクロールは触らない */
+function paintAnGraph() {
+  const g = document.getElementById('anGraph');
+  if (g) g.innerHTML = anGraphHtml();
+  document.querySelectorAll('#analysisBody [data-an="mode"]').forEach(b => {
+    const on = b.dataset.m === anMode;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function renderAnalysis() {
+  const el = document.getElementById('analysisBody');
+  if (!el) return;
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth(), dd = n.getDate();
+  const mon = new Date(y, m, dd - (n.getDay() + 6) % 7); /* 今週の月曜 */
+  const ws = dstr(mon), we = dstr(new Date(y, m, mon.getDate() + 6));
+  const pws = dstr(new Date(y, m, mon.getDate() - 7)), pwe = dstr(new Date(y, m, mon.getDate() - 1));
+  const ym = y + '-' + pad(m + 1), pl = new Date(y, m - 1, 1), pym = pl.getFullYear() + '-' + pad(pl.getMonth() + 1);
+  const wk = d => d >= ws && d <= we, pwk = d => d >= pws && d <= pwe;
+  const mo = d => d.slice(0, 7) === ym, pmo = d => d.slice(0, 7) === pym;
+  const vol = volByDay();
+  const trend = '<div class="bg-gray-800 border border-gray-700 rounded-2xl"><div class="dt-sec dt-sec-row"><span>月間推移（直近6か月）</span><div class="dt-n">' +
+    [['days', 'トレ回数'], ['cardio', '有酸素']].map(x => '<button type="button" class="gr-btn' + (x[0] === anMode ? ' on' : '') + '" data-an="mode" data-m="' + x[0] +
+      '" aria-pressed="' + (x[0] === anMode ? 'true' : 'false') + '">' + x[1] + '</button>').join('') +
+    '</div></div><div class="dt-graph" id="anGraph">' + anGraphHtml() + '</div></div>';
+  el.innerHTML =
+    anSection('今週の分析', fmtD(ws) + '〜' + fmtD(we), '週は月曜始まり・差分は前週比', trainIn(vol, wk), trainIn(vol, pwk), cardioIn(wk), cardioIn(pwk)) +
+    anSection('今月の成績', y + '年' + (m + 1) + '月', '差分は前月比（有酸素は先月比）', trainIn(vol, mo), trainIn(vol, pmo), cardioIn(mo), cardioIn(pmo)) +
+    trend;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-an="mode"]');
+  if (!b) return;
+  const md = b.dataset.m;
+  if ((md !== 'days' && md !== 'cardio') || md === anMode) return;
+  anMode = md;
+  paintAnGraph();
+});
+/* 上サブタブ（月間/分析・設定）。「月間/設定」を開くたびに showTab が最初の「月間/分析」へ戻す */
+function setSub(k) {
+  const a = document.getElementById('subAnalysis'), s = document.getElementById('subSettings');
+  if (a) a.classList.toggle('hidden', k !== 'analysis');
+  if (s) s.classList.toggle('hidden', k !== 'settings');
+  document.querySelectorAll('#setSubTabs button').forEach(b => {
+    const on = b.dataset.s === k;
+    b.classList.toggle('cur', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+window.switchSettingsSub = function (k) {
+  if (k !== 'analysis' && k !== 'settings') return;
+  closePad();
+  setSub(k);
+};
 
 /* ===== 画面更新の入口（描画はここだけ。データを変える側は requestRender を1操作につき1回呼ぶ）
    scope … 文字列 'w' | 'c' | 'menu' | 'all'、または { w, c, menu, view }
      w … トレ記録・部位が変わった ／ c … 有酸素が変わった ／ menu … メニュー（テンプレート）が変わった
      view … データは変えず、その画面の表示だけ更新する（'home' | 'settings' | 'calendar'）
    どの変更でどの画面を描くか（見えていないホーム／月間・設定は描かず、タブを開いたとき view 付きで描く）
-     履歴リスト＋「グラフ推移」ボタン … w ／ 有酸素リスト … c ／ 月間サマリー … w, c, view=settings
+     履歴リスト＋「グラフ推移」ボタン … w ／ 有酸素リスト … c ／ 月間/分析（今週・今月・月間推移） … w, c, view=settings
      カレンダー … w, c, view=settings|calendar ／ メニュー表示 … menu, view=settings
      ホーム … w, menu, view=home ／ 開いている日付シート … w, c
-   描く順は固定（リスト → サマリー → カレンダー → メニュー → ホーム → シート）。1つ失敗しても後続は描く ===== */
+   描く順は固定（リスト → 月間/分析 → カレンダー → メニュー → ホーム → シート）。1つ失敗しても後続は描く ===== */
 const isShown = id => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden'); };
 const safe = fn => { try { fn(); } catch (e) { console.log(e); } };
 const SCOPES = { w: { w: true }, c: { c: true }, menu: { menu: true }, all: { w: true, c: true, menu: true } };
@@ -154,8 +253,8 @@ function paint(s) {
   const data = !!(s.w || s.c);
   if (s.w) safe(() => { drawWorkoutList(); decorateHistory(); }); /* 描いたあとに「グラフ推移」ボタンとグラフ枠を足す */
   if (s.c) safe(drawCardioList);
-  if (data || s.view === 'settings') safe(updateSummary);
   if (isShown('tabContentSettings')) {
+    if (data || s.view === 'settings') safe(renderAnalysis);
     if (data || s.view === 'settings' || s.view === 'calendar') safe(renderCalendar);
     if (s.menu || s.view === 'settings') safe(renderMenuSummary);
   }
@@ -472,10 +571,10 @@ function curvePath(P) {
   }
   return d + ' L' + f(P[P.length - 1][0]) + ',' + f(P[P.length - 1][1]);
 }
-function line(v, w, h, dates, rm) {
+function line(v, w, h, dates, rm, lab) {
   const n = v.length;
   if (n < 2) return '';
-  const big = !!dates;
+  const big = !!dates, fmtL = lab || fmtD; /* lab … x軸ラベルの整形（省略時は M/D） */
   const hasRm = big && Array.isArray(rm) && rm.length === n && rm.some(x => x > 0);
   const px = big ? 22 : 5, pt = big ? 26 : 8, pb = big ? (hasRm ? 36 : 24) : 8;
   const toPts = arr => {
@@ -508,7 +607,7 @@ function line(v, w, h, dates, rm) {
       if ((n - 1 - i) % step !== 0) return;
       s += '<text x="' + f(q[0]) + '" y="' + f(q[1] - 10) + '" text-anchor="middle" font-size="11" fill="' +
         (last ? '#ece8dd' : '#b8b2a2') + '" font-family="Barlow Condensed,sans-serif">' + v[i] + '</text>' +
-        '<text x="' + f(q[0]) + '" y="' + (h - 5) + '" text-anchor="middle" font-size="11" fill="#b8b2a2" font-family="Barlow Condensed,sans-serif">' + fmtD(dates[i]) + '</text>';
+        '<text x="' + f(q[0]) + '" y="' + (h - 5) + '" text-anchor="middle" font-size="11" fill="#b8b2a2" font-family="Barlow Condensed,sans-serif">' + fmtL(dates[i]) + '</text>';
       if (P2) {
         const y2 = Math.min(h - pb - 2, P2[i][1] + 15);
         s += '<text x="' + f(P2[i][0]) + '" y="' + f(y2) + '" text-anchor="middle" font-size="10.5" fill="' +
@@ -580,6 +679,39 @@ function isPR(name, today) {
   const best = Math.max(...days.map(d => metric(prev[d])));
   return metric(todaySets) > best;
 }
+/* ===== 保存時のPR演出（saveWorkout から呼ばれる）
+   prSnap(name, dateStr) … 保存の前に呼ぶ。「その日以外の記録日があるか」「その最高値」「その日の保存前の値」を控える
+   prCheck(snap)         … 保存の後に呼ぶ。他の日の記録があり、その日の値が過去最高を超え、かつ保存前より上がっていれば true（初回記録は false） */
+function dayMetrics(name) {
+  const map = {};
+  workouts.filter(w => w.name.trim() === name).forEach(w => { (map[w.dateStr] = map[w.dateStr] || []).push(...w.setList); });
+  return map;
+}
+window.prSnap = function (name, dateStr) {
+  const map = dayMetrics(name);
+  const others = Object.keys(map).filter(d => d !== dateStr).map(d => metric(map[d]));
+  return { name: name, dateStr: dateStr, hasPrev: others.length > 0, best: others.length ? Math.max(...others) : 0, before: map[dateStr] ? metric(map[dateStr]) : 0 };
+};
+window.prCheck = function (snap) {
+  if (!snap || !snap.hasPrev) return false;
+  const sets = dayMetrics(snap.name)[snap.dateStr];
+  if (!sets) return false;
+  const now = metric(sets);
+  return now > snap.best && now > snap.before;
+};
+/* 金色のモーダル（画面中央）＋バイブ。余計な数値や差分は出さない。タップか約2.4秒で閉じる */
+window.showPRModal = function () {
+  if (document.getElementById('prModal')) return;
+  const o = document.createElement('div');
+  o.id = 'prModal';
+  o.setAttribute('role', 'alert');
+  o.innerHTML = '<div class="pr-box">NEW RECORD!!</div>';
+  const close = () => { clearTimeout(t); o.remove(); };
+  const t = setTimeout(close, 2400);
+  o.addEventListener('click', close);
+  document.body.appendChild(o);
+  try { navigator.vibrate && navigator.vibrate([80, 50, 80, 50, 160]); } catch (err) {}
+};
 const fmtSet = s => (s.weight ? s.weight + 'kg × ' + s.reps + '回' : s.reps + '回');
 const bestSet = sets => sets.reduce((b, s) => (!b || s.weight > b.weight || (s.weight === b.weight && s.reps > b.reps)) ? s : b, null);
 
@@ -735,7 +867,7 @@ window.homeFill = function (i) {
 };
 /* ===== 勲章バッジ（選択中の部位のメニューを全完了したときだけ、部位文字の右横に出す）
    放射光条（金）・月桂樹（銀）・帯（青のエナメル）・中央メダリオン（深い赤＋金の星）の多色。実物らしさのため色は固定（テーマでは変えない） ===== */
-function medalHtml() {
+function medalSvg(uid, label) { /* uid … 複数の勲章を並べても gradient の id が重ならないようにする接尾辞 */
   const C = 32, f = x => x.toFixed(2);
   const pt = (a, r) => f(C + Math.sin(a) * r) + ',' + f(C - Math.cos(a) * r);
   let rays = '', leaves = '', star = '';
@@ -750,7 +882,7 @@ function medalHtml() {
       '<ellipse cx="' + f(x2) + '" cy="' + f(y) + '" rx="3.9" ry="1.6" transform="rotate(' + f(-(deg + 32)) + ' ' + f(x2) + ' ' + f(y) + ')" fill="url(#mdS)" stroke="#4b5260" stroke-width=".25"/>';
   }
   for (let i = 0; i < 10; i++) star += (i ? ' ' : '') + pt(i * Math.PI / 5, i % 2 ? 2.9 : 7);
-  return '<div class="hm-medal"><svg class="md" viewBox="0 0 64 64" role="img" aria-label="今日のメニュー全完了"><defs>' +
+  return ('<svg class="md" viewBox="0 0 64 64" role="img" aria-label="' + label + '"><defs>' +
     '<linearGradient id="mdG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e3a6"/><stop offset=".5" stop-color="#d1a847"/><stop offset="1" stop-color="#8a6420"/></linearGradient>' +
     '<linearGradient id="mdS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f9"/><stop offset=".55" stop-color="#aab1bd"/><stop offset="1" stop-color="#6c7482"/></linearGradient>' +
     '<linearGradient id="mdB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b7bc4"/><stop offset="1" stop-color="#1a3470"/></linearGradient>' +
@@ -764,9 +896,11 @@ function medalHtml() {
     '<circle cx="32" cy="32" r="12.4" fill="url(#mdR)" stroke="url(#mdG)" stroke-width="1.3"/>' +
     '<polygon points="' + star + '" fill="url(#mdG)"/>' +
     '<path class="md-shine" d="M' + pt(-1.9, 10.4) + ' A10.4 10.4 0 0 1 ' + pt(-0.35, 10.4) + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.1" stroke-linecap="round"/>' +
-    '</svg><div class="hm-medal-lb">COMPLETE</div></div>';
+    '</svg>').replace(/mdG|mdS|mdB|mdR/g, m => m + uid);
 }
-const MEDAL_HTML = medalHtml();
+const MEDAL_HTML = '<div class="hm-medal">' + medalSvg('', '今日のメニュー全完了') + '<div class="hm-medal-lb">COMPLETE</div></div>';
+/* PRミニ勲章（種目名の右。CSS で約24px。下に小さく PR） */
+const prMedal = i => '<span class="hm-pr">' + medalSvg('p' + i, 'PR更新') + '<span class="hm-medal-lb">PR</span></span>';
 
 function renderHome() {
   const el = document.getElementById('tabContentHome');
@@ -787,7 +921,7 @@ function renderHome() {
   let h = '<div class="hm-card"><div class="hm-pad"><div class="hm-lb">今日のおすすめ</div><div class="hm-top"><div class="hm-big">' + type +
     '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-sub">' + sub + '</div><div class="hm-ord">' + chips + '</div></div></div>';
   if (!names.length) {
-    el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。「月間/設定」の「種目の編集」から追加できます。</div></div>';
+    el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。「月間/設定」→「設定」の「種目の編集」から追加できます。</div></div>';
     return;
   }
   h += '<div class="hm-card"><div class="hm-pad" style="padding-bottom:12px"><div class="hm-exh"><div class="hm-lb">今日のメニュー</div><div class="hm-lb hm-gold">' +
@@ -802,7 +936,7 @@ function renderHome() {
     const pr = !!t && isPR(n, today);
     const tr = trendOf(s.map(x => x.v));
     h += '<div class="hm-ex' + (open ? ' open' : '') + '" data-i="' + i + '"><div class="hm-exh"><div class="hm-row2"><span class="hm-chk' + (t ? ' f' : '') + '"></span><div class="hm-en' + (t ? ' dn' : '') + '">' +
-      escapeHtml(n) + '</div>' + (pr ? '<span class="hm-pr">PR達成！！</span>' : '') + '</div><div class="hm-act">' + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(' + i + ')">入力</button>') +
+      escapeHtml(n) + '</div>' + (pr ? prMedal(i) : '') + '</div><div class="hm-act">' + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(' + i + ')">入力</button>') +
       (open ? '<button type="button" class="hm-dt">詳細</button>' : '') +
       '<span class="hm-chev"></span></div></div><div class="hm-mini"><div class="hm-st">' +
       (b ? (t ? '今日 ' : '前回 ') + fmtSet(b) : '') +
@@ -1183,10 +1317,17 @@ function detailCompareHtml(st) {
     cell('重量', ba.weight, ba.weight - bb.weight, 'kg') + cell('回数', ba.reps, ba.reps - bb.reps, '回') +
     cell('推定1RM', est1RM(a), est1RM(a) - est1RM(b), 'kg') + '</div>';
 }
+/* 種目名の横：最終実施日と今日との日数差（当日＝今日／未実施＝未実施） */
+function lastDoneHtml(st) {
+  if (!st.days.length) return '<span class="hm-sub">未実施</span>';
+  const d = st.days[st.days.length - 1], p = d.split('-').map(Number), n = new Date();
+  const diff = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(p[0], p[1] - 1, p[2])) / 864e5);
+  return '<span class="hm-sub">最終実施: ' + fmtD(d) + '（' + (diff <= 0 ? '今日' : diff + '日前') + '）</span>';
+}
 function renderDetail() {
   if (!detailEl || !detailState) return;
   const st = detailStats(detailState.name);
-  let h = '<div class="dt-head"><div><div class="hm-lb">種目別の詳細</div><div class="hm-en">' + escapeHtml(detailState.name) + '</div></div>' +
+  let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">' + escapeHtml(detailState.name) + '</span>' + lastDoneHtml(st) + '</div>' +
     '<button type="button" class="dt-x" data-dt="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
   if (!st.days.length) {
     detailEl.innerHTML = h + '<div class="hm-sub dt-pad">この種目の記録がまだありません。</div></div>';
@@ -1205,7 +1346,7 @@ function renderDetail() {
     DETAIL_COUNTS.map(n => '<button type="button" class="gr-btn' + (n === detailState.n ? ' on' : '') + '" data-dt="n" data-n="' + n + '" aria-pressed="' + (n === detailState.n ? 'true' : 'false') + '">' + n + '件</button>').join('') +
     '</div></div><div class="dt-graph" id="dtGraph">' + detailGraphHtml(detailState.name, detailState.n) + '</div>' +
     '<div class="dt-sec">前回との比較</div>' + detailCompareHtml(st) +
-    '<div class="dt-sec">過去の記録（新しい順）</div>' +
+    '<div class="dt-sec">過去記録</div>' +
     st.days.slice().reverse().map(d => {
       const sets = st.map[d], b = bestSet(sets), vol = sets.reduce((a, s) => a + s.weight * s.reps, 0);
       return '<div class="dt-day"><div class="dt-dh" data-dt="day"><span class="dt-dd">' + fmtD(d) + '</span><span class="dt-sum">' +
@@ -1283,6 +1424,7 @@ function showTab(name, extra) {
     if (el) el.classList.toggle('hidden', k !== name);
   });
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.t === name));
+  if (name === 'settings') setSub('analysis'); /* 「月間/設定」を開いたときは、最初に「月間/分析」 */
   /* 件数を戻した履歴と、見えるようになった画面（ホーム／月間・設定）を、最新の内容で1回だけ描く */
   const e = extra || {};
   requestRender({ w: !!e.w || paging.w, c: !!e.c || paging.c, view: name });
@@ -1293,11 +1435,11 @@ function showTab(name, extra) {
 window.switchTab = function (name) { showTab(name); };
 
 /* 起動：1手順ずつ実行し、要素が無いなどで1つ失敗しても後続の初期化を止めない
-   （保存済みテーマを適用 → 履歴・有酸素・月間サマリー・ホームを showTab で1回ずつ描く） */
+   （保存済みテーマを適用 → 履歴・有酸素・ホームを showTab で1回ずつ描く） */
 function step(fn) { try { fn(); } catch (e) { console.log(e); } }
 step(() => { if (layerFlagged()) history.replaceState(null, ''); }); /* 再読み込みで残った重なり用の履歴状態を消す */
 step(() => applyTheme(getTheme()));
-step(() => showTab('home', { w: true, c: true })); /* 履歴・有酸素・月間サマリー・ホームを1回ずつ描く */
+step(() => showTab('home', { w: true, c: true })); /* 履歴・有酸素・ホームを1回ずつ描く */
 step(() => fitTimer(true));
 step(() => { if (storageWarn) window.alert('保存データの一部を読み込めませんでした。バックアップから復元してください。', 7000); });
 })();

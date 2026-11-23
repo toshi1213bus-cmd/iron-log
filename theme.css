@@ -200,7 +200,6 @@ div.bg-gray-900.border.overflow-hidden > input {
   caret-color: transparent;
   cursor: pointer;
 }
-:is(#monthlyCardioSummary, #compareWorkoutPoints, #compareCardioPoints),
 #workoutList :is(span, div).text-xs:not(.day-toggle-icon):not(.ex-toggle-icon),
 #cardioList span.text-xs {
   font-family: var(--num);
@@ -318,7 +317,8 @@ body .ex-toggle-icon.is-open {
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #modal,
-#pplPicker {
+#pplPicker,
+#prModal {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.72);
@@ -338,6 +338,9 @@ body .ex-toggle-icon.is-open {
   padding: 24px 20px 16px;
   box-shadow: 0 16px 40px rgba(0,0,0,.7);
 }
+#prModal { z-index: 140; cursor: pointer; } /* 確認ダイアログ・トーストより前面 */
+.pr-box { width: 100%; max-width: 320px; padding: 28px 16px; text-align: center; white-space: nowrap; font-family: var(--num); font-size: 28px; font-weight: 600; letter-spacing: 0.12em; text-indent: 0.12em; color: var(--on-gold); background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border-radius: 4px; box-shadow: 0 16px 40px rgba(0,0,0,.7), 0 0 28px rgba(var(--gold-rgb), .45); animation: prIn .25s ease; }
+@keyframes prIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
 .modal-box p { text-align: center; font-size: 14px; letter-spacing: 0.1em; color: var(--text); margin-bottom: 20px; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions button {
@@ -409,13 +412,14 @@ body .ex-toggle-icon.is-open {
 .hm-chk.f { background: var(--gold); }
 .hm-chk.f::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border-right: 2px solid var(--on-gold); border-bottom: 2px solid var(--on-gold); transform: rotate(45deg); }
 .hm-en { font-size: 14px; font-weight: 500; }
+.hm-row2 .hm-en { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* 長い種目名は省略。右の操作ボタンを押しのけない */
 .hm-en.dn { color: var(--muted); }
 .hm-mini { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-left: 30px; }
 .hm-st { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-family: var(--num); font-size: 17px; font-weight: 500; letter-spacing: 0.04em; }
 .hm-ch { flex: none; line-height: 0; }
 /* ホーム：種目タップで展開 */
 .card-sep { border-top: 1px solid var(--line); }
-.hm-act { display: flex; align-items: center; gap: 12px; }
+.hm-act { flex: none; display: flex; align-items: center; gap: 12px; }
 .hm-chev { width: 7px; height: 7px; border-right: 1.5px solid var(--gold); border-bottom: 1.5px solid var(--gold); transform: rotate(45deg); transition: transform .2s; margin: 0 4px 3px 0; }
 .hm-ex.open .hm-chev { transform: rotate(-135deg); margin-bottom: -3px; }
 /* ホームは開閉のたびに描き直すため、transition では動かない。描き直し後に付く hm-chev-open / hm-chev-close で、履歴のシェブロンと同じ 0.2 秒の回転を再生する */
@@ -475,8 +479,11 @@ body .ex-toggle-icon.is-open {
 .me-foot button { height: 48px; font-size: 14px; font-weight: 700; letter-spacing: 0.25em; text-indent: 0.25em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
 .me-foot .primary { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: var(--on-gold); border-color: transparent; }
 
-/* ================= 追加: PR達成！！（ホームの種目名のすぐ右） ================= */
-.hm-pr { flex: none; margin-left: 8px; white-space: nowrap; font-family: var(--num); font-size: 14px; font-weight: 600; letter-spacing: 0.15em; color: var(--gold); }
+/* ================= 追加: PRミニ勲章（ホームの種目名のすぐ右。コンプリート勲章と同じ多色モチーフの小型版＋下に小さく PR） =================
+   上下の負マージンで、勲章を足しても種目行の高さが変わらないようにしている */
+.hm-pr { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px; margin: -6px 0 -6px 8px; }
+.hm-pr .md { display: block; width: 24px; height: 24px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.65)); }
+.hm-pr .hm-medal-lb { font-size: 8px; letter-spacing: 0.15em; text-indent: 0.15em; }
 
 /* ================= 追加: タイマー（左＋/− ・中央 時間＋円形目盛りリング ・右 START/STOP） =================
    数字（#timerDisplay）の大きさは extras.js の fitTimer が中央の幅から決める。列幅 68px・gap 8px は従来のまま（数字は大きくならない・小さくならない） */
@@ -543,6 +550,8 @@ button.is-busy,
 .dt-head > div:first-child { min-width: 0; word-break: break-all; }
 .sh-x, .dt-x { flex: none; width: 36px; height: 32px; font-size: 16px; }
 .dt-x { color: var(--gold); } /* 右上の金の「✕」 */
+.dt-ttl { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
+.dt-ttl .hm-sub { margin-top: 0; white-space: nowrap; } /* 種目名の横の「最終実施」 */
 .dt-pad { padding: 4px 16px 10px; }
 .dt-grid { display: grid; grid-template-columns: 1fr 1fr; }
 .dt-cell { padding: 12px 14px; border-top: 1px solid var(--line); }
@@ -695,6 +704,7 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 .gr-btn.on { color: var(--gold); }
 
 /* ================= 追加: 履歴表示件数（− 5件 / ＋ 5件） ================= */
+.dt-sec { color: var(--gold); } /* 詳細ページの見出しは金色 */
 .pager-btn:disabled { opacity: .35; pointer-events: none; }
 
 /* ================= 追加: ボタンを押した瞬間のわずかな沈み込み＋枠の発光（テンキー・タイマーは上で個別に指定済み） ================= */
@@ -707,6 +717,22 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
   transform: scale(0.97);
   box-shadow: 0 0 8px rgba(var(--gold-rgb), .45);
 }
+
+/* ================= 追加: 月間/設定タブの上サブタブ（月間/分析・設定）と分析カード =================
+   サブタブはホームの部位選択（.hm-ord）をそのまま使い、見出し・数値・区切りは詳細ページの部品（.dt-sec / .dt-grid / .dt-cell / .dt-v / .dt-u / .gr-btn）を流用 */
+.an-tabs { margin-top: 0; } /* .hm-pad の中に置くので、.hm-ord の上の余白は不要 */
+.an-rng { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+.an-hd, .an-part { display: grid; grid-template-columns: 52px 1fr 1fr; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.an-hd { padding: 8px 14px; }
+.an-t { font-size: 11px; letter-spacing: 0.2em; font-weight: 500; color: var(--gold); }
+.an-c { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+.an-part .dt-v { font-size: 17px; }
+.dt-cell .an-bd { margin-top: 4px; }
+/* 前週比・前月比バッジ（％は使わず差分のみ）。増＝金／減＝赤／±0・記録なし＝控えめ */
+.an-bd { display: inline-block; font-size: 11px; line-height: 1.5; letter-spacing: 0.05em; white-space: nowrap; padding: 0 6px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
+.an-bd.up { color: var(--gold); border-color: var(--gold-line); }
+.an-bd.down { color: #c0605a; border-color: #c0605a; }
+.an-bd.none { border-color: transparent; padding: 0; }
 
 /* ================= 追加: タブ切替のふわっとしたフェード（0.15s・わずかに下から浮き上がる）
    非表示→表示になるたびに自動で再生される。transform は使わない（position: fixed の子の基準がずれるため。top で動かす） ================= */

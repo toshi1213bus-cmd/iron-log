@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=16">
+<link rel="stylesheet" href="theme.css?v=18">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -90,9 +90,6 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
         </button>
       </div>
     </div>
-    <div class="p-3.5 card-sep">
-      <div id="monthlyCardioSummary" class="text-xs text-white font-bold tracking-tight">今月合計: 0分 / 約0kcal</div>
-    </div>
     <div id="cardioListWrapper" class="card-sep hidden">
       <div id="cardioList" class="divide-y divide-gray-700"></div>
       <div id="cardioMoreContainer"></div>
@@ -105,58 +102,69 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 
 <!-- ================= 3. 月間/設定タブ ================= -->
 <div id="tabContentSettings" class="hidden">
-  <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
-    <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">月間サマリー（＋今週のトレ日数・有酸素分）</h2>
-    <div class="bg-gray-900 border border-gray-700 rounded-xl divide-y divide-gray-700">
-      <div id="compareWorkoutPoints" class="p-3 text-xs font-bold text-white">今月トレ 0日（先月 0日）／ 今週 0日</div>
-      <div id="compareCardioPoints" class="p-3 text-xs font-bold text-white">今月有酸素 0分・約0kcal（先月 0分）／ 今週 0分</div>
+  <!-- 上サブタブ（ホームの部位選択と同じ下線デザイン）。開いたときは最初に「月間/分析」 -->
+  <div class="hm-pad">
+    <div class="hm-ord an-tabs" id="setSubTabs" role="tablist">
+      <button type="button" role="tab" data-s="analysis" class="cur" aria-selected="true" onclick="switchSettingsSub('analysis')">月間/分析</button>
+      <button type="button" role="tab" data-s="settings" aria-selected="false" onclick="switchSettingsSub('settings')">設定</button>
     </div>
   </div>
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
-    <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">種目の編集</h2>
-    <div id="menuSummary"></div>
-    <button type="button" onclick="openMenuEditor()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-      編集
-    </button>
+
+  <!-- ---- 月間/分析（カレンダー＋今週の分析＋今月の成績＋月間推移。分析は extras.js の renderAnalysis が描く） ---- -->
+  <div id="subAnalysis">
+    <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
+    <div id="analysisBody"></div>
   </div>
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-3">
-    <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力/復元</h2>
-    <div class="grid grid-cols-2 gap-2 pt-1">
-      <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-        出力 (JSON)
-      </button>
-      <button type="button" onclick="exportTxt()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-        出力 (TXT)
+
+  <!-- ---- 設定（種目の編集・バックアップ・テーマ・ヘルプ） ---- -->
+  <div id="subSettings" class="hidden">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
+      <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">種目の編集</h2>
+      <div id="menuSummary"></div>
+      <button type="button" onclick="openMenuEditor()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+        編集
       </button>
     </div>
-    <div class="space-y-2 pt-3 border-t border-gray-700">
-      <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
-      <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-        復元実行
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-3">
+      <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力/復元</h2>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+          出力 (JSON)
+        </button>
+        <button type="button" onclick="exportTxt()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+          出力 (TXT)
+        </button>
+      </div>
+      <div class="space-y-2 pt-3 border-t border-gray-700">
+        <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
+        <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+          復元実行
+        </button>
+      </div>
+    </div>
+    <!-- テーマ切替（3分割ボタン。選択中は塗り） -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
+      <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">テーマ</h2>
+      <div class="th-grid">
+        <button type="button" class="th-btn" data-theme="gold" aria-pressed="true" onclick="setTheme('gold')">黒金</button>
+        <button type="button" class="th-btn" data-theme="ocean" aria-pressed="false" onclick="setTheme('ocean')">深海ブルー</button>
+        <button type="button" class="th-btn" data-theme="forest" aria-pressed="false" onclick="setTheme('forest')">森林グリーン</button>
+      </div>
+    </div>
+    <!-- ヘルプ（アコーディオン。初期は閉じる） -->
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5">
+      <button type="button" id="helpToggle" onclick="toggleHelp()" aria-expanded="false" aria-controls="helpBody" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+        ヘルプ<span class="help-chev"></span>
       </button>
-    </div>
-  </div>
-  <!-- テーマ切替（3分割ボタン。選択中は塗り） -->
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
-    <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">テーマ</h2>
-    <div class="th-grid">
-      <button type="button" class="th-btn" data-theme="gold" aria-pressed="true" onclick="setTheme('gold')">黒金</button>
-      <button type="button" class="th-btn" data-theme="ocean" aria-pressed="false" onclick="setTheme('ocean')">深海ブルー</button>
-      <button type="button" class="th-btn" data-theme="forest" aria-pressed="false" onclick="setTheme('forest')">森林グリーン</button>
-    </div>
-  </div>
-  <!-- ヘルプ（アコーディオン。初期は閉じる） -->
-  <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5">
-    <button type="button" id="helpToggle" onclick="toggleHelp()" aria-expanded="false" aria-controls="helpBody" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-      ヘルプ<span class="help-chev"></span>
-    </button>
-    <div id="helpBody" class="help-body hidden">
-      <div class="help-item"><div class="help-t">保存とバックアップ</div><div class="help-d">記録はブラウザ内に自動保存されます。ブラウザのキャッシュ削除や端末変更に備えて、JSON/TXT出力でバックアップを残してください。</div></div>
-      <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除も一覧や履歴から行えます。</div></div>
-      <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。月間サマリーでは今月・先月の比較に加え、月曜始まりの今週の実績も確認できます。</div></div>
-      <div class="help-item"><div class="help-t">グラフと達成表示</div><div class="help-d">種目ごとの推移や推定1RMなどのグラフを確認でき、その日のメニューを完了すると達成表示が出ます。</div></div>
-      <div class="help-item"><div class="help-t">テーマと注意点</div><div class="help-d">見た目のテーマは設定から変更できます（グラフの色は固定）。外部サーバーへ自動送信しないため、端末ごとに管理されます。</div></div>
+      <div id="helpBody" class="help-body hidden">
+        <div class="help-item"><div class="help-t">保存とバックアップ</div><div class="help-d">記録はブラウザ内に自動保存されます。ブラウザのキャッシュ削除や端末変更に備えて、JSON/TXT出力でバックアップを残してください。</div></div>
+        <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除も一覧や履歴から行えます。</div></div>
+        <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。メニューの編集は「月間/設定」の「設定」タブから行えます。</div></div>
+      <div class="help-item"><div class="help-t">月間/分析</div><div class="help-d">「月間/設定」を開くと最初に「月間/分析」が表示され、カレンダーと、今週（月曜始まり）・今月の分析を確認できます。トレ回数（日）・総負荷量・有酸素（合計時間・約kcal）を全部位と PUSH / PULL / LEGS / OTHER 別に集計し、前週・前月（有酸素は先週・先月）との差を「+1日」「-400kg」「+30分」の形で表示します。記録がない場合は「記録なし」と表示します。</div></div>
+      <div class="help-item"><div class="help-t">月間推移</div><div class="help-d">直近6か月（当月を含む）の「トレ回数」「有酸素」を切り替えて折れ線グラフで確認できます。2か月以上の記録があるとグラフが表示されます。</div></div>
+        <div class="help-item"><div class="help-t">グラフと達成表示</div><div class="help-d">種目ごとの推移や推定1RMなどのグラフを確認でき、その日のメニューを完了すると達成表示が出ます。</div></div>
+        <div class="help-item"><div class="help-t">テーマと注意点</div><div class="help-d">見た目のテーマは設定から変更できます（グラフの色は固定）。外部サーバーへ自動送信しないため、端末ごとに管理されます。</div></div>
+      </div>
     </div>
   </div>
 </div>
@@ -178,6 +186,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
      1. 操作（onclick など）→ 下の「操作（アクション）」の関数
         saveWorkout / saveCardio / deleteWorkout / deleteCardio / updateDayPpl / importFromJsonText
         （メニューの変更は extras.js の tplSelect・メニュー編集の保存。どちらも同じ transact を通る）
+        PR更新の判定・演出（金色モーダル＋バイブ）は extras.js の prSnap / prCheck / showPRModal を saveWorkout から呼ぶ
      2. 記録・有酸素・部位・メニューの変更は必ず transact() を通す。
         メモリと保存領域をまとめて退避 → 変更 → 保存し、失敗・例外のときは両方を元へ戻して false を返す
      3. 画面の更新は requestRender(scope) だけ（実体は extras.js の paint）。1つの操作につき1回だけ呼ぶ
@@ -802,6 +811,10 @@ function saveWorkout() {
   const today = todayStr();
   const day = (editingId === null && formDate) || today; /* 部位・メニューを決める日（「この日にトレを追加」の日付） */
   const type = day === today ? todayType() : pplOf(day);  /* 保存前に決める（保存すると今日の部位が変わるため） */
+  /* PR判定用：保存前の「他の日の最高値」と「その日の保存前の値」を控える（保存後に比べる） */
+  const prDate = editingId ? (workouts.find(i => i.id === editingId) || {}).dateStr || day : (formDate || today);
+  let prBefore = null;
+  try { if (typeof prSnap === 'function') prBefore = prSnap(name, prDate); } catch (e) { console.log(e); }
   const ok = transact(['workouts', 'dayPpl', 'menu'], () => {
     if (editingId) {
       const target = workouts.find(i => i.id === editingId);
@@ -833,6 +846,8 @@ function saveWorkout() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
+  /* 2回目以降で過去最高を超えたときだけ、金色の NEW RECORD!! とバイブ（初回記録は出さない） */
+  try { if (prBefore && prCheck(prBefore)) showPRModal(); } catch (e) { console.log(e); }
   return true;
 }
 
@@ -1025,25 +1040,18 @@ function drawWorkoutList() {
   });
   restoreOpen(list, openState);
   renderPager(moreContainer, visibleDaysCount, sortedDates.length, PAGE_STEP, loadLessDays, loadMoreDays);
-  /* 「グラフ推移」ボタンの追加・月間サマリー・ホーム・カレンダーは extras.js の paint が続けて更新する */
+  /* 「グラフ推移」ボタンの追加・月間/分析・ホーム・カレンダーは extras.js の paint が続けて更新する */
 }
 
-/* 有酸素リスト＋有酸素タブの今月合計。月間サマリー（比較の2行）は extras.js の updateSummary だけが描く */
+/* 有酸素リスト。今月・今週の有酸素の集計は「月間/分析」（extras.js の renderAnalysis）が描く */
 function drawCardioList() {
   const wrapper = document.getElementById('cardioListWrapper');
   const list = document.getElementById('cardioList');
   const moreContainer = document.getElementById('cardioMoreContainer');
   const empty = document.getElementById('emptyCardioMessage');
-  const summary = document.getElementById('monthlyCardioSummary');
   if (!list || !wrapper) return;
   list.innerHTML = '';
   if (moreContainer) moreContainer.innerHTML = '';
-
-  const currentYearMonth = todayStr().slice(0, 7);
-  const totalMin = cardios.filter(i => i.dateStr.startsWith(currentYearMonth)).reduce((sum, i) => sum + i.minutes, 0);
-  if (summary) {
-    summary.textContent = `今月合計: ${totalMin}分 / 約${Math.round(totalMin * 3.5)}kcal`;
-  }
 
   if (cardios.length === 0) {
     wrapper.classList.add('hidden');
@@ -1192,6 +1200,6 @@ async function importFromJsonText() {
 }
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=16"></script>
+<script src="extras.js?v=18"></script>
 </body>
 </html>
