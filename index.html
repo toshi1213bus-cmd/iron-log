@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=29">
+<link rel="stylesheet" href="theme.css?v=30">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -143,6 +143,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
         </button>
       </div>
       <div id="lastBackupInfo" class="text-xs text-gray-400"></div>
+      <div id="dataUsageInfo" class="text-xs text-gray-400"></div>
       <div class="space-y-2 pt-3 border-t border-gray-700">
         <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
         <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -362,6 +363,7 @@ let formDate = null;        /* 「この日にトレを追加」で指定され�
 let cardioDate = null;      /* 「この日に有酸素を追加」で指定された記録日（null＝今日） */
 let homeInput = false;      /* ホームの「入力」／サジェストから来た「入力中」 */
 let homeInputName = null;
+let warmupMode = false;     /* 「アップ」入力中（保存ボタンは無効。記録としては保存しない） */
 let visibleDaysCount = PAGE_STEP;
 let visibleCardioDaysCount = CARDIO_PAGE_STEP;
 /* ■ タイマー（再読み込みで0に戻る。localStorageには保存しない） */
@@ -518,6 +520,8 @@ function setRowHtml(num, w, r, hideX) {
     '<button type="button" onclick="removeSetRow(this)"' + (hideX ? ' style="visibility: hidden;"' : '') + ' class="text-gray-500 hover:text-red-400 p-2">✕</button>' +
     '</div>';
 }
+/* 「アップ」入力（ホームの「アップ」ボタン）：種目名の固定文字 */
+const WARMUP_NAME = 'アップ';
 const FIRST_ROW_HTML = setRowHtml(1, '', '', true);
 (function () { const c = document.getElementById('setsContainer'); if (c) c.innerHTML = FIRST_ROW_HTML; })();
 /* フォーム上部（#formHeaderContainer）は状態から組み立てる
@@ -543,6 +547,11 @@ function renderFormHeader() {
 /* 「この日にトレを追加」：記録日を指定（null で今日に戻す） */
 function setFormDate(ds) {
   formDate = ds || null;
+  if (ds && warmupMode) { /* 「この日にトレを追加」したら、アップ入力は終えて通常の空フォームへ */
+    homeInput = false;
+    homeInputName = null;
+    resetFormFields();
+  }
   renderFormHeader();
 }
 /* 「この日に有酸素を追加」 */
@@ -561,6 +570,29 @@ function hideSuggest() {
   const box = byId('suggestionBox');
   if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
 }
+/* 「アップ」入力を終える：保存ボタンを元の有効状態へ戻す */
+function endWarmup() {
+  warmupMode = false;
+  const b = byId('saveBtn');
+  if (b) b.disabled = false;
+}
+/* ホームの「アップ」：種目名に「アップ」・セット欄に 20%/50%/70% の行（sets は {weight, reps} の配列）を入れ、
+   「入力中＋キャンセル」を出して、保存ボタンを無効にする（トレーニング記録として保存させない） */
+function startWarmup(sets) {
+  const nameEl = byId('exerciseName'), container = byId('setsContainer'), saveBtn = byId('saveBtn');
+  if (!nameEl || !container || !saveBtn || !sets || !sets.length) return;
+  editingId = null;
+  resetFormFields(); /* 入力欄を初期化（日付指定は残す）。ここで保存ボタンも一度元に戻る */
+  padClose();
+  nameEl.value = WARMUP_NAME;
+  container.innerHTML = '';
+  sets.forEach(s => addSetRow(s.weight, s.reps));
+  homeInput = true;
+  homeInputName = WARMUP_NAME;
+  warmupMode = true;
+  saveBtn.disabled = true;
+  renderFormHeader();
+}
 /* 入力欄だけを初期状態に戻す（状態・ヘッダーは触らない） */
 function resetFormFields() {
   const nameEl = byId('exerciseName'), saveBtn = byId('saveBtn'), container = byId('setsContainer');
@@ -568,6 +600,7 @@ function resetFormFields() {
   hideSuggest();
   if (saveBtn) saveBtn.textContent = '保存';
   if (container) container.innerHTML = FIRST_ROW_HTML;
+  endWarmup(); /* 通常のリセット（キャンセル・別種目への切り替え・保存後など）では保存ボタンを元に戻す */
 }
 function resetForm(keep) {
   const keepDate = (keep === true || editingId !== null) ? formDate : null;
@@ -594,6 +627,7 @@ function editWorkout(id) {
   hideSuggest();
   renderFormHeader();
   const saveBtn = byId('saveBtn'), nameEl = byId('exerciseName'), container = byId('setsContainer');
+  endWarmup(); /* 編集を始めたら保存（更新）ボタンを有効に */
   if (saveBtn) saveBtn.textContent = '更新';
   if (nameEl) nameEl.value = target.name;
   if (container) {
@@ -669,6 +703,7 @@ function applySuggestion(id) {
   const container = byId('setsContainer');
   if (nameEl) nameEl.value = target.name;
   hideSuggest();
+  endWarmup(); /* 過去の記録から入力するときは保存ボタンを有効に */
   if (container) {
     container.innerHTML = '';
     target.setList.forEach(set => addSetRow(set.weight, set.reps));
@@ -764,7 +799,7 @@ function lockButton(btn) {
   if (!btn) return;
   btn.disabled = true;
   btn.classList.add('is-busy');
-  setTimeout(() => { btn.disabled = false; btn.classList.remove('is-busy'); }, LOCK_MS);
+  setTimeout(() => { btn.disabled = (btn.id === 'saveBtn' && warmupMode); btn.classList.remove('is-busy'); }, LOCK_MS); /* アップ入力中は保存ボタンを無効のまま */
 }
 /* 空状態の「記録をつける」：そのタブの入力欄へ案内する */
 function goFirstRecord(kind) {
@@ -787,6 +822,7 @@ function savedFeedback(btn) {
 function saveWorkout() {
   const btn = byId('saveBtn');
   if (btn && btn.disabled) return false;
+  if (warmupMode) return false; /* 「アップ」は記録として保存しない */
   const nameInput = byId('exerciseName');
   const container = byId('setsContainer');
   if (!nameInput || !container) return false;
@@ -1142,6 +1178,7 @@ function exportData() {
   a.remove();
   try { localStorage.setItem('iron_last_backup', new Date().toISOString()); } catch (e) {}
   paintLastBackup();
+  if (window.paintDataUsage) window.paintDataUsage(); /* 最終バックアップ日の保存でも使用量が変わる */
 }
 
 /* 最終バックアップ日の表示（14日以上あいていたら警告色で知らせる） */
@@ -1256,7 +1293,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=27"></script>
+<script src="extras.js?v=28"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

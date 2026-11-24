@@ -21,37 +21,54 @@ toastEl.setAttribute('role', 'status');
 toastEl.setAttribute('aria-live', 'polite');
 document.body.appendChild(toastEl);
 let toastTimer;
+let undoTimer, undoTick = null; /* 「元に戻す」の終了タイマーと、残り秒数を更新するタイマー */
+/* 取り消し用のタイマーを両方とも確実に止める（押したとき・時間切れ・別のトースト／通知が出たときに必ず通す） */
+function clearUndo() {
+  clearTimeout(undoTimer);
+  undoTimer = null;
+  if (undoTick) { clearInterval(undoTick); undoTick = null; }
+}
 /* kind: 'ok'（保存できた）／'err'（失敗）。省略時は文言から判定 */
 window.alert = function (msg, ms, kind) {
   const m = String(msg);
   toastEl.textContent = m;
   toastEl.className = 'show' + (kind ? ' ' + kind : /できません|失敗/.test(m) ? ' err' : '');
   clearTimeout(toastTimer);
-  clearTimeout(undoTimer);
+  clearUndo(); /* 別の通知が出たら、取り消しの残り時間表示も止める */
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
 };
-/* 削除の取り消し用トースト（「元に戻す」ボタンつき。5秒で消える） */
-let undoTimer;
+/* 削除の取り消し用トースト（「元に戻す (10s)」ボタンつき。残り秒数が減り、10秒で消える） */
+const UNDO_SEC = 10;
 window.showUndoToast = function (msg, onUndo) {
   clearTimeout(toastTimer);
-  clearTimeout(undoTimer);
+  clearUndo(); /* 前の取り消し表示が残っていても、重ならないよう先に止める */
   toastEl.innerHTML = '';
   const span = document.createElement('span');
   span.textContent = msg;
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'toast-undo';
-  btn.textContent = '元に戻す';
-  btn.addEventListener('click', () => {
-    clearTimeout(undoTimer);
+  const label = s => '元に戻す (' + s + 's)';
+  btn.textContent = label(UNDO_SEC);
+  const close = () => {
+    clearUndo();
     toastEl.classList.remove('show', 'undoable');
     toastEl.innerHTML = '';
+  };
+  btn.addEventListener('click', () => {
+    close();
     if (onUndo) onUndo();
   });
   toastEl.appendChild(span);
   toastEl.appendChild(btn);
   toastEl.className = 'show undoable';
-  undoTimer = setTimeout(() => { toastEl.classList.remove('show', 'undoable'); toastEl.innerHTML = ''; }, 5000);
+  const endAt = Date.now() + UNDO_SEC * 1000; /* 終了時刻から残りを計算（タイマーが遅れてもズレない） */
+  undoTick = setInterval(() => {
+    const left = Math.ceil((endAt - Date.now()) / 1000);
+    if (left <= 0) { close(); return; }
+    btn.textContent = label(left);
+  }, 250);
+  undoTimer = setTimeout(close, UNDO_SEC * 1000); /* 念のための終了保証 */
 };
 function ask(msg, ok) {
   return new Promise(resolve => {
@@ -113,6 +130,31 @@ function applyTheme(t) {
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
+/* ===== データ使用量（「設定」タブ：約◯KB／目安5MB）
+   このアプリのキー（simple_ ＝記録・有酸素・部位・メニュー・復元前の控え など ／ iron_ ＝テーマ・最終バックアップ日）だけを数える。
+   localStorage は文字を2バイト（UTF-16）で数えるため、（キー名＋中身）の文字数×2 を使う ===== */
+const USAGE_PREFIXES = ['simple_', 'iron_'];
+function dataUsageBytes() {
+  let chars = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !USAGE_PREFIXES.some(p => k.indexOf(p) === 0)) continue;
+    const v = localStorage.getItem(k);
+    chars += k.length + (v == null ? 0 : v.length);
+  }
+  return chars * 2;
+}
+function paintDataUsage() {
+  const el = document.getElementById('dataUsageInfo');
+  if (!el) return;
+  try {
+    const kb = dataUsageBytes() / 1024;
+    el.textContent = 'データ使用量：約' + (kb < 100 ? kb.toFixed(1) : Math.round(kb).toLocaleString()) + 'KB／目安5MB';
+  } catch (err) {
+    el.textContent = 'データ使用量：取得できませんでした';
+  }
+}
+window.paintDataUsage = paintDataUsage; /* index.html の exportData（最終バックアップ日の保存）からも呼ぶ */
 window.setTheme = function (t) {
   if (THEMES.indexOf(t) < 0) return;
   const prev = document.documentElement.getAttribute('data-theme') || 'gold';
@@ -120,6 +162,7 @@ window.setTheme = function (t) {
   try { localStorage.setItem(THEME_KEY, t); } catch (e) { ok = false; }
   if (!ok) { applyTheme(prev); window.alert('保存できませんでした'); return; } /* 保存できなければ見た目も元のまま */
   applyTheme(t);
+  paintDataUsage(); /* テーマの保存でも使用量が変わる */
 };
 
 /* ===== ヘルプ（アコーディオン。初期は閉じる） ===== */
@@ -360,6 +403,7 @@ function paint(s) {
     if (data || s.view === 'settings') safe(renderAnalysis);
     if (data || s.view === 'settings' || s.view === 'calendar') safe(renderCalendar);
     if (s.menu || s.view === 'settings') safe(renderMenuSummary);
+    if (data || s.menu || s.view === 'settings') safe(paintDataUsage); /* 保存・削除・復元・メニュー変更のたびに最新へ */
   }
   if ((s.w || s.menu || s.view === 'home') && isShown('tabContentHome')) safe(renderHome);
   if (data && sheetEl) safe(renderSheet); /* 日付ボトムシートが開いていれば最新化 */
@@ -989,6 +1033,26 @@ window.homeFill = function (i) {
   hideSuggest();
   renderFormHeader();
 };
+/* ===== アップ（ホームの1番上の種目の過去最大重量から 20%・50%・70% をフォームへセット）
+   WARMUP … [最大重量に対する割合, 回数]。重量は 0.5kg 刻みに丸める（0 にならないよう最小 0.5kg）
+   フォームの状態の切り替えは index.html の startWarmup（入力中＋キャンセル／保存ボタンの無効化もそこ） ===== */
+const WARMUP = [[0.2, 10], [0.5, 5], [0.7, 3]];
+function maxWeightOf(name) {
+  let m = 0;
+  workouts.forEach(w => {
+    if (w.name.trim() === name) w.setList.forEach(s => { if (s.weight > m) m = s.weight; });
+  });
+  return m;
+}
+window.homeWarmup = function () {
+  const name = homeNames[0]; /* ホームで1番上の種目 */
+  if (name === undefined) return;
+  const max = maxWeightOf(name);
+  if (!(max > 0)) return; /* 過去最大重量の記録がなければ何もしない */
+  if (editingId !== null) resetForm(true); /* 編集は中断（日付指定は維持） */
+  switchTab('workout');
+  startWarmup(WARMUP.map(p => ({ weight: Math.max(0.5, Math.round(max * p[0] / 0.5) * 0.5), reps: p[1] })));
+};
 /* ===== 勲章バッジ（選択中の部位のメニューを全完了したときだけ、部位文字の右横に出す）
    放射光条（金）・月桂樹（銀）・帯（青のエナメル）・中央メダリオン（深い赤＋金の星）の多色。実物らしさのため色は固定（テーマでは変えない） ===== */
 function medalSvg(uid, label) { /* uid … 複数の勲章を並べても gradient の id が重ならないようにする接尾辞 */
@@ -1059,8 +1123,10 @@ function renderHome() {
     const open = homeOpen === n;
     const pr = !!t && isPR(n, today);
     const tr = trendOf(s.map(x => x.v));
+    /* 「アップ」は1番上の種目の「入力」ボタンの左。過去最大重量の記録がなければ押せない状態 */
+    const up = (i === 0 && !t) ? '<button type="button" class="hm-in hm-up"' + (maxWeightOf(n) > 0 ? ' onclick="homeWarmup()"' : ' disabled aria-disabled="true"') + '>アップ</button>' : '';
     h += '<div class="hm-ex' + (open ? ' open' : '') + '" data-i="' + i + '"><div class="hm-exh"><div class="hm-row2"><span class="hm-chk' + (t ? ' f' : '') + '"></span><div class="hm-en' + (t ? ' dn' : '') + '">' +
-      escapeHtml(n) + '</div>' + (pr ? prMedal(i) : '') + '</div><div class="hm-act">' + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(' + i + ')">入力</button>') +
+      escapeHtml(n) + '</div>' + (pr ? prMedal(i) : '') + '</div><div class="hm-act">' + up + (t ? '' : '<button type="button" class="hm-in" onclick="homeFill(' + i + ')">入力</button>') +
       '<button type="button" class="hm-dt">詳細</button>' +
       '<span class="hm-chev"></span></div></div><div class="hm-mini"><div class="hm-st">' +
       (b ? (t ? '今日 ' : '前回 ') + fmtSet(b) : '') +

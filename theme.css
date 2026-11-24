@@ -702,6 +702,8 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 .hm-in:active, .hm-dt:active, .gr-btn:active, .ppl-btn:active, .ex-edit:active,
 .gr-btn.on, .hm-in:focus-visible, .hm-dt:focus-visible, .gr-btn:focus-visible, .ppl-btn:focus-visible, .ex-edit:focus-visible { border-bottom-color: var(--gold); outline: none; }
 .gr-btn.on { color: var(--gold); }
+/* ホーム「アップ」：過去最大重量の記録がないときは押せない（色・下線を沈める） */
+.hm-up:disabled, .hm-up:disabled:active { color: var(--disabled); border-bottom-color: var(--line); transform: none; }
 
 /* ================= 追加: 履歴表示件数（− 5件 / ＋ 5件） ================= */
 .dt-sec { color: var(--gold); } /* 詳細ページの見出しは金色 */
@@ -755,7 +757,7 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 
 /* トースト内の「元に戻す」ボタン */
 #toast.undoable { pointer-events: auto; }
-#toast .toast-undo { margin-left: 14px; background: none; border: none; color: var(--gold); font-weight: 700; font-size: 13px; letter-spacing: 0.05em; white-space: nowrap; flex: none; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
+#toast .toast-undo { font-variant-numeric: tabular-nums; margin-left: 14px; background: none; border: none; color: var(--gold); font-weight: 700; font-size: 13px; letter-spacing: 0.05em; white-space: nowrap; flex: none; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
 #toast.undoable span { white-space: nowrap; }
 
 /* ================= UI/UX仕上げ（v24）：雰囲気合わせ＋動き＋空状態＋タブアイコン ================= */
