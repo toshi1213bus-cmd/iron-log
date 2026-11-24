@@ -1033,10 +1033,10 @@ window.homeFill = function (i) {
   hideSuggest();
   renderFormHeader();
 };
-/* ===== アップ（ホームの1番上の種目の過去最大重量から 20%・50%・70% をフォームへセット）
+/* ===== アップ（ホームの1番上の種目の過去最大重量から 30%・60%・80% をフォームへセット）
    WARMUP … [最大重量に対する割合, 回数]。重量は 0.5kg 刻みに丸める（0 にならないよう最小 0.5kg）
    フォームの状態の切り替えは index.html の startWarmup（入力中＋キャンセル／保存ボタンの無効化もそこ） ===== */
-const WARMUP = [[0.2, 10], [0.5, 5], [0.7, 3]];
+const WARMUP = [[0.3, 10], [0.6, 5], [0.8, 3]];
 function maxWeightOf(name) {
   let m = 0;
   workouts.forEach(w => {

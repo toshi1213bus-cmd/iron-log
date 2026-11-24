@@ -576,7 +576,7 @@ function endWarmup() {
   const b = byId('saveBtn');
   if (b) b.disabled = false;
 }
-/* ホームの「アップ」：種目名に「アップ」・セット欄に 20%/50%/70% の行（sets は {weight, reps} の配列）を入れ、
+/* ホームの「アップ」：種目名に「アップ」・セット欄に 30%/60%/80% の行（sets は {weight, reps} の配列）を入れ、
    「入力中＋キャンセル」を出して、保存ボタンを無効にする（トレーニング記録として保存させない） */
 function startWarmup(sets) {
   const nameEl = byId('exerciseName'), container = byId('setsContainer'), saveBtn = byId('saveBtn');
@@ -1152,7 +1152,6 @@ function drawCardioList() {
         <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
         <span class="text-xs text-white">${dayCardio.minutes}分 / 約${dayKcal}kcal</span>
       </div>
-      <button type="button" onclick="deleteCardio('${dayCardio.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
     `;
     list.appendChild(div);
   });
@@ -1198,7 +1197,8 @@ function paintLastBackup() {
     el.style.color = '#f87171';
     return;
   }
-  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const dayStart = t => { const x = new Date(t); x.setHours(0, 0, 0, 0); return x.getTime(); };
+  const days = Math.round((dayStart(Date.now()) - dayStart(d.getTime())) / 86400000);
   const label = d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
   if (days >= 14) {
     el.textContent = '⚠ 最終バックアップ：' + label + '（' + days + '日前）。14日以上たっています。そろそろJSON出力をおすすめします。';
@@ -1293,7 +1293,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=28"></script>
+<script src="extras.js?v=29"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {
