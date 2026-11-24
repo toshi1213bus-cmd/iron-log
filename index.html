@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=18">
+<link rel="stylesheet" href="theme.css?v=20">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -100,17 +100,17 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   </div>
 </div>
 
-<!-- ================= 3. 月間/設定タブ ================= -->
+<!-- ================= 3. 編集・分析/設定タブ ================= -->
 <div id="tabContentSettings" class="hidden">
-  <!-- 上サブタブ（ホームの部位選択と同じ下線デザイン）。開いたときは最初に「月間/分析」 -->
+  <!-- 上サブタブ（ホームの部位選択と同じ下線デザイン）。開いたときは最初に「編集・分析」 -->
   <div class="hm-pad">
     <div class="hm-ord an-tabs" id="setSubTabs" role="tablist">
-      <button type="button" role="tab" data-s="analysis" class="cur" aria-selected="true" onclick="switchSettingsSub('analysis')">月間/分析</button>
+      <button type="button" role="tab" data-s="analysis" class="cur" aria-selected="true" onclick="switchSettingsSub('analysis')">編集・分析</button>
       <button type="button" role="tab" data-s="settings" aria-selected="false" onclick="switchSettingsSub('settings')">設定</button>
     </div>
   </div>
 
-  <!-- ---- 月間/分析（カレンダー＋今週の分析＋今月の成績＋月間推移。分析は extras.js の renderAnalysis が描く） ---- -->
+  <!-- ---- 編集・分析（カレンダー＋週間/月間の分析＋月間推移。分析は extras.js の renderAnalysis が描く） ---- -->
   <div id="subAnalysis">
     <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
     <div id="analysisBody"></div>
@@ -158,10 +158,10 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       </button>
       <div id="helpBody" class="help-body hidden">
         <div class="help-item"><div class="help-t">保存とバックアップ</div><div class="help-d">記録はブラウザ内に自動保存されます。ブラウザのキャッシュ削除や端末変更に備えて、JSON/TXT出力でバックアップを残してください。</div></div>
-        <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除も一覧や履歴から行えます。</div></div>
-        <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。メニューの編集は「月間/設定」の「設定」タブから行えます。</div></div>
-      <div class="help-item"><div class="help-t">月間/分析</div><div class="help-d">「月間/設定」を開くと最初に「月間/分析」が表示され、カレンダーと、今週（月曜始まり）・今月の分析を確認できます。トレ回数（日）・総負荷量・有酸素（合計時間・約kcal）を全部位と PUSH / PULL / LEGS / OTHER 別に集計し、前週・前月（有酸素は先週・先月）との差を「+1日」「-400kg」「+30分」の形で表示します。記録がない場合は「記録なし」と表示します。</div></div>
-      <div class="help-item"><div class="help-t">月間推移</div><div class="help-d">直近6か月（当月を含む）の「トレ回数」「有酸素」を切り替えて折れ線グラフで確認できます。2か月以上の記録があるとグラフが表示されます。</div></div>
+        <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除は「編集・分析」のカレンダーで日付をタップして開く日付シートから行います（トレーニング履歴は閲覧専用です）。</div></div>
+        <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。メニューの編集は「編集・分析/設定」の「設定」タブから行えます。</div></div>
+      <div class="help-item"><div class="help-t">編集・分析</div><div class="help-d">「編集・分析/設定」を開くと最初に「編集・分析」が表示され、カレンダーと分析カードを確認できます。分析カードは「週間分析」（月曜始まり）と「月間分析」を切り替えられ、トレ回数（日）・総負荷量・有酸素（合計時間・約kcal）を全部位と PUSH / PULL / LEGS / OTHER 別に集計し、前週・前月（有酸素は先週・先月）との差を「+1日」「-400kg」「+30分」の形で表示します。記録がない場合は「記録なし」と表示します。</div></div>
+      <div class="help-item"><div class="help-t">月間推移</div><div class="help-d">直近6か月（当月を含む）の「トレ回数」「有酸素」「総負荷量」を切り替えて折れ線グラフで確認できます。切り替えると縦軸の範囲・ラベル・単位も変わります。2か月以上の記録があるとグラフが表示されます。</div></div>
         <div class="help-item"><div class="help-t">グラフと達成表示</div><div class="help-d">種目ごとの推移や推定1RMなどのグラフを確認でき、その日のメニューを完了すると達成表示が出ます。</div></div>
         <div class="help-item"><div class="help-t">テーマと注意点</div><div class="help-d">見た目のテーマは設定から変更できます（グラフの色は固定）。外部サーバーへ自動送信しないため、端末ごとに管理されます。</div></div>
       </div>
@@ -174,7 +174,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   <button type="button" data-t="home" onclick="switchTab('home')">ホーム</button>
   <button type="button" data-t="workout" onclick="switchTab('workout')">トレーニング</button>
   <button type="button" data-t="cardio" onclick="switchTab('cardio')">有酸素</button>
-  <button type="button" data-t="settings" onclick="switchTab('settings')">月間/設定</button>
+  <button type="button" data-t="settings" onclick="switchTab('settings')">編集・分析/設定</button>
 </nav>
 
 <script>
@@ -203,6 +203,8 @@ const LIMITS = { name: 60, weight: 1000, reps: 999 };
 const PAGE_STEP = 4;
 const CARDIO_PAGE_STEP = 5;
 const LOCK_MS = 700;
+/* バックアップJSONの版番号。データ構造を変えるときに 2 以降へ上げる */
+const BACKUP_VERSION = 1;
 let storageWarn = false;
 
 /* ===================== 共通ユーティリティ ===================== */
@@ -512,10 +514,11 @@ const FIRST_ROW_HTML = setRowHtml(1, '', '', true);
 (function () { const c = document.getElementById('setsContainer'); if (c) c.innerHTML = FIRST_ROW_HTML; })();
 /* フォーム上部（#formHeaderContainer）は状態から組み立てる
    ・編集中 → 「編集中（キャンセル）」（日付指定は裏で保持し、編集が終わると戻る）
-   ・日付指定（formDate）がある → 「○/○ の記録を追加（解除）」
-   ・ホームの「入力」／サジェストから来た → 「入力中（キャンセル）」を日付指定の下に並べる */
+   ・日付指定（formDate）がある → 「○/○ の記録を追加（キャンセル）」
+   ・ホームの「入力」／サジェストから来た → 「入力中（キャンセル）」を日付指定の下に並べる
+   キャンセルは見出しのすぐ右（左詰め）に置き、右端のタイマー STOP との誤タップを防ぐ */
 function hdrRow(title, fn, label) {
-  return '<div class="flex justify-between items-center mb-2.5"><h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">' + title +
+  return '<div class="flex items-center gap-3 mb-2.5"><h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">' + title +
     '</h2><button type="button" onclick="' + fn + '" class="text-xs text-gray-400 hover:text-white">' + label + '</button></div>';
 }
 function renderFormHeader() {
@@ -524,7 +527,7 @@ function renderFormHeader() {
   let html = '';
   if (editingId !== null) html = hdrRow('編集中', 'cancelEdit()', 'キャンセル');
   else {
-    if (formDate) html += hdrRow(formatDate(formDate) + ' の記録を追加', 'setFormDate(null)', '解除');
+    if (formDate) html += hdrRow(formatDate(formDate) + ' の記録を追加', 'setFormDate(null)', 'キャンセル');
     if (homeInput) html += hdrRow('入力中', 'cancelEdit()', 'キャンセル');
   }
   h.innerHTML = html;
@@ -540,9 +543,9 @@ function setCardioDate(ds) {
   const el = byId('cardioDateBanner');
   if (!el) return;
   el.innerHTML = cardioDate ? `
-    <div class="flex justify-between items-center mb-2.5">
+    <div class="flex items-center gap-3 mb-2.5">
       <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">${formatDate(cardioDate)} の有酸素を追加</h2>
-      <button type="button" onclick="setCardioDate(null)" class="text-xs text-gray-400 hover:text-white">解除</button>
+      <button type="button" onclick="setCardioDate(null)" class="text-xs text-gray-400 hover:text-white">キャンセル</button>
     </div>
   ` : '';
 }
@@ -1001,7 +1004,7 @@ function drawWorkoutList() {
         <div class="flex items-center gap-2.5 flex-wrap">
           <span class="text-sm font-bold text-orange-400">${formatDate(dateStr)}</span>
           <span class="text-xs text-white font-bold">総負荷: <span class="text-white">${formattedVolume}</span>kg</span>
-          <button type="button" class="ppl-btn" aria-haspopup="dialog" onclick="event.stopPropagation(); pickPpl('${dateStr}')">${currentPpl}</button>
+          <span class="day-ppl text-xs text-white font-bold">${currentPpl}</span>
         </div>
         <span class="text-xs text-gray-400 day-toggle-icon">▼</span>
       </div>
@@ -1024,8 +1027,6 @@ function drawWorkoutList() {
             </div>
             <div class="flex items-center gap-2">
               <span class="text-xs text-gray-400 ex-toggle-icon">▼</span>
-              <button type="button" onclick="event.stopPropagation(); editWorkout('${item.id}')" class="ex-edit">編集</button>
-              <button type="button" onclick="event.stopPropagation(); deleteWorkout('${item.id}')" class="text-gray-500 hover:text-red-400 p-1">✕</button>
             </div>
           </div>
           <div class="ex-content hidden mt-2 pt-2 border-t border-gray-800 space-y-1">
@@ -1040,10 +1041,10 @@ function drawWorkoutList() {
   });
   restoreOpen(list, openState);
   renderPager(moreContainer, visibleDaysCount, sortedDates.length, PAGE_STEP, loadLessDays, loadMoreDays);
-  /* 「グラフ推移」ボタンの追加・月間/分析・ホーム・カレンダーは extras.js の paint が続けて更新する */
+  /* 履歴は閲覧専用（編集・削除・部位変更は、カレンダーの日付シートから）。「グラフ推移」ボタンの追加・分析・ホーム・カレンダーは extras.js の paint が続けて更新する */
 }
 
-/* 有酸素リスト。今月・今週の有酸素の集計は「月間/分析」（extras.js の renderAnalysis）が描く */
+/* 有酸素リスト。今月・今週の有酸素の集計は「編集・分析」（extras.js の renderAnalysis）が描く */
 function drawCardioList() {
   const wrapper = document.getElementById('cardioListWrapper');
   const list = document.getElementById('cardioList');
@@ -1086,6 +1087,7 @@ function drawCardioList() {
 /* ===================== バックアップ ===================== */
 function exportData() {
   const exportObj = {
+    version: BACKUP_VERSION,
     workouts: workouts,
     cardios: cardios,
     dayPplMap: dayPplMap,
@@ -1152,9 +1154,26 @@ async function importFromJsonText() {
     return;
   }
   let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null;
+  let oldVersionLabel = null; /* 古い版のバックアップのときだけ入る（警告に使う） */
   if (Array.isArray(imported)) {
     rawWorkouts = imported;
+    oldVersionLabel = '版番号なし'; /* 記録だけの配列は古い形式 */
   } else if (imported && typeof imported === 'object' && Array.isArray(imported.workouts)) {
+    /* 版番号の確認：現行(1)は通常どおり、版番号なし・現行より古い版は警告つきで復元、未来の版・不正な値は弾く */
+    if ('version' in imported) {
+      const v = imported.version;
+      if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) {
+        alert('バックアップの版番号が不正です。記録は変更していません。', 4000, 'err');
+        return;
+      }
+      if (v > BACKUP_VERSION) {
+        alert('このバックアップは新しい版（版' + v + '）のため復元できません。記録は変更していません。', 4000, 'err');
+        return;
+      }
+      if (v < BACKUP_VERSION) oldVersionLabel = '版' + v;
+    } else {
+      oldVersionLabel = '版番号なし';
+    }
     rawWorkouts = imported.workouts;
     rawCardios = Array.isArray(imported.cardios) ? imported.cardios : [];
     rawPpl = imported.dayPplMap || {};
@@ -1174,7 +1193,8 @@ async function importFromJsonText() {
   }
   /* 2) 件数を見せて確認（除外があればその件数も） */
   const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件で上書きします。` +
-    (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') + 'よろしいですか？';
+    (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') +
+    (oldVersionLabel ? `<br>⚠ 古い版（${oldVersionLabel}）のバックアップです。内容を確認してください。` : '') + 'よろしいですか？';
   if (!(await askConfirm(msg, '復元'))) return;
   /* 3) 上書き前の状態を simple_pre_restore に控えてから、記録・有酸素・部位・メニューを1つの取引で入れ替える。
         失敗したらメモリ・保存領域とも全部元に戻す */
@@ -1200,6 +1220,6 @@ async function importFromJsonText() {
 }
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=18"></script>
+<script src="extras.js?v=20"></script>
 </body>
 </html>
