@@ -341,7 +341,11 @@ function renderAnalysis() {
     Object.keys(AN_MODES).map(k => '<button type="button" class="gr-btn' + (k === anMode ? ' on' : '') + '" data-an="mode" data-m="' + k +
       '" aria-pressed="' + (k === anMode ? 'true' : 'false') + '">' + AN_MODES[k].label + '</button>').join('') +
     '</div><div class="dt-n an-pers">' + [3, 6, 12].map(m => '<button type="button" class="gr-btn' + (m === anMonths ? ' on' : '') + '" data-an="span" data-m="' + m + '" aria-pressed="' + (m === anMonths ? 'true' : 'false') + '">' + m + 'か月</button>').join('') + '</div><div class="dt-graph" id="anGraph">' + anGraphHtml() + '</div><div class="gr-info" id="anInfo">' + anInfoHtml() + '</div></div>';
-  el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend; /* 月間推移は週間・月間どちらでも常時表示 */
+  const achCats = achievements();
+  let achTotal = 0, achGot = 0;
+  achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
+  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>実績</span><span class="ach-entry-r"><span class="ach-entry-n">達成 ' + achGot + '/' + achTotal + '</span><span class="ach-entry-ar">›</span></span></button>';
+  el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + achRow; /* 月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-an]');
@@ -359,6 +363,8 @@ document.addEventListener('click', e => {
   } else if (b.dataset.an === 'pt') {
     const s = anSeries(anMonths), x = s[parseInt(b.dataset.gi, 10)];
     if (x && x.ym !== anSel) { anSel = x.ym; paintAnGraph(); }
+  } else if (b.dataset.an === 'ach') {
+    openAchievements();
   } else if (b.dataset.an === 'period') {
     const p = b.dataset.p;
     if ((p !== 'week' && p !== 'month') || p === anPeriod) return;
@@ -366,6 +372,127 @@ document.addEventListener('click', e => {
     paintAnCard();
   }
 });
+/* ===== 実績（記録から計算するだけ。保存データは増やさない） =====
+   各実績は { name, got（達成日 dateStr／未達成は null）, prog（未達成時の進み具合） } */
+function achTierDates(pairs, tiers) {
+  /* pairs … [dateStr, 累計値] を日付順に並べたもの。累計が各 tiers に初めて届いた日を返す */
+  return tiers.map(t => {
+    const hit = pairs.find(p => p[1] >= t);
+    return hit ? hit[0] : null;
+  });
+}
+function achievements() {
+  const ws = [...workouts].sort((a, b) => a.dateStr === b.dateStr ? Number(a.id) - Number(b.id) : (a.dateStr < b.dateStr ? -1 : 1));
+  const cs = [...cardios].sort((a, b) => a.dateStr === b.dateStr ? Number(a.id) - Number(b.id) : (a.dateStr < b.dateStr ? -1 : 1));
+  /* トレーニング日数（累計） */
+  const dayList = [...new Set(ws.map(w => w.dateStr))].sort();
+  const dayPairs = dayList.map((d, i) => [d, i + 1]);
+  /* 総負荷（累計 kg） */
+  let vol = 0; const volPairs = [];
+  ws.forEach(w => { vol += w.setList.reduce((s, x) => s + (x.weight || 0) * (x.reps || 0), 0); volPairs.push([w.dateStr, vol]); });
+  /* 種目数（累計） */
+  const seen = new Set(); const exPairs = [];
+  ws.forEach(w => { const n = w.name.trim(); if (!seen.has(n)) { seen.add(n); exPairs.push([w.dateStr, seen.size]); } });
+  /* PR更新回数（種目ごとに、日単位のスコアが過去最高を超えた回数。初回は数えない） */
+  const byName = {};
+  ws.forEach(w => {
+    const n = w.name.trim();
+    if (!byName[n]) byName[n] = {};
+    (byName[n][w.dateStr] = byName[n][w.dateStr] || []).push(...w.setList);
+  });
+  let prCount = 0; const prPairs = [];
+  Object.keys(byName).forEach(n => {
+    let best = null;
+    Object.keys(byName[n]).sort().forEach(d => {
+      const v = metric(byName[n][d]);
+      if (best === null) { best = v; return; }
+      if (v > best) { best = v; prCount++; prPairs.push([d, prCount]); }
+    });
+  });
+  /* 連続週（週1回以上トレした週の連続。週の始まりは月曜） */
+  const monday = ds => { const p = ds.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+  const weekFirst = {};
+  dayList.forEach(d => { const m = monday(d); const k = m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0') + '-' + String(m.getDate()).padStart(2, '0'); if (!weekFirst[k]) weekFirst[k] = d; });
+  const weekKeys = Object.keys(weekFirst).sort();
+  let run = 0, prevT = null; const runPairs = [];
+  weekKeys.forEach(k => {
+    const t = monday(k).getTime();
+    run = (prevT !== null && t - prevT === 7 * 864e5) ? run + 1 : 1;
+    prevT = t;
+    runPairs.push([weekFirst[k], run]);
+  });
+  const curRun = run;
+  /* 有酸素：日数と累計分 */
+  const cDayList = [...new Set(cs.map(c => c.dateStr))].sort();
+  const cDayPairs = cDayList.map((d, i) => [d, i + 1]);
+  let mins = 0; const minPairs = [];
+  cs.forEach(c => { mins += c.minutes || 0; minPairs.push([c.dateStr, mins]); });
+  const mk = (tiers, pairs, cur, fmtLeft) => tiers.map((t, i) => {
+    const got = achTierDates(pairs, tiers)[i];
+    return { name: '', got: got, prog: got ? '' : fmtLeft(t, cur) };
+  });
+  const left = u => (t, cur) => 'あと' + (t - cur) + u;
+  const pct = (t, cur) => Math.floor(cur / t * 100) + '%';
+  const cats = [
+    { label: '継続', items: [
+      ...mk([10, 30, 50, 100, 200, 365], dayPairs, dayList.length, left('日')).map((x, i) => ({ ...x, name: '通算' + [10, 30, 50, 100, 200, 365][i] + '日' })),
+      ...mk([4, 8, 12], runPairs, curRun, () => '現在' + curRun + '週').map((x, i) => ({ ...x, name: '連続' + [4, 8, 12][i] + '週' }))
+    ]},
+    { label: '成長', items: [
+      ...mk([10000, 50000, 100000, 500000, 1000000], volPairs, vol, pct).map((x, i) => ({ ...x, name: '総負荷' + [10, 50, 100, 500, 1000][i] + 't' })),
+      ...mk([10, 30, 50, 100], prPairs, prCount, left('回')).map((x, i) => ({ ...x, name: 'PR更新' + [10, 30, 50, 100][i] + '回' }))
+    ]},
+    { label: '挑戦', items: [
+      ...mk([10, 20, 30], exPairs, seen.size, left('種目')).map((x, i) => ({ ...x, name: '' + [10, 20, 30][i] + '種目制覇' })),
+      ...mk([10, 30, 100], cDayPairs, cDayList.length, left('日')).map((x, i) => ({ ...x, name: '有酸素' + [10, 30, 100][i] + '日' })),
+      ...mk([600, 3000, 10000], minPairs, mins, pct).map((x, i) => ({ ...x, name: '有酸素' + [600, 3000, 10000][i] + '分' }))
+    ]}
+  ];
+  return cats;
+}
+function achMedal(got) {
+  return '<svg class="ach-medal' + (got ? '' : ' off') + '" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="19" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 12l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="' + (got ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.4"/><path d="M16 30l-2.5 8L22 34l8.5 4L28 30" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+}
+function achPageHtml() {
+  const cats = achievements();
+  let total = 0, gotN = 0;
+  cats.forEach(c => c.items.forEach(x => { total++; if (x.got) gotN++; }));
+  let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">実績</span><span class="ach-count">達成 ' + gotN + '/' + total + '</span></div>' +
+    '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
+  cats.forEach(c => {
+    h += '<div class="dt-sec">' + c.label + '</div><div class="ach-grid">' + c.items.map(x =>
+      '<div class="ach-item' + (x.got ? '' : ' off') + '">' + achMedal(!!x.got) +
+      '<div class="ach-name">' + escapeHtml(x.name) + '</div>' +
+      '<div class="ach-sub">' + (x.got ? fmtD(x.got) + ' 達成' : x.prog) + '</div></div>').join('') + '</div>';
+  });
+  return h + '</div>';
+}
+let achEl = null; /* 実績ページ（全画面） */
+function openAchievements() {
+  openLayer('ach', () => !achEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    achEl = document.createElement('div');
+    achEl.id = 'achPage';
+    achEl.setAttribute('role', 'dialog');
+    achEl.setAttribute('aria-modal', 'true');
+    achEl.addEventListener('click', onAchClick);
+    document.body.appendChild(achEl);
+    return () => { achEl.innerHTML = achPageHtml(); };
+  });
+}
+function removeAch() {
+  if (!achEl) return;
+  achEl.remove();
+  achEl = null;
+}
+function leaveAch() {
+  if (!achEl) return;
+  removeAch();
+  leaveLayer();
+}
+function onAchClick(e) {
+  if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
+  if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
+}
 /* 上サブタブ（編集・分析・設定）。「編集・分析/設定」を開くたびに showTab が最初の「編集・分析」へ戻す */
 function setSub(k) {
   const a = document.getElementById('subAnalysis'), s = document.getElementById('subSettings');
@@ -1233,7 +1360,7 @@ function navDone() {
   navQueue = [];
   q.forEach(f => { try { f(); } catch (e) { console.log(e); } });
 }
-function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex)); }
+function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach)); }
 function enterLayer(flag) {
   try {
     if (layerFlagged()) history.replaceState({ [flag]: 1 }, ''); /* すでに重なり用の履歴があれば差し替え（増やさない） */
@@ -1266,6 +1393,7 @@ window.addEventListener('popstate', () => {
   if (!s.sheet) removeSheet();
   if (!s.me) closeEditor();
   if (!s.ex) removeDetail();
+  if (!s.ach) removeAch();
   navDone();
 });
 function leaveEditor() {
