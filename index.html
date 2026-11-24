@@ -212,7 +212,10 @@ const LIMITS = { name: 60, weight: 1000, reps: 999 };
 const PAGE_STEP = 4;
 const CARDIO_PAGE_STEP = 5;
 const LOCK_MS = 700;
-/* バックアップJSONの版番号。データ構造を変えるときに 2 以降へ上げる */
+/* バックアップJSONの版番号と運用ポリシー
+   ・項目の追加は「任意項目（無いデータでも読み込める形）」で行い、版番号は上げない
+   ・版番号を上げるのは、既存項目の意味や型を変える／必須項目を増やすなど、古い版では正しく読めなくなる変更の時だけ
+   ・読み込み側は知らない項目を無視し、自分より新しい版のデータは受け付けない（現在の実装のまま） */
 const BACKUP_VERSION = 1;
 let storageWarn = false;
 
@@ -363,7 +366,7 @@ let formDate = null;        /* 「この日にトレを追加」で指定され�
 let cardioDate = null;      /* 「この日に有酸素を追加」で指定された記録日（null＝今日） */
 let homeInput = false;      /* ホームの「入力」／サジェストから来た「入力中」 */
 let homeInputName = null;
-let warmupMode = false;     /* 「アップ」入力中（保存ボタンは無効。記録としては保存しない） */
+let warmupMode = false;     /* 「アップ」入力中（保存ボタンは無効。記録としては保存しない）。切り替えは setWarmup だけが行う */
 let visibleDaysCount = PAGE_STEP;
 let visibleCardioDaysCount = CARDIO_PAGE_STEP;
 /* ■ タイマー（再読み込みで0に戻る。localStorageには保存しない） */
@@ -505,7 +508,7 @@ function playSingleBeep() {
 }
 
 /* ===================== 入力フォーム =====================
-   フォームの状態（editingId / formDate / homeInput / homeInputName）はここの関数だけが変える
+   フォームの状態（editingId / formDate / homeInput / homeInputName / warmupMode）はここの関数だけが変える
    ・resetForm … 入力欄と状態を初期化（保存後はすべて、キャンセル／編集の終了では日付指定を残す）
    ・editWorkout … 編集の開始（日付指定は残す） ／ applySuggestion … 過去の記録から入力（「入力中」） */
 /* セット行のひな形（最初の行・「＋ セット」・過去の記録からの入力で共通）。入力欄は readonly（専用テンキーで入力）。
@@ -570,12 +573,15 @@ function hideSuggest() {
   const box = byId('suggestionBox');
   if (box) { box.classList.add('hidden'); box.innerHTML = ''; }
 }
-/* 「アップ」入力を終える：保存ボタンを元の有効状態へ戻す */
-function endWarmup() {
-  warmupMode = false;
+/* 「アップ」状態の切り替えはここだけ（フラグと保存ボタンの無効／有効を必ずセットで変える）。
+   フォームの各操作は、アップを始める／終えるを宣言するだけにして、ここ以外で warmupMode と保存ボタンを直接触らない */
+function setWarmup(on) {
+  warmupMode = on;
   const b = byId('saveBtn');
-  if (b) b.disabled = false;
+  if (b) b.disabled = on;
 }
+/* 「アップ」入力を終える */
+function endWarmup() { setWarmup(false); }
 /* ホームの「アップ」：種目名に「アップ」・セット欄に 30%/60%/80% の行（sets は {weight, reps} の配列）を入れ、
    「入力中＋キャンセル」を出して、保存ボタンを無効にする（トレーニング記録として保存させない） */
 function startWarmup(sets) {
@@ -589,8 +595,7 @@ function startWarmup(sets) {
   sets.forEach(s => addSetRow(s.weight, s.reps));
   homeInput = true;
   homeInputName = WARMUP_NAME;
-  warmupMode = true;
-  saveBtn.disabled = true;
+  setWarmup(true);
   renderFormHeader();
 }
 /* 入力欄だけを初期状態に戻す（状態・ヘッダーは触らない） */
