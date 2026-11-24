@@ -1003,8 +1003,7 @@ function renderHome() {
         ? '<span class="hm-trw"><span class="hm-tr plat">' + tr.txt + '</span><span class="hm-tip">レスト+1分or重量-10%</span></span>'
         : '<span class="hm-tr ' + tr.cls + '">' + tr.txt + '</span>') : '') + '</div>' +
       '</div>' +
-      (open ? '<div class="hm-big2">' + (s.length > 1 ? line(s.map(x => x.v), 320, 138, s.map(x => x.d), s.map(x => x.rm)) : '<div class="hm-sub">2回以上の記録でグラフが出ます。</div>') +
-        '</div>' : '') +
+      (open && s.length ? '<div class="hm-past">' + detailDaysHtml(detailStats(n), 3) + '</div>' : '') +
       '</div>';
   });
   el.innerHTML = h + '</div>';
@@ -1027,6 +1026,12 @@ document.addEventListener('click', e => {
   const n = homeNames[parseInt(r.dataset.i, 10)];
   if (n === undefined) return;
   if (e.target.closest('.hm-dt')) { openDetail(n); return; } /* 詳細：別ページ（全画面）へ。ホームの展開状態はそのまま（閉じるのは戻ったとき） */
+  const dh = e.target.closest('.dt-dh');
+  if (dh) { /* 過去記録の日タップ：セット内訳だけ開閉する（アコーディオンは閉じない） */
+    const body = dh.nextElementSibling, ic = dh.querySelector('.ex-toggle-icon');
+    if (body) { const hidden = body.classList.toggle('hidden'); if (ic) ic.classList.toggle('is-open', !hidden); }
+    return;
+  }
   if (e.target.closest('.hm-in')) return;
   const prev = homeOpen;
   homeOpen = prev === n ? null : n;
@@ -1331,9 +1336,9 @@ document.addEventListener('click', e => {
   if (c) openSheet(c.dataset.d);
 });
 
-/* ===== 種目別の詳細ページ（ホームの種目行を開いて「詳細」→ 独立した全画面。右上の金の「✕」／戻る操作で閉じる）
-   ・閉じるとホームの種目の展開は閉じた状態に戻る。もう一度開くと、グラフの件数（5件）・過去記録の開閉はすべて初期状態から始まる（状態は開くたびに作り直す）
-   ・内容：基本サマリー（総実施回数・累計総負荷）／自己ベスト（PR）／グラフ・推移（5・10・20件）と前回比／過去の記録一覧（日ごと。タップでセット内訳。下の − 5件 / ＋ 5件 で件数切替）
+/* ===== 種目別の詳細ページ（ホームの種目行を開いて「詳細」→ 独立した全画面。右上の金の「✕」／戻る操作／余白タップで閉じる）
+   ・閉じるとホームの種目の展開は閉じた状態に戻る。もう一度開くと、グラフの件数（5件）は初期状態から始まる（状態は開くたびに作り直す）
+   ・内容：基本サマリー（総実施回数・累計総負荷）／自己ベスト（PR）／グラフ・推移（5・10・20件）と前回比
    ・グラフは既存の line()（金＝総合・赤＝推定1RM。色は固定）をそのまま使う ===== */
 const DETAIL_COUNTS = [5, 10, 20];
 function detailStats(name) {
@@ -1380,8 +1385,7 @@ function lastDoneHtml(st) {
   const diff = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(p[0], p[1] - 1, p[2])) / 864e5);
   return '<span class="hm-sub">最終実施: ' + fmtD(d) + '（' + (diff <= 0 ? '今日' : diff + '日前') + '）</span>';
 }
-const DETAIL_PAGE_STEP = 5; /* 過去記録の件数切替（− / ＋）の1回あたりの件数。初期・下限も同じ 5 件 */
-/* 過去記録（新しい日から visible 件。タップでセット内訳） */
+/* 過去記録（ホームの開いた行に表示。新しい日から visible 件。タップでセット内訳） */
 function detailDaysHtml(st, visible) {
   return st.days.slice().reverse().slice(0, visible).map(d => {
     const sets = st.map[d], b = bestSet(sets), vol = sets.reduce((a, s) => a + s.weight * s.reps, 0);
@@ -1390,30 +1394,6 @@ function detailDaysHtml(st, visible) {
       '<span class="ex-toggle-icon"></span></div><div class="dt-sets hidden">' +
       sets.map((s, i) => '<div class="dt-set"><span class="dt-sn">' + (i + 1) + '.</span><span>' + fmtSet(s) + '</span></div>').join('') + '</div></div>';
   }).join('');
-}
-/* 過去記録の下のページャー（有酸素履歴と同じ renderPager：− 5件 / ＋ 5件） */
-function paintDetailPager(st) {
-  if (!detailEl || !detailState) return;
-  renderPager(detailEl.querySelector('#dtMore'), detailState.p, st.days.length, DETAIL_PAGE_STEP,
-    () => setDetailPage(detailState.p - DETAIL_PAGE_STEP), () => setDetailPage(detailState.p + DETAIL_PAGE_STEP));
-}
-/* 件数を変えて過去記録だけ描き直す。開いている日の内訳・スクロール位置は保つ */
-function setDetailPage(p) {
-  if (!detailEl || !detailState) return;
-  const st = detailStats(detailState.name), np = Math.max(DETAIL_PAGE_STEP, p);
-  if (np > detailState.p && detailState.p >= st.days.length) return; /* ＋は総数に届いていたら何もしない */
-  detailState.p = np;
-  const box = detailEl.querySelector('#dtDays');
-  if (!box) return;
-  const open = new Set([...box.querySelectorAll('.dt-day')].filter(r => !r.querySelector('.dt-sets').classList.contains('hidden')).map(r => r.dataset.d));
-  box.innerHTML = detailDaysHtml(st, np);
-  box.querySelectorAll('.dt-day').forEach(r => {
-    if (!open.has(r.dataset.d)) return;
-    r.querySelector('.dt-sets').classList.remove('hidden');
-    const ic = r.querySelector('.ex-toggle-icon');
-    if (ic) ic.classList.add('is-open');
-  });
-  paintDetailPager(st);
 }
 function renderDetail() {
   if (!detailEl || !detailState) return;
@@ -1436,9 +1416,8 @@ function renderDetail() {
     DETAIL_COUNTS.map(n => '<button type="button" class="gr-btn' + (n === detailState.n ? ' on' : '') + '" data-dt="n" data-n="' + n + '" aria-pressed="' + (n === detailState.n ? 'true' : 'false') + '">' + n + '件</button>').join('') +
     '</div></div><div class="dt-graph" id="dtGraph">' + detailGraphHtml(detailState.name, detailState.n) + '</div>' +
     '<div class="dt-sec">前回との比較</div>' + detailCompareHtml(st) +
-    '<div class="dt-sec">過去記録</div><div id="dtDays">' + detailDaysHtml(st, detailState.p) + '</div><div id="dtMore"></div></div>';
+    '</div>';
   detailEl.innerHTML = h;
-  paintDetailPager(st);
 }
 /* グラフだけ描き直す（件数ボタン）。ページのスクロール位置や過去記録の開閉は触らない */
 function paintDetailGraph() {
@@ -1452,6 +1431,8 @@ function paintDetailGraph() {
   });
 }
 function onDetailClick(e) {
+  /* 余白（ページ本体・見出しのタイトル部分）をタップしたら閉じる。ボタンや日付行のタップはそのまま */
+  if (e.target === detailEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) { leaveDetail(); return; }
   const b = e.target.closest('[data-dt]');
   if (!b || !detailState) return;
   const a = b.dataset.dt;
@@ -1469,7 +1450,7 @@ function onDetailClick(e) {
 function openDetail(name) {
   if (name === undefined) return;
   openLayer('ex', () => !detailEl && !sheetEl && !editorOpen(), () => {
-    detailState = { name: name, n: DETAIL_COUNTS[0], p: DETAIL_PAGE_STEP }; /* グラフ件数・過去記録の件数は 5 件から・過去記録はすべて閉じた状態から */
+    detailState = { name: name, n: DETAIL_COUNTS[0] }; /* グラフ件数は 5 件から */
     detailEl = document.createElement('div');
     detailEl.id = 'exDetail';
     detailEl.setAttribute('role', 'dialog');

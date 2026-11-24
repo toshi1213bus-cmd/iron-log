@@ -743,3 +743,12 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
   .md-shine, .set-row.row-in, .hm-chev.hm-chev-open, .hm-chev.hm-chev-close { animation: none; }
   input.border, textarea.border, .me-add input, #cardioMinutes { transition: none; }
 }
+
+/* ホームの過去記録（詳細と同じ部品・色のまま、行に収まるよう少し小さく） */
+.hm-past { margin-top: 10px; }
+.hm-past .dt-day:first-child { border-top: none; }
+.hm-past .dt-dh { padding: 9px 2px; }
+.hm-past .dt-dd { font-size: 14px; }
+.hm-past .dt-sum { font-size: 13px; }
+.hm-past .dt-sets { padding: 0 2px 10px; }
+.hm-past .dt-set { font-size: 13px; line-height: 1.6; }
