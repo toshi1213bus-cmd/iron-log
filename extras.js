@@ -1513,6 +1513,8 @@ function showTab(name, extra) {
     if (el) el.classList.toggle('hidden', k !== name);
   });
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.t === name));
+  const shownEl = document.getElementById(TABS[name]);
+  if (shownEl) { shownEl.classList.remove('view-in'); void shownEl.offsetWidth; shownEl.classList.add('view-in'); }
   if (name === 'settings') { anPeriod = 'week'; setSub('analysis'); } /* 「編集・分析/設定」を開いたときは、最初に「編集・分析」（分析カードは週間分析から） */
   /* 件数を戻した履歴と、見えるようになった画面（ホーム／月間・設定）を、最新の内容で1回だけ描く */
   const e = extra || {};

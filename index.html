@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=23">
+<link rel="stylesheet" href="theme.css?v=24">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -72,8 +72,13 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       <div id="workoutList" class="divide-y divide-gray-700"></div>
       <div id="workoutMoreContainer"></div>
     </div>
-    <div id="emptyMessage" class="text-center text-gray-500 py-10 hidden">
-      記録がまだありません。
+    <div id="emptyMessage" class="hidden">
+      <div class="empty-box">
+        <div class="empty-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 6.8v10.4M3.8 9.2v5.6M17.2 6.8v10.4M20.2 9.2v5.6M6.8 12h10.4"/></svg></div>
+        <p class="empty-t">記録がまだありません</p>
+        <p class="empty-s">最初の1セットから、今日のトレーニングを始めよう</p>
+        <button type="button" class="empty-btn" onclick="goFirstRecord('workout')">記録をつける</button>
+      </div>
     </div>
   </div>
 </div>
@@ -94,8 +99,13 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       <div id="cardioList" class="divide-y divide-gray-700"></div>
       <div id="cardioMoreContainer"></div>
     </div>
-    <div id="emptyCardioMessage" class="card-sep text-center text-gray-500 py-10 hidden">
-      有酸素の記録がまだありません。
+    <div id="emptyCardioMessage" class="card-sep hidden">
+      <div class="empty-box">
+        <div class="empty-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg></div>
+        <p class="empty-t">有酸素の記録がまだありません</p>
+        <p class="empty-s">まずは1回分を記録してみよう</p>
+        <button type="button" class="empty-btn" onclick="goFirstRecord('cardio')">記録をつける</button>
+      </div>
     </div>
   </div>
 </div>
@@ -169,10 +179,10 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 
 <!-- ================= 下タブ（画面下に固定） ================= -->
 <nav id="bottomNav">
-  <button type="button" data-t="home" onclick="switchTab('home')">ホーム</button>
-  <button type="button" data-t="workout" onclick="switchTab('workout')">トレーニング</button>
-  <button type="button" data-t="cardio" onclick="switchTab('cardio')">有酸素</button>
-  <button type="button" data-t="settings" onclick="switchTab('settings')">編集・分析/設定</button>
+  <button type="button" data-t="home" onclick="switchTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 9.8V20h11V9.8"/><path d="M10 20v-5h4v5"/></svg><span>ホーム</span></button>
+  <button type="button" data-t="workout" onclick="switchTab('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 6.8v10.4M3.8 9.2v5.6M17.2 6.8v10.4M20.2 9.2v5.6M6.8 12h10.4"/></svg><span>トレーニング</span></button>
+  <button type="button" data-t="cardio" onclick="switchTab('cardio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg><span>有酸素</span></button>
+  <button type="button" data-t="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></svg><span>編集・分析/設定</span></button>
 </nav>
 
 <script>
@@ -756,6 +766,15 @@ function lockButton(btn) {
   btn.classList.add('is-busy');
   setTimeout(() => { btn.disabled = false; btn.classList.remove('is-busy'); }, LOCK_MS);
 }
+/* 空状態の「記録をつける」：そのタブの入力欄へ案内する */
+function goFirstRecord(kind) {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => {
+    const i = document.getElementById(kind === 'cardio' ? 'cardioMinutes' : 'exerciseName');
+    if (i) i.focus();
+  }, 380);
+}
+
 function savedFeedback(btn) {
   buzz(25);
   alert('保存しました', 0, 'ok');
@@ -1237,7 +1256,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=23"></script>
+<script src="extras.js?v=24"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {
