@@ -1034,7 +1034,7 @@ window.homeFill = function (i) {
   renderFormHeader();
 };
 /* ===== アップ（ホームの1番上の種目の過去最大重量から 30%・60%・80% をフォームへセット）
-   WARMUP … [最大重量に対する割合, 回数]。重量は 0.5kg 刻みに丸める（0 にならないよう最小 0.5kg）
+   WARMUP … [最大重量に対する割合, 回数]。重量は一の位を四捨五入して 10kg 単位にする（0kg になる軽い種目だけ 1kg 単位に丸める）
    フォームの状態の切り替えは index.html の startWarmup（入力中＋キャンセル／保存ボタンの無効化もそこ） ===== */
 const WARMUP = [[0.3, 10], [0.6, 5], [0.8, 3]];
 function maxWeightOf(name) {
@@ -1051,7 +1051,7 @@ window.homeWarmup = function () {
   if (!(max > 0)) return; /* 過去最大重量の記録がなければ何もしない */
   if (editingId !== null) resetForm(true); /* 編集は中断（日付指定は維持） */
   switchTab('workout');
-  startWarmup(WARMUP.map(p => ({ weight: Math.max(0.5, Math.round(max * p[0] / 0.5) * 0.5), reps: p[1] })));
+  startWarmup(WARMUP.map(p => ({ weight: Math.round(max * p[0] / 10) * 10 || Math.max(1, Math.round(max * p[0])), reps: p[1] })));
 };
 /* ===== 勲章バッジ（選択中の部位のメニューを全完了したときだけ、部位文字の右横に出す）
    放射光条（金）・月桂樹（銀）・帯（青のエナメル）・中央メダリオン（深い赤＋金の星）の多色。実物らしさのため色は固定（テーマでは変えない） ===== */
