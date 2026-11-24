@@ -811,4 +811,4 @@ button:active { transform: scale(.95); }
 .pt-sel { fill: none; stroke: var(--gold); stroke-width: 1.6; }
 .pt-sel-rm { fill: none; stroke: #d96b66; stroke-width: 1.4; }
 .an-pers { margin-top: 8px; }
-.gr-dates { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 14px 0; }
+.pt-hit { cursor: pointer; }
