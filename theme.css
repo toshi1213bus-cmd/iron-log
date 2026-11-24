@@ -801,14 +801,14 @@ button:active { transform: scale(.95); }
 .empty-btn { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: var(--on-gold); border: none; font-weight: 700; font-size: 13px; letter-spacing: .08em; padding: 10px 26px; border-radius: 3px; cursor: pointer; }
 
 /* ================= シャープ統一＋グラフ固定欄（v27） ================= */
-.rounded-2xl { border: 1px solid var(--gold-line) !important; border-radius: 3px !important; }
+.rounded-2xl { border-color: var(--line) !important; border-radius: 3px !important; }
 .empty-box { border-radius: 3px; }
 .gr-info { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
 .gr-info b { color: var(--text); font-weight: 600; }
 .gr-info .gr-d { color: var(--gold); font-family: var(--num); font-size: 13px; letter-spacing: .08em; }
 #anInfo { margin: 0 14px 14px; }
 #dtInfo { margin: 0 14px; }
-.pt-hit { cursor: pointer; }
 .pt-sel { fill: none; stroke: var(--gold); stroke-width: 1.6; }
 .pt-sel-rm { fill: none; stroke: #d96b66; stroke-width: 1.4; }
 .an-pers { margin-top: 8px; }
+.gr-dates { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 14px 0; }

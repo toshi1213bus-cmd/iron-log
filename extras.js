@@ -222,7 +222,14 @@ function anGraphHtml() {
   if (si < 0) si = s.length - 1;
   return '<div class="hm-leg"><span class="lg-g">' + md.leg + '</span></div>' +
     line(v, 320, 138, s.map(x => x.ym), null, ym => parseInt(ym.slice(5), 10) + '月',
-      { min: 0, max: niceMax(Math.max(...v), md.floor, md.cap), fmtV: nf }, { a: 'an', sel: si });
+      { min: 0, max: niceMax(Math.max(...v), md.floor, md.cap), fmtV: nf }, { sel: si });
+}
+/* 推移グラフ下の日付チップ（月を選ぶ） */
+function anDatesHtml() {
+  const s = anSeries(anMonths);
+  if (s.length < 2) return '';
+  const selYm = anSel || s[s.length - 1].ym;
+  return s.map((x, i) => '<button type="button" class="gr-btn' + (x.ym === selYm ? ' on' : '') + '" data-an="dpt" data-gi="' + i + '" aria-pressed="' + (x.ym === selYm ? 'true' : 'false') + '">' + parseInt(x.ym.slice(5), 10) + '月</button>').join('');
 }
 /* 推移グラフ下の固定欄：選択中の月（初期は最新月）の3指標 */
 function anInfoHtml() {
@@ -238,6 +245,8 @@ function paintAnGraph() {
   if (g) g.innerHTML = anGraphHtml();
   const inf = document.getElementById('anInfo');
   if (inf) inf.innerHTML = anInfoHtml();
+  const ad = document.getElementById('anDates');
+  if (ad) ad.innerHTML = anDatesHtml();
   document.querySelectorAll('#analysisBody [data-an="span"]').forEach(b => {
     const on = parseInt(b.dataset.m, 10) === anMonths;
     b.classList.toggle('on', on);
@@ -297,7 +306,7 @@ function renderAnalysis() {
   const trend = '<div class="bg-gray-800 border border-gray-700 rounded-2xl"><div class="dt-sec">月間推移（直近' + anMonths + 'か月）</div><div class="dt-n an-modes">' +
     Object.keys(AN_MODES).map(k => '<button type="button" class="gr-btn' + (k === anMode ? ' on' : '') + '" data-an="mode" data-m="' + k +
       '" aria-pressed="' + (k === anMode ? 'true' : 'false') + '">' + AN_MODES[k].label + '</button>').join('') +
-    '</div><div class="dt-n an-pers">' + [3, 6, 12].map(m => '<button type="button" class="gr-btn' + (m === anMonths ? ' on' : '') + '" data-an="span" data-m="' + m + '" aria-pressed="' + (m === anMonths ? 'true' : 'false') + '">' + m + 'か月</button>').join('') + '</div><div class="dt-graph" id="anGraph">' + anGraphHtml() + '</div><div class="gr-info" id="anInfo">' + anInfoHtml() + '</div></div>';
+    '</div><div class="dt-n an-pers">' + [3, 6, 12].map(m => '<button type="button" class="gr-btn' + (m === anMonths ? ' on' : '') + '" data-an="span" data-m="' + m + '" aria-pressed="' + (m === anMonths ? 'true' : 'false') + '">' + m + 'か月</button>').join('') + '</div><div class="dt-graph" id="anGraph">' + anGraphHtml() + '</div><div class="dt-n gr-dates" id="anDates">' + anDatesHtml() + '</div><div class="gr-info" id="anInfo">' + anInfoHtml() + '</div></div>';
   el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend; /* 月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
@@ -313,7 +322,7 @@ document.addEventListener('click', e => {
     if (![3, 6, 12].includes(m) || m === anMonths) return;
     anMonths = m; anSel = null;
     paintAnGraph();
-  } else if (b.dataset.an === 'pt') {
+  } else if (b.dataset.an === 'dpt') {
     const s = anSeries(anMonths), x = s[parseInt(b.dataset.gi, 10)];
     if (x && x.ym !== anSel) { anSel = x.ym; paintAnGraph(); }
   } else if (b.dataset.an === 'period') {
@@ -733,7 +742,7 @@ function line(v, w, h, dates, rm, lab, ax, tap) {
       hits += '<circle class="pt-sel" cx="' + f(P[tap.sel][0]) + '" cy="' + f(P[tap.sel][1]) + '" r="7"/>';
       if (P2 && P2[tap.sel]) hits += '<circle class="pt-sel-rm" cx="' + f(P2[tap.sel][0]) + '" cy="' + f(P2[tap.sel][1]) + '" r="6"/>';
     }
-    P.forEach((q, i) => { hits += '<circle class="pt-hit" data-' + tap.a + '="pt" data-gi="' + i + '" cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="16" fill="#fff" opacity="0"/>'; });
+    if (tap.a) P.forEach((q, i) => { hits += '<circle class="pt-hit" data-' + tap.a + '="pt" data-gi="' + i + '" cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="16" fill="#fff" opacity="0"/>'; });
   }
   return s + hits + '</svg>';
 }
@@ -1429,7 +1438,14 @@ function detailGraphHtml(name, n) {
   const s = seriesAll(name).slice(-n);
   if (s.length < 2) return '<div class="hm-sub">2回以上の記録でグラフが出ます。</div>';
   const sel = detailState && detailState.g != null && detailState.g < s.length ? detailState.g : s.length - 1;
-  return line(s.map(x => x.v), 320, 138, s.map(x => x.d), s.map(x => x.rm), null, null, { a: 'dt', sel: sel });
+  return line(s.map(x => x.v), 320, 138, s.map(x => x.d), s.map(x => x.rm), null, null, { sel: sel });
+}
+/* 詳細グラフ下の日付チップ（日を選ぶ） */
+function detailDatesHtml(name, n) {
+  const s = seriesAll(name).slice(-n);
+  if (s.length < 2) return '';
+  const sel = detailState && detailState.g != null && detailState.g < s.length ? detailState.g : s.length - 1;
+  return s.map((x, i) => '<button type="button" class="gr-btn' + (i === sel ? ' on' : '') + '" data-dt="dpt" data-gi="' + i + '" aria-pressed="' + (i === sel ? 'true' : 'false') + '">' + fmtD(x.d) + '</button>').join('');
 }
 /* 詳細グラフ下の固定欄：選択中の日（初期は最新日）の詳細 */
 function detailInfoHtml(name, n) {
@@ -1488,7 +1504,7 @@ function renderDetail() {
     best(st.ps && { k: '1日スコア', v: st.ps.v, d: st.ps.d }) +
     '<div class="dt-sec dt-sec-row"><span>グラフ・推移</span><div class="dt-n">' +
     DETAIL_COUNTS.map(n => '<button type="button" class="gr-btn' + (n === detailState.n ? ' on' : '') + '" data-dt="n" data-n="' + n + '" aria-pressed="' + (n === detailState.n ? 'true' : 'false') + '">' + n + '件</button>').join('') +
-    '</div></div><div class="dt-graph" id="dtGraph">' + detailGraphHtml(detailState.name, detailState.n) + '</div><div class="gr-info" id="dtInfo">' + detailInfoHtml(detailState.name, detailState.n) + '</div>' +
+    '</div></div><div class="dt-graph" id="dtGraph">' + detailGraphHtml(detailState.name, detailState.n) + '</div><div class="dt-n gr-dates" id="dtDates">' + detailDatesHtml(detailState.name, detailState.n) + '</div><div class="gr-info" id="dtInfo">' + detailInfoHtml(detailState.name, detailState.n) + '</div>' +
     '<div class="dt-sec">前回との比較</div>' + detailCompareHtml(st) +
     '</div>';
   detailEl.innerHTML = h;
@@ -1500,6 +1516,8 @@ function paintDetailGraph() {
   if (g) g.innerHTML = detailGraphHtml(detailState.name, detailState.n);
   const inf = detailEl.querySelector('#dtInfo');
   if (inf) inf.innerHTML = detailInfoHtml(detailState.name, detailState.n);
+  const dd = detailEl.querySelector('#dtDates');
+  if (dd) dd.innerHTML = detailDatesHtml(detailState.name, detailState.n);
   detailEl.querySelectorAll('[data-dt="n"]').forEach(b => {
     const on = parseInt(b.dataset.n, 10) === detailState.n;
     b.classList.toggle('on', on);
@@ -1516,7 +1534,7 @@ function onDetailClick(e) {
   else if (a === 'n') {
     const n = parseInt(b.dataset.n, 10);
     if (DETAIL_COUNTS.includes(n) && n !== detailState.n) { detailState.n = n; detailState.g = null; paintDetailGraph(); }
-  } else if (a === 'pt') {
+  } else if (a === 'dpt') {
     const i = parseInt(b.dataset.gi, 10);
     if (!isNaN(i)) { detailState.g = i; paintDetailGraph(); }
   } else if (a === 'day') {
