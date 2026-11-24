@@ -29,6 +29,29 @@ window.alert = function (msg, ms, kind) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
 };
+/* 削除の取り消し用トースト（「元に戻す」ボタンつき。5秒で消える） */
+let undoTimer;
+window.showUndoToast = function (msg, onUndo) {
+  clearTimeout(toastTimer);
+  clearTimeout(undoTimer);
+  toastEl.innerHTML = '';
+  const span = document.createElement('span');
+  span.textContent = msg;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'toast-undo';
+  btn.textContent = '元に戻す';
+  btn.addEventListener('click', () => {
+    clearTimeout(undoTimer);
+    toastEl.classList.remove('show');
+    toastEl.innerHTML = '';
+    if (onUndo) onUndo();
+  });
+  toastEl.appendChild(span);
+  toastEl.appendChild(btn);
+  toastEl.className = 'show';
+  undoTimer = setTimeout(() => { toastEl.classList.remove('show'); toastEl.innerHTML = ''; }, 5000);
+};
 function ask(msg, ok) {
   return new Promise(resolve => {
     const o = document.createElement('div');

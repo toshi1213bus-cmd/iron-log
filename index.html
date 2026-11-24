@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=21">
+<link rel="stylesheet" href="theme.css?v=22">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -890,18 +890,40 @@ function saveCardio() {
 /* 記録の削除。その日の記録が0件になったら、部位の情報もいっしょに消す（どちらかが保存できなければ両方元のまま） */
 async function deleteWorkout(id) {
   if (!(await askConfirm('この記録を削除しますか？'))) return;
-  const gone = workouts.find(i => i.id === id);
+  const idx = workouts.findIndex(i => i.id === id);
+  const gone = idx >= 0 ? workouts[idx] : null;
+  const hadPpl = !!(gone && (gone.dateStr in dayPplMap));
+  const oldPpl = hadPpl ? dayPplMap[gone.dateStr] : undefined;
   const ok = transact(['workouts', 'dayPpl'], () => {
     workouts = workouts.filter(i => i.id !== id);
     if (gone && !workouts.some(i => i.dateStr === gone.dateStr)) delete dayPplMap[gone.dateStr];
   });
   if (ok && editingId === id) resetForm(); /* 削除できたときだけ、編集中の入力を消す */
   requestRender('w');
+  if (ok && gone && window.showUndoToast) { /* 削除直後だけ「元に戻す」を出す */
+    showUndoToast('記録を削除しました', () => {
+      transact(['workouts', 'dayPpl'], () => {
+        if (!workouts.some(i => i.id === gone.id)) workouts.splice(Math.min(idx, workouts.length), 0, gone);
+        if (hadPpl && !(gone.dateStr in dayPplMap)) dayPplMap[gone.dateStr] = oldPpl;
+      });
+      requestRender('all');
+    });
+  }
 }
 async function deleteCardio(id) {
   if (!(await askConfirm('この有酸素記録を削除しますか？'))) return;
-  transact(['cardios'], () => { cardios = cardios.filter(i => i.id !== id); });
+  const idx = cardios.findIndex(i => i.id === id);
+  const gone = idx >= 0 ? cardios[idx] : null;
+  const ok = transact(['cardios'], () => { cardios = cardios.filter(i => i.id !== id); });
   requestRender('c');
+  if (ok && gone && window.showUndoToast) { /* 削除直後だけ「元に戻す」を出す */
+    showUndoToast('有酸素記録を削除しました', () => {
+      transact(['cardios'], () => {
+        if (!cardios.some(i => i.id === gone.id)) cardios.splice(Math.min(idx, cardios.length), 0, gone);
+      });
+      requestRender('all');
+    });
+  }
 }
 /* 履歴・日付シートの部位（PUSH/PULL/LEGS/OTHER）変更。失敗しても画面は保存結果（元の値）に揃える */
 function updateDayPpl(dateStr, v) {
@@ -1215,7 +1237,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=21"></script>
+<script src="extras.js?v=22"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

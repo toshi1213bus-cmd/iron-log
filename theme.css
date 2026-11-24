@@ -752,3 +752,6 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 .hm-past .dt-sum { font-size: 13px; }
 .hm-past .dt-sets { padding: 0 2px 10px; }
 .hm-past .dt-set { font-size: 13px; line-height: 1.6; }
+
+/* トースト内の「元に戻す」ボタン */
+#toast .toast-undo { margin-left: 14px; background: none; border: none; color: var(--gold); font-weight: 700; font-size: 13px; cursor: pointer; padding: 4px 2px; text-decoration: underline; }
