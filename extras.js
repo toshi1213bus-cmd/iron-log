@@ -21,11 +21,15 @@ toastEl.setAttribute('role', 'status');
 toastEl.setAttribute('aria-live', 'polite');
 document.body.appendChild(toastEl);
 let toastTimer;
-let undoTimer, undoTick = null; /* 「元に戻す」の終了タイマーと、残り秒数を更新するタイマー */
-/* 取り消し用のタイマーを両方とも確実に止める（押したとき・時間切れ・別のトースト／通知が出たときに必ず通す） */
+let undoTick = null; /* 「元に戻す」の残り秒数を更新するタイマー */
+const undoQueue = []; /* 取り消し待ち（削除ごとに1件積む。末尾が表示中で、新しいものから順に戻す） */
+let undoShown = null; /* いまトーストに表示している取り消し */
+let undoBtn = null; /* 表示中の「元に戻す」ボタン */
+/* 取り消しの待ち行列とタイマーを止める（別の通知が出たときに必ず通す） */
 function clearUndo() {
-  clearTimeout(undoTimer);
-  undoTimer = null;
+  undoQueue.length = 0;
+  undoShown = null;
+  undoBtn = null;
   if (undoTick) { clearInterval(undoTick); undoTick = null; }
 }
 /* kind: 'ok'（保存できた）／'err'（失敗）。省略時は文言から判定 */
@@ -37,38 +41,55 @@ window.alert = function (msg, ms, kind) {
   clearUndo(); /* 別の通知が出たら、取り消しの残り時間表示も止める */
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms || 2200);
 };
-/* 削除の取り消し用トースト（「元に戻す (10s)」ボタンつき。残り秒数が減り、10秒で消える） */
+/* 削除の取り消し用トースト（「元に戻す (10s)」ボタンつき。残り秒数が減り、10秒で消える）
+   連続で削除しても前の取り消しは消えない：削除ごとに待ち行列へ積み、新しいものから順に戻せる。
+   期限は削除ごとに個別（押した時点から10秒）で、表示中のものが終わると前のものが残り時間つきで出る */
 const UNDO_SEC = 10;
-window.showUndoToast = function (msg, onUndo) {
-  clearTimeout(toastTimer);
-  clearUndo(); /* 前の取り消し表示が残っていても、重ならないよう先に止める */
+function paintUndo() {
+  const cur = undoQueue[undoQueue.length - 1] || null;
+  if (!cur) {
+    if (undoTick) { clearInterval(undoTick); undoTick = null; }
+    undoShown = null;
+    undoBtn = null;
+    toastEl.classList.remove('show', 'undoable');
+    toastEl.innerHTML = '';
+    return;
+  }
+  if (undoShown === cur) return; /* 表示中のものはそのまま（秒数だけ tick で更新） */
+  undoShown = cur;
   toastEl.innerHTML = '';
   const span = document.createElement('span');
-  span.textContent = msg;
+  span.textContent = cur.msg + (undoQueue.length > 1 ? '（あと' + (undoQueue.length - 1) + '件も戻せます）' : '');
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'toast-undo';
-  const label = s => '元に戻す (' + s + 's)';
-  btn.textContent = label(UNDO_SEC);
-  const close = () => {
-    clearUndo();
-    toastEl.classList.remove('show', 'undoable');
-    toastEl.innerHTML = '';
-  };
+  btn.textContent = '元に戻す (' + Math.max(1, Math.ceil((cur.endAt - Date.now()) / 1000)) + 's)';
   btn.addEventListener('click', () => {
-    close();
-    if (onUndo) onUndo();
+    const i = undoQueue.indexOf(cur);
+    if (i >= 0) undoQueue.splice(i, 1);
+    undoShown = null;
+    paintUndo();
+    if (cur.onUndo) cur.onUndo();
   });
+  undoBtn = btn;
   toastEl.appendChild(span);
   toastEl.appendChild(btn);
   toastEl.className = 'show undoable';
-  const endAt = Date.now() + UNDO_SEC * 1000; /* 終了時刻から残りを計算（タイマーが遅れてもズレない） */
-  undoTick = setInterval(() => {
-    const left = Math.ceil((endAt - Date.now()) / 1000);
-    if (left <= 0) { close(); return; }
-    btn.textContent = label(left);
-  }, 250);
-  undoTimer = setTimeout(close, UNDO_SEC * 1000); /* 念のための終了保証 */
+  if (!undoTick) {
+    undoTick = setInterval(() => {
+      const now = Date.now();
+      for (let i = undoQueue.length - 1; i >= 0; i--) if (undoQueue[i].endAt <= now) undoQueue.splice(i, 1);
+      const c = undoQueue[undoQueue.length - 1] || null;
+      if (c !== undoShown) { paintUndo(); return; }
+      if (c && undoBtn) undoBtn.textContent = '元に戻す (' + Math.max(1, Math.ceil((c.endAt - now) / 1000)) + 's)';
+    }, 250);
+  }
+}
+window.showUndoToast = function (msg, onUndo) {
+  clearTimeout(toastTimer);
+  undoQueue.push({ msg: msg, onUndo: onUndo, endAt: Date.now() + UNDO_SEC * 1000 });
+  undoShown = null; /* 新しく積んだ末尾を必ず表示し直す */
+  paintUndo();
 };
 function ask(msg, ok) {
   return new Promise(resolve => {
