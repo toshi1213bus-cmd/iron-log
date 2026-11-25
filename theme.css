@@ -112,6 +112,9 @@ body .bg-gray-800.border.rounded-2xl {
 /* 面・線・角丸 */
 body .bg-gray-800 { background: transparent; }
 body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bgimg); }
+body:has(#tabContentWorkout:not(.hidden))::before { background: var(--bgimg-workout, var(--bgimg)); }
+body:has(#tabContentCardio:not(.hidden))::before { background: var(--bgimg-cardio, var(--bgimg)); }
+body:has(#tabContentSettings:not(.hidden))::before { background: var(--bgimg-settings, var(--bgimg)); }
 body .bg-gray-900 { background: rgba(var(--bg-rgb), .80); }
 body .border-gray-700,
 body .border-gray-800 { border-color: var(--line); }
