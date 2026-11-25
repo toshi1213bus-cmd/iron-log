@@ -1,1 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPL 自己診断</title>
+<style>
+  body { background: #0a0a0b; color: #ece8dd; font-family: sans-serif; margin: 0; padding: 20px 16px 40px; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: #dcc28a; }
+  .sub { font-size: 12px; color: #b8b2a2; margin-bottom: 16px; line-height: 1.7; }
+  #summary { font-size: 15px; font-weight: bold; margin: 12px 0; }
+  .row { display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid #2a2a2e; font-size: 13px; }
+  .ok { color: #7bc47f; font-weight: bold; }
+  .ng { color: #e89a95; font-weight: bold; }
+  .note { color: #b8b2a2; font-size: 11px; }
+  button { margin-top: 18px; padding: 10px 18px; background: none; border: 1px solid #8a6d3b; border-radius: 3px; color: #dcc28a; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>PPL 自己診断</h1>
+<div class="sub">
+  アプリ本体の計算・集計が壊れていないかを、テスト用データで自動チェックします。<br>
+  実データはテスト前に自動で退避し、終わったら元に戻します。<b>テスト中はこのページを閉じないでください。</b><br>
+  <span id="ver"></span>
+</div>
+<div id="summary">診断中…</div>
+<div id="list"></div>
+<button type="button" onclick="location.reload()">もう一度診断する</button>
 
+<iframe id="app" src="index.html" style="position:absolute;left:-9999px;top:0;width:380px;height:700px;border:0" aria-hidden="true"></iframe>
+
+<script>
+function iso(off) {
+  const d = new Date(); d.setDate(d.getDate() + off);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+function dumpStorage() {
+  const o = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
+  return o;
+}
+function restoreStorage(o) {
+  localStorage.clear();
+  Object.keys(o).forEach(k => localStorage.setItem(k, o[k]));
+}
+async function main() {
+  const frame = document.getElementById('app');
+  let W = null;
+  for (let i = 0; i < 50; i++) {
+    try { if (frame.contentWindow && frame.contentWindow.PPLTest) { W = frame.contentWindow; break; } } catch (e) {}
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!W) {
+    document.getElementById('summary').textContent = 'アプリのテスト窓口が見つかりませんでした。extras.js が最新版か確認してください。';
+    return;
+  }
+  const T = W.PPLTest;
+  document.getElementById('ver').textContent = '対象: ' + T.version;
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const results = [];
+  const test = (name, fn) => {
+    try { results.push({ name: name, ok: fn() === true, note: '' }); }
+    catch (e) { results.push({ name: name, ok: false, note: String((e && e.message) || e) }); }
+  };
+
+  /* テスト用データ（今日を基準にした4週間分） */
+  const fx = {
+    workouts: [
+      { id: 'a1', name: 'ベンチプレス', dateStr: iso(-21), setList: [{ weight: 60, reps: 10 }] },
+      { id: 'a2', name: 'ベンチプレス', dateStr: iso(-14), setList: [{ weight: 65, reps: 10 }] },
+      { id: 'a3', name: 'ベンチプレス', dateStr: iso(-7), setList: [{ weight: 70, reps: 10 }] },
+      { id: 'a4', name: 'ベンチプレス', dateStr: iso(0), setList: [{ weight: 70, reps: 10 }] },
+      { id: 'b1', name: 'スクワット', dateStr: iso(-7), setList: [{ weight: 100, reps: 5 }] },
+      { id: 'b2', name: 'スクワット', dateStr: iso(0), setList: [{ weight: 100, reps: 5 }] }
+    ],
+    cardios: [
+      { id: 'c1', minutes: 30, dateStr: iso(-7) },
+      { id: 'c2', minutes: 20, dateStr: iso(0) }
+    ],
+    dayPplMap: { },
+    goalsData: { 'ベンチプレス': 80 }
+  };
+  fx.dayPplMap[iso(-21)] = 'PUSH'; fx.dayPplMap[iso(-14)] = 'PUSH';
+  fx.dayPplMap[iso(-7)] = 'LEGS'; fx.dayPplMap[iso(0)] = 'PUSH';
+
+  const backup = dumpStorage();
+  const keep = T.swap(fx);
+  try {
+    test('日付の変換', () => T.dstr(new Date()) === iso(0) && typeof T.fmtD(iso(0)) === 'string' && T.fmtD(iso(0)).length > 0);
+    test('最大重量の取得', () => T.maxWeightOf('ベンチプレス') === 70);
+    test('種目の推移データ', () => { const s = T.seriesAll('ベンチプレス'); return s.length === 4 && s[0].d === iso(-21) && s[3].d === iso(0); });
+    test('トレンド判定（上昇）', () => T.trendOf([1, 2, 3, 4]).txt === '絶好調！！');
+    test('トレンド判定（停滞）', () => T.trendOf([5, 5, 5, 5]).txt === 'プラトー検知！！' && T.trendOf([1]) === null);
+    test('総負荷の集計', () => T.volByDay()[iso(0)] === 1200);
+    test('期間集計（今日）', () => { const r = T.trainIn(T.volByDay(), ds => ds === iso(0)); return r.days === 1 && r.vol === 1200; });
+    test('有酸素の集計', () => { const r = T.cardioIn(() => true); return r.min === 50 && r.kcal === 175; });
+    test('プロフィール計算', () => { const p = T.profileStats(); return p.days === 4 && p.vol === 3650 && p.prTotal === 2 && p.xp === 541 && p.lv === 1 && p.title === '駆け出し'; });
+    test('実績メダルの進捗', () => {
+      const a = T.achievements();
+      const first = a.find(c => c.label === '継続').items.find(i => i.name === '通算10日');
+      const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
+      return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
+    });
+    test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
+    test('スナップショット作成', () => {
+      localStorage.removeItem('simple_snapshots');
+      T.ensureDailySnapshot();
+      const s = T.loadSnaps();
+      if (!(s.length === 1 && s[0].date === iso(0) && s[0].data.workouts.length === 6)) return false;
+      T.ensureDailySnapshot();
+      return T.loadSnaps().length === 1;
+    });
+    test('PR判定（更新あり）', () => {
+      const snap = W.prSnap('スクワット', iso(0));
+      fx.workouts.find(w => w.id === 'b2').setList.push({ weight: 110, reps: 5 });
+      return W.prCheck(snap) === true;
+    });
+    test('PR判定（更新なし）', () => {
+      const snap = W.prSnap('ベンチプレス', iso(0));
+      return W.prCheck(snap) === false;
+    });
+  } finally {
+    T.restore(keep);
+    restoreStorage(backup);
+  }
+
+  const pass = results.filter(r => r.ok).length;
+  document.getElementById('summary').textContent =
+    pass === results.length ? 'すべて正常です（' + pass + '/' + results.length + '）' : '異常があります（' + pass + '/' + results.length + ' 合格）';
+  document.getElementById('list').innerHTML = results.map(r =>
+    '<div class="row"><span class="' + (r.ok ? 'ok' : 'ng') + '">' + (r.ok ? '○' : '×') + '</span><span>' + r.name + '</span>' +
+    (r.note ? '<span class="note">' + r.note + '</span>' : '') + '</div>').join('');
+}
+main();
+</script>
+</body>
+</html>
