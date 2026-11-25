@@ -833,6 +833,7 @@ button:active { transform: scale(.95); }
 .goal-row { cursor: pointer; }
 .goal-none { color: var(--muted); }
 .goal-done { color: var(--gold); font-weight: 700; }
+.goal-sub { color: var(--text); opacity: .85; }
 .goal-bar { height: 4px; margin: 0 14px 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
 .goal-bar i { display: block; height: 100%; background: var(--gold); }
 .goal-edit { display: flex; align-items: center; gap: 6px; }

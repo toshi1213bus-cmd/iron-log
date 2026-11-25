@@ -866,7 +866,7 @@ function curvePath(P) {
   }
   return d + ' L' + f(P[P.length - 1][0]) + ',' + f(P[P.length - 1][1]);
 }
-function line(v, w, h, dates, rm, lab, ax, tap) {
+function line(v, w, h, dates, rm, lab, ax, tap, goal) {
   const n = v.length;
   if (n < 2) return '';
   const big = !!dates, fmtL = lab || fmtD; /* lab … x軸ラベルの整形（省略時は M/D） */
@@ -885,7 +885,7 @@ function line(v, w, h, dates, rm, lab, ax, tap) {
     [ax.min, (ax.min + ax.max) / 2, ax.max].forEach(t => {
       const y = h - pb - (t - ax.min) / (ax.max - ax.min) * (h - pt - pb);
       grid += '<line x1="' + px + '" y1="' + f(y) + '" x2="' + (w - px) + '" y2="' + f(y) + '" stroke="#2a2a2c"/>' +
-        '<text x="' + (px - 6) + '" y="' + f(y + 3.5) + '" text-anchor="end" font-size="10.5" fill="#b8b2a2" font-family="Barlow Condensed,sans-serif">' + fv(t) + '</text>';
+        '<text x="' + (px - 6) + '" y="' + f(y + 3.5) + '" text-anchor="end" font-size="10.5" fill="#ddd6c4" font-family="Barlow Condensed,sans-serif">' + fv(t) + '</text>';
     });
   }
   let s = (hasRm ? '<div class="hm-leg"><span class="lg-g">総合</span><span class="lg-r">推定1RM</span></div>' : '') +
@@ -903,6 +903,17 @@ function line(v, w, h, dates, rm, lab, ax, tap) {
   }
   s += '<circle cx="' + f(L[0]) + '" cy="' + f(L[1]) + '" r="' + (big ? 9 : 7) + '" fill="#c9a96a" opacity=".18"/>' +
     '<circle cx="' + f(L[0]) + '" cy="' + f(L[1]) + '" r="' + (big ? 3.5 : 2.5) + '" fill="#dcc28a"/>';
+  if (big && goal > 0 && hasRm) { /* 目標ライン（推定1RMの目盛りに合わせた破線＋左端にラベル。範囲外は端に寄せる） */
+    const mn = Math.min(...rm), mx = Math.max(...rm), r = (mx - mn) || 1;
+    let gy = h - pb - (goal - mn) / r * (h - pt - pb);
+    gy = Math.max(pt - 2, Math.min(h - pb + 2, gy));
+    const gtxt = '目標' + (Math.round(goal * 10) / 10) + 'kg';
+    const lw = [...gtxt].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? 11 : 6.2), 0) + 10;
+    const ly = gy - 15 < pt - 8 ? gy + 5 : gy - 16;
+    s += '<line x1="' + px + '" y1="' + f(gy) + '" x2="' + (w - px) + '" y2="' + f(gy) + '" stroke="#ece8dd" stroke-width="1.2" stroke-dasharray="5 4" opacity=".85"/>' +
+      '<rect x="' + f(px + 2) + '" y="' + f(ly) + '" width="' + f(lw) + '" height="15" rx="3" fill="#101012" opacity=".82"/>' +
+      '<text x="' + f(px + 7) + '" y="' + f(ly + 11.5) + '" font-size="11" font-weight="700" fill="#dcc28a" font-family="Barlow Condensed,sans-serif">' + gtxt + '</text>';
+  }
   if (big) {
     s += '<line x1="' + px + '" y1="' + (h - pb + 6) + '" x2="' + (w - px) + '" y2="' + (h - pb + 6) + '" stroke="#2a2a2c"/>';
     const step = Math.max(1, Math.ceil(n / Math.max(1, Math.floor((w - 2 * px) / 26)))); /* 点が多いときは数字・日付を間引く（最新は必ず出す） */
@@ -910,8 +921,8 @@ function line(v, w, h, dates, rm, lab, ax, tap) {
       const last = i === n - 1;
       if ((n - 1 - i) % step !== 0) return;
       s += '<text x="' + f(q[0]) + '" y="' + f(q[1] - 10) + '" text-anchor="middle" font-size="11" fill="' +
-        (last ? '#ece8dd' : '#b8b2a2') + '" font-family="Barlow Condensed,sans-serif">' + fv(v[i]) + '</text>' +
-        '<text x="' + f(q[0]) + '" y="' + (h - 5) + '" text-anchor="middle" font-size="11" fill="' + (tap && tap.sel === i ? '#dcc28a' : '#b8b2a2') + '" font-family="Barlow Condensed,sans-serif">' + fmtL(dates[i]) + '</text>';
+        (last ? '#ece8dd' : '#ddd6c4') + '" font-family="Barlow Condensed,sans-serif">' + fv(v[i]) + '</text>' +
+        '<text x="' + f(q[0]) + '" y="' + (h - 5) + '" text-anchor="middle" font-size="11" fill="' + (tap && tap.sel === i ? '#dcc28a' : '#ddd6c4') + '" font-family="Barlow Condensed,sans-serif">' + fmtL(dates[i]) + '</text>';
       if (tap && tap.a) {
         const sp = (w - 2 * px) / (n - 1), hw = Math.min(48, sp);
         s += '<rect class="pt-hit" data-' + tap.a + '="pt" data-gi="' + i + '" x="' + f(q[0] - hw / 2) + '" y="' + (h - pb + 2) + '" width="' + f(hw) + '" height="' + (pb - 2) + '" fill="#fff" opacity="0"/>';
@@ -919,7 +930,7 @@ function line(v, w, h, dates, rm, lab, ax, tap) {
       if (P2) {
         const y2 = Math.min(h - pb - 2, P2[i][1] + 15);
         s += '<text x="' + f(P2[i][0]) + '" y="' + f(y2) + '" text-anchor="middle" font-size="10.5" fill="' +
-          (last ? '#f29b96' : '#d96b66') + '" font-family="Barlow Condensed,sans-serif">' + rm[i] + '</text>';
+          (last ? '#f29b96' : '#e89a95') + '" font-family="Barlow Condensed,sans-serif">' + rm[i] + '</text>';
       }
     });
   }
@@ -1657,7 +1668,7 @@ function detailGraphHtml(name, n) {
   const s = seriesAll(name).slice(-n);
   if (s.length < 2) return '<div class="hm-sub">2回以上の記録でグラフが出ます。</div>';
   const sel = detailState && detailState.g != null && detailState.g < s.length ? detailState.g : s.length - 1;
-  return line(s.map(x => x.v), 320, 138, s.map(x => x.d), s.map(x => x.rm), null, null, { a: 'dt', sel: sel });
+  return line(s.map(x => x.v), 320, 138, s.map(x => x.d), s.map(x => x.rm), null, null, { a: 'dt', sel: sel }, goalsData[name] || null);
 }
 /* 詳細グラフ下の固定欄：選択中の日（初期は最新日）の詳細 */
 function detailInfoHtml(name, n) {
@@ -1714,7 +1725,7 @@ function goalRowHtml(st) {
     return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="dt-v goal-none">未設定</span><span class="dt-date">タップで設定</span></div></div>';
   }
   const pct = Math.floor(bestW / g * 100);
-  const sub = bestW >= g ? '<span class="dt-date goal-done">達成！</span>' : '<span class="dt-date">あと' + fmtKg(g - bestW) + 'kg・' + pct + '%</span>';
+  const sub = bestW >= g ? '<span class="dt-date goal-done">達成！</span>' : '<span class="dt-date goal-sub">あと' + fmtKg(g - bestW) + 'kg・' + pct + '%</span>';
   return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="dt-v">' + fmtKg(g) + 'kg</span>' + sub + '</div></div>' +
     '<div class="goal-bar"><i style="width:' + Math.min(100, pct) + '%"></i></div>';
 }
