@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=38">
+<link rel="stylesheet" href="theme.css?v=39">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -144,6 +144,12 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       </div>
       <div id="lastBackupInfo" class="text-xs text-gray-400"></div>
       <div id="dataUsageInfo" class="text-xs text-gray-400"></div>
+      <div class="space-y-2 pt-3 border-t border-gray-700">
+        <div class="text-xs font-bold text-gray-300">スナップショット（自動バックアップ）</div>
+        <div id="snapPersistInfo" class="text-xs text-gray-400"></div>
+        <div id="snapList"></div>
+        <div class="text-xs text-gray-500">毎日、起動時と保存時にその日のデータを自動で保存します（最大7日分）。端末内だけに保存され、クラウドは使いません。</div>
+      </div>
       <div class="space-y-2 pt-3 border-t border-gray-700">
         <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
         <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -918,6 +924,7 @@ function saveWorkout() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
+  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* その日最初の保存でスナップショットを作る */
   /* 2回目以降で過去最高を超えたときだけ、金色の NEW RECORD!! とバイブ（初回記録は出さない） */
   try { if (prBefore && prCheck(prBefore)) showPRModal(); } catch (e) { console.log(e); }
   return true;
@@ -955,6 +962,7 @@ function saveCardio() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
+  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* その日最初の保存でスナップショットを作る */
   return true;
 }
 
@@ -1314,7 +1322,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=39"></script>
+<script src="extras.js?v=40"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

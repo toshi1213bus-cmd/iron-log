@@ -2204,12 +2204,77 @@ function showTab(name, extra) {
 }
 window.switchTab = function (name) { showTab(name); };
 
+/* ===== スナップショット世代管理（端末内のみ・クラウドなし）
+   毎日「その日最初に触れた時点」のデータを1世代として自動保存し、最大7世代を保つ。
+   その日に作った世代は上書きしない＝当日の事故（誤削除・誤復元）の前の状態が残る。
+   復元は JSON 復元の仕組み（検証・件数確認・復元前の控え保存）をそのまま使う ===== */
+const SNAP_KEY = 'simple_snapshots', SNAP_MAX = 7;
+function snapData() {
+  return { version: BACKUP_VERSION, workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, menu: menuData, menuTpl: window.tplExport ? window.tplExport() : null, goals: goalsData };
+}
+function loadSnaps() {
+  const s = loadJson(SNAP_KEY, []);
+  return Array.isArray(s) ? s.filter(x => x && typeof x.date === 'string' && x.data && typeof x.data === 'object') : [];
+}
+function ensureDailySnapshot() {
+  try {
+    if (!workouts.length && !cardios.length) return; /* 空データの日は世代を作らない */
+    const today = dstr(new Date());
+    let snaps = loadSnaps();
+    if (snaps.some(s => s.date === today)) return; /* 今日の分は作成済み（上書きしない） */
+    const data = snapData(), ser = JSON.stringify(data);
+    const last = snaps[snaps.length - 1];
+    if (last && JSON.stringify(last.data) === ser) return; /* 前の世代から変化なし */
+    snaps.push({ date: today, ts: new Date().toISOString(), data: data });
+    snaps.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    while (snaps.length > SNAP_MAX) snaps.shift();
+    if (!writeJson(SNAP_KEY, snaps)) writeJson(SNAP_KEY, snaps.slice(-1)); /* 容量不足なら最新1世代だけでも残す */
+    paintSnapshots();
+  } catch (e) {}
+}
+/* スナップショットからの復元：JSON を取り込み欄に渡して、既存の復元処理（検証→確認→控え保存つき）に任せる */
+async function restoreSnapshot(date) {
+  const s = loadSnaps().find(x => x.date === date);
+  if (!s) return;
+  const el = document.getElementById('importText');
+  if (!el) return;
+  const keep = el.value;
+  el.value = JSON.stringify(s.data);
+  await importFromJsonText();
+  el.value = keep;
+  paintSnapshots();
+}
+function paintSnapshots() {
+  const pin = document.getElementById('snapPersistInfo');
+  if (pin && navigator.storage && navigator.storage.persisted) {
+    navigator.storage.persisted().then(p => { pin.textContent = p ? 'データ保持：永続化されています' : 'データ保持：永続化されていません（ブラウザの判断で消える場合があります）'; }).catch(() => {});
+  }
+  const list = document.getElementById('snapList');
+  if (!list) return;
+  const snaps = loadSnaps();
+  if (!snaps.length) {
+    list.innerHTML = '<div class="text-xs text-gray-500">まだスナップショットがありません。記録がある日に自動で作られます。</div>';
+    return;
+  }
+  list.innerHTML = snaps.slice().reverse().map(s =>
+    '<div class="snap-row"><span>' + s.date.replace(/-/g, '/') + '（トレ' + (Array.isArray(s.data.workouts) ? s.data.workouts.length : 0) + '件・有酸素' + (Array.isArray(s.data.cardios) ? s.data.cardios.length : 0) + '件）</span>' +
+    '<button type="button" class="snap-btn" onclick="restoreSnapshot(\'' + s.date + '\')">復元</button></div>').join('');
+}
+/* ブラウザにデータの永続化を頼む（許可されるかはブラウザの判断） */
+function requestPersist() {
+  try {
+    if (!navigator.storage || !navigator.storage.persist) return;
+    navigator.storage.persisted().then(p => { if (!p) return navigator.storage.persist(); }).catch(() => {});
+  } catch (e) {}
+}
+
 /* 起動：1手順ずつ実行し、要素が無いなどで1つ失敗しても後続の初期化を止めない
    （保存済みテーマを適用 → 履歴・有酸素・ホームを showTab で1回ずつ描く） */
 function step(fn) { try { fn(); } catch (e) { console.log(e); } }
 step(() => { if (layerFlagged()) history.replaceState(null, ''); }); /* 再読み込みで残った重なり用の履歴状態を消す */
 step(() => applyTheme(getTheme()));
 step(() => showTab('home', { w: true, c: true })); /* 履歴・有酸素・ホームを1回ずつ描く */
+step(() => { ensureDailySnapshot(); requestPersist(); paintSnapshots(); }); /* その日のスナップショット作成と永続化の要求 */
 step(() => fitTimer(true));
 step(() => { if (storageWarn) window.alert('保存データの一部を読み込めませんでした。バックアップから復元してください。', 7000); });
 })();
