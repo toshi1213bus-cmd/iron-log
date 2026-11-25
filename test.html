@@ -225,6 +225,8 @@ async function main() {
     return Array.isArray(secs) && !secs.some(s => s.t === '身体・栄養');
   });
 
+  test('容量警告の判定', () => T.usageWarn(5 * 1024 * 1024 * 0.8) === true && T.usageWarn(1024) === false && T.KCAL_PER_MIN === 3.5);
+
   const backup = dumpStorage();
   const keep = T.swap(fx);
   const results = [];

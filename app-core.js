@@ -18,6 +18,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PPL_TYPES = ['PUSH', 'PULL', 'LEGS', 'OTHER'];
 /* 入力上限（入力画面・復元・メニュー編集で共通） */
 const LIMITS = { name: 60, weight: 1000, reps: 999 };
+const KCAL_PER_MIN = 3.5; /* 有酸素1分あたりの消費カロリー係数（kcal/分）。集計・表示はすべてこれを使う */
 /* 履歴の表示件数（＋ / −）
    トレーニング履歴：1回のタップで4件ずつ。初期・下限は4件（PAGE_STEP）
    有酸素履歴：従来どおり5件ずつ（CARDIO_PAGE_STEP） */
@@ -1003,7 +1004,7 @@ function drawCardioList() {
   displayDates.forEach(dateStr => {
     const dayCardio = cardios.find(i => i.dateStr === dateStr);
     if (!dayCardio) return;
-    const dayKcal = Math.round(dayCardio.minutes * 3.5);
+    const dayKcal = Math.round(dayCardio.minutes * KCAL_PER_MIN);
     const div = document.createElement('div');
     div.className = 'p-3.5 flex justify-between items-center';
     div.innerHTML = `

@@ -165,12 +165,17 @@ function dataUsageBytes() {
   }
   return chars * 2;
 }
+const USAGE_GUIDE_BYTES = 5 * 1024 * 1024; /* データ使用量の目安（5MB） */
+function usageWarn(bytes) { return bytes >= USAGE_GUIDE_BYTES * 0.8; } /* 目安の8割で警告 */
 function paintDataUsage() {
   const el = document.getElementById('dataUsageInfo');
   if (!el) return;
   try {
-    const kb = dataUsageBytes() / 1024;
-    el.textContent = 'データ使用量：約' + (kb < 100 ? kb.toFixed(1) : Math.round(kb).toLocaleString()) + 'KB／目安5MB';
+    const bytes = dataUsageBytes();
+    const kb = bytes / 1024;
+    let h = 'データ使用量：約' + (kb < 100 ? kb.toFixed(1) : Math.round(kb).toLocaleString()) + 'KB／目安5MB';
+    if (usageWarn(bytes)) h += '<br><span style="color:#e5484d">⚠ 目安の8割を超えています。JSONバックアップを書き出して保存してください</span>';
+    el.innerHTML = h;
   } catch (err) {
     el.textContent = 'データ使用量：取得できませんでした';
   }
@@ -233,7 +238,7 @@ function trainIn(vol, test) {
 function cardioIn(test) {
   let min = 0;
   cardios.forEach(c => { if (test(c.dateStr)) min += c.minutes; });
-  return { min: min, kcal: Math.round(min * 3.5) };
+  return { min: min, kcal: Math.round(min * KCAL_PER_MIN) };
 }
 function anCell(k, v, u, bd) {
   return '<div class="dt-cell"><div class="hm-lb">' + k + '</div><div class="dt-v">' + v + '<span class="dt-u">' + u + '</span></div>' + bd + '</div>';
@@ -1860,7 +1865,7 @@ function sheetHtml(d) {
   h += '<div class="sh-sec">有酸素</div>';
   if (cs.length) {
     h += '<div class="space-y-2">' + cs.map(c => '<div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">' +
-      c.minutes + '分 / 約' + Math.round(c.minutes * 3.5) + 'kcal</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
+      c.minutes + '分 / 約' + Math.round(c.minutes * KCAL_PER_MIN) + 'kcal</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
   }
@@ -2593,7 +2598,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v44',
+  version: 'extras v45',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2603,7 +2608,7 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody,
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
   sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
   sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
   data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },
