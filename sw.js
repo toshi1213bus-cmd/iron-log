@@ -8,12 +8,13 @@
    ※ このファイルはリポジトリの一番上（index.html と同じ場所）に置くこと。
    ============================================================ */
 
-const CACHE_NAME = 'ppl-cache-v1';
+const CACHE_NAME = 'ppl-cache-v2';
 
 /* 最初に保存しておくアプリ本体のファイル */
 const CORE_FILES = [
   './',
   './index.html',
+  './app-core.js',
   './extras.js',
   './theme.css',
   './manifest.webmanifest',
