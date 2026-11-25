@@ -658,7 +658,12 @@ function aiTotals() {
 }
 /* 分析レポート（セクション構成）。集計は分析カードと同じ trainIn / cardioIn を使う */
 function aiReport() {
-  if (!workouts.length && !cardios.length) return [{ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] }];
+  if (!workouts.length && !cardios.length) {
+    const out0 = [{ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] }];
+    const bd0 = aiBody();
+    if (bd0.length) out0.push({ t: '身体・栄養', lines: bd0 });
+    return out0;
+  }
   const r = anRanges(), vol = volByDay(), wk = anPeriod === 'week';
   const inCur = wk ? (d => d >= r.ws && d <= r.we) : (d => d.slice(0, 7) === r.ym);
   const inPrev = wk ? (d => d >= r.pws && d <= r.pwe) : (d => d.slice(0, 7) === r.pym);
@@ -708,6 +713,8 @@ function aiReport() {
     const hl = aiHighlights(inCur, wk ? r.ws : r.ms);
     if (hl.length) secs.push({ t: 'ハイライト', lines: hl });
   }
+  const bd = aiBody();
+  if (bd.length) secs.push({ t: '身体・栄養', lines: bd });
   const tt = aiTotals();
   if (tt.length) secs.push({ t: '通算・節目', lines: tt });
   return secs;
@@ -2325,17 +2332,84 @@ function bodyCalc() {
   const act = activityFactor();
   const maint = Math.round(bmrOf(b, kg) * act.f / 10) * 10;
   const goal = BODY_GOALS[b.goal] ? b.goal : 'recomp';
-  const kcal = b.kcalManual > 0 ? b.kcalManual : maint + BODY_GOALS[goal].adj;
+  const kcal = b.kcalManual > 0 ? b.kcalManual : maint + BODY_GOALS[goal].adj + (b.adjKcal || 0);
   const pG = Math.round(kg * 2), fG = Math.round(kcal * 0.25 / 9);
   const cG = Math.max(0, Math.round((kcal - pG * 4 - fG * 9) / 4));
   return { kg: kg, date: lw.d, avg: weeklyAvgWeight(), bmi: Math.round(kg / Math.pow(b.heightCm / 100, 2) * 10) / 10,
-    bmr: Math.round(bmrOf(b, kg)), factor: act.f, maint: maint, goal: goal, kcal: kcal, manual: b.kcalManual > 0,
+    bmr: Math.round(bmrOf(b, kg)), factor: act.f, maint: maint, goal: goal, kcal: kcal, manual: b.kcalManual > 0, adj: b.adjKcal || 0,
     pG: pG, fG: fG, cG: cG, trainWk: act.trainWk, cardioWk: act.cardioWk };
+}
+
+/* ===== 自動補正（第2弾）：体重の週平均の動きが目標の想定とずれたら、目標カロリーを少しずつ寄せる。
+   「目標通りに食べている」前提の目安補正。1回 ±150kcal まで・週1回まで・累積 ±600kcal まで。
+   目標カロリーを手入力している間は止まる ===== */
+function bodyAdjustCalc() {
+  const b = bodyData;
+  if (b.kcalManual > 0) return null;
+  if (weightData.length < 2) return null;
+  const today = dstr(new Date());
+  if (weightData[0].d > shiftDate(today, -13)) return null; /* 記録が14日分に届いていない */
+  const aNow = weightAvg(shiftDate(today, -6), today);
+  const aPrev = weightAvg(shiftDate(today, -13), shiftDate(today, -7));
+  if (aNow === null || aPrev === null) return null;
+  const goal = BODY_GOALS[b.goal] ? b.goal : 'recomp';
+  const expected = BODY_GOALS[goal].adj * 7 / 7700; /* 想定の週変化(kg) */
+  const actual = aNow - aPrev;
+  const gapKcal = (actual - expected) * 1100; /* ズレの1日あたりkcal換算（1kg＝7700kcal÷7日） */
+  let step = -Math.round(gapKcal * 0.5 / 10) * 10;
+  step = Math.max(-150, Math.min(150, step));
+  return { step: step, actual: Math.round(actual * 100) / 100, expected: Math.round(expected * 100) / 100 };
+}
+function applyBodyCorrection() {
+  try {
+    if (bodyData.kcalManual > 0) return;
+    const today = dstr(new Date());
+    if (bodyData.adjDate && bodyData.adjDate > shiftDate(today, -7)) return; /* 前回から7日たっていない */
+    const r = bodyAdjustCalc();
+    if (!r || r.step === 0) return;
+    const next = Math.max(-600, Math.min(600, (bodyData.adjKcal || 0) + r.step));
+    if (next === (bodyData.adjKcal || 0)) return;
+    transact(['body'], () => { bodyData = Object.assign({}, bodyData, { adjKcal: next, adjDate: today }); });
+  } catch (e) {}
+}
+/* AI分析の「身体・栄養」セクション。身体データが無い・途中でも落ちず、ある分だけ返す */
+function aiBody() {
+  const lines = [];
+  try {
+    applyBodyCorrection();
+    const b = bodyData, lw = latestWeight();
+    if (!lw) return lines;
+    const avg = weeklyAvgWeight();
+    lines.push('最新体重は' + fmtKg(lw.kg) + 'kg（' + fmtD(lw.d) + '）' + (avg !== null ? '、週平均は' + fmtKg(Math.round(avg * 10) / 10) + 'kg' : '') + '。');
+    const today = dstr(new Date());
+    const aPrev = weightAvg(shiftDate(today, -13), shiftDate(today, -7));
+    if (avg !== null && aPrev !== null) {
+      const d = Math.round((avg - aPrev) * 10) / 10;
+      const goal = BODY_GOALS[b.goal] ? b.goal : 'recomp';
+      let judge = '';
+      if (goal === 'cut') judge = d < 0 ? '減量の方向に進んでいます。' : d > 0 ? '減量目標とは逆方向です。' : '横ばいです。';
+      else if (goal === 'bulk') judge = d > 0 ? '増量の方向に進んでいます。' : d < 0 ? '増量目標とは逆方向です。' : '横ばいです。';
+      else judge = Math.abs(d) <= 0.5 ? 'リコンプの範囲で安定しています。' : (d > 0 ? 'やや増加傾向です。' : 'やや減少傾向です。');
+      lines.push('週平均は前週比' + (d > 0 ? '+' : '') + fmtKg(d) + 'kg。' + judge);
+    }
+    if (b.targetKg > 0) {
+      const diff = Math.round((lw.kg - b.targetKg) * 10) / 10;
+      lines.push(diff === 0 ? '目標体重' + fmtKg(b.targetKg) + 'kgに到達しています！' : '目標体重' + fmtKg(b.targetKg) + 'kgまであと' + fmtKg(Math.abs(diff)) + 'kg。');
+    }
+    const c = bodyCalc();
+    if (c) {
+      lines.push('目標カロリーは' + nf(c.kcal) + 'kcal（P' + c.pG + 'g／F' + c.fG + 'g／C' + c.cG + 'g）。');
+      if (c.manual) lines.push('目標カロリーは手入力のため、自動補正は止まっています。');
+      else if (c.adj) lines.push('体重の動きに合わせて、目標カロリーを' + (c.adj > 0 ? '+' : '') + c.adj + 'kcal補正中です。');
+    }
+  } catch (e) { return []; }
+  return lines;
 }
 let bodyEl = null; /* 身体データページ（全画面） */
 let bodyState = { date: null, form: null };
 function shiftDate(ds, n) { const p = ds.split('-').map(Number); return dstr(new Date(p[0], p[1] - 1, p[2] + n)); }
 function openBodyPage() {
+  applyBodyCorrection();
   openLayer('body', () => !bodyEl && !aiEl && !detailEl && !sheetEl && !editorOpen(), () => {
     if (achEl) removeAch();
     bodyState = { date: dstr(new Date()),
@@ -2445,7 +2519,8 @@ function bodyPageHtml() {
       '<div class="ai-card"><div class="ai-line"><span>活動量は「' + (BODY_LIFE[b.life] || BODY_LIFE.mid).label + '」＋運動分（直近4週：トレ週' + (Math.round(c.trainWk * 10) / 10) + '回・有酸素週' + c.cardioWk + '分）で計算しています。</span></div></div>' +
       row('目標カロリー', nf(c.kcal) + 'kcal' + (c.manual ? '（手入力）' : '')) +
       row('目標PFC', 'P ' + c.pG + 'g ／ F ' + c.fG + 'g ／ C ' + c.cG + 'g') +
-      '<div class="ai-note">P＝体重×2g、F＝目標カロリーの25%、残りをCで計算した目安です。</div>';
+      '<div class="ai-note">P＝体重×2g、F＝目標カロリーの25%、残りをCで計算した目安です。</div>' +
+      (c.adj ? '<div class="ai-card"><div class="ai-line"><span>体重の動きに合わせて、目標カロリーを' + (c.adj > 0 ? '+' : '') + c.adj + 'kcal補正中です。</span></div></div>' : '');
   } else {
     h += '<div class="ai-card"><div class="ai-line"><span>身長・年齢・性別と体重がそろうと、推奨カロリーと目標PFCを計算します。</span></div></div>';
   }
@@ -2507,6 +2582,7 @@ async function onBodyClick(e) {
     nb.life = BODY_LIFE[f.life] ? f.life : 'mid';
     if (target !== null) nb.targetKg = Math.round(target * 10) / 10;
     if (kcal !== null) nb.kcalManual = Math.round(kcal);
+    if (nb.goal === bodyData.goal && bodyData.adjKcal) { nb.adjKcal = bodyData.adjKcal; if (bodyData.adjDate) nb.adjDate = bodyData.adjDate; } /* 目標が同じなら自動補正を引き継ぐ */
     const ok = transact(['body'], () => { bodyData = nb; });
     if (ok) { bodyState.form = { height: nb.heightCm || '', age: nb.age || '', sex: nb.sex || '', goal: nb.goal, life: nb.life, target: nb.targetKg || '', kcal: nb.kcalManual || '' }; paintBodyPage(); alert('設定を保存しました。'); }
     return;
@@ -2517,7 +2593,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v43',
+  version: 'extras v44',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2527,7 +2603,7 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight,
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody,
   sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
   sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
   data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },

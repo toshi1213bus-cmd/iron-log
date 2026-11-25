@@ -199,6 +199,32 @@ async function main() {
   test('身体設定の検証', () => eq(T.sanitizeBody({ heightCm: 170.4, age: 30, sex: 'x', goal: 'cut', life: 'mid', targetKg: 65.54, kcalManual: 100 }),
     { heightCm: 170, age: 30, goal: 'cut', life: 'mid', targetKg: 65.5 }));
 
+  test('自動補正の計算', () => {
+    T.swap({ workouts: [], cardios: [], dayPplMap: {}, goalsData: {},
+      bodyData: { heightCm: 170, age: 30, sex: 'm', goal: 'cut', life: 'mid' },
+      weightData: [{ d: iso(-15), kg: 72 }, { d: iso(-8), kg: 72 }, { d: iso(-1), kg: 72 }] });
+    const r = T.bodyAdjustCalc();
+    if (!r || r.step !== -150) return false;
+    T.swap({ workouts: [], cardios: [], dayPplMap: {}, goalsData: {},
+      bodyData: { heightCm: 170, age: 30, sex: 'm', goal: 'recomp', life: 'mid' },
+      weightData: [{ d: iso(-15), kg: 72 }, { d: iso(-8), kg: 72 }, { d: iso(-1), kg: 72 }] });
+    const r2 = T.bodyAdjustCalc();
+    return !!r2 && r2.step === 0;
+  });
+  test('AI分析の身体セクション', () => {
+    T.swap({ workouts: fx.workouts, cardios: fx.cardios, dayPplMap: fx.dayPplMap, goalsData: fx.goalsData,
+      bodyData: { heightCm: 170, age: 30, sex: 'm', goal: 'cut', life: 'mid', targetKg: 65 },
+      weightData: [{ d: iso(-8), kg: 71 }, { d: iso(-1), kg: 70 }, { d: iso(0), kg: 70 }] });
+    const secs = T.aiReport();
+    const body = secs.find(s => s.t === '身体・栄養');
+    return !!body && body.lines.length >= 3;
+  });
+  test('身体データなしでも分析が落ちない', () => {
+    T.swap({ workouts: [], cardios: [], dayPplMap: {}, goalsData: {}, bodyData: {}, weightData: [] });
+    const secs = T.aiReport();
+    return Array.isArray(secs) && !secs.some(s => s.t === '身体・栄養');
+  });
+
   const backup = dumpStorage();
   const keep = T.swap(fx);
   const results = [];

@@ -141,6 +141,8 @@ function sanitizeBody(raw) {
   if (raw.life === 'low' || raw.life === 'mid' || raw.life === 'high') out.life = raw.life;
   const t = num(raw.targetKg); if (t !== null && t >= 30 && t <= 300) out.targetKg = Math.round(t * 10) / 10;
   const k = num(raw.kcalManual); if (k !== null && k >= 800 && k <= 6000) out.kcalManual = Math.round(k);
+  const adj = num(raw.adjKcal); if (adj !== null && adj !== 0 && adj >= -600 && adj <= 600) out.adjKcal = Math.round(adj);
+  if (isRealDate(raw.adjDate)) out.adjDate = String(raw.adjDate);
   return out;
 }
 /* 体重ログの検証：日付と体重が正しいものだけ。同日は後のものを優先し、日付順に並べる */
