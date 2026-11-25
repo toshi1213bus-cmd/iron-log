@@ -513,15 +513,19 @@ function achievements() {
     if (!byName[n]) byName[n] = {};
     (byName[n][w.dateStr] = byName[n][w.dateStr] || []).push(...w.setList);
   });
-  let prCount = 0; const prPairs = [];
+  /* PRが起きた日を全種目まとめて集め、日付順に並べてから累計にする（種目ごとに集めると日付順が崩れ、達成日がズレる） */
+  const prDates = [];
   Object.keys(byName).forEach(n => {
     let best = null;
     Object.keys(byName[n]).sort().forEach(d => {
       const v = metric(byName[n][d]);
       if (best === null) { best = v; return; }
-      if (v > best) { best = v; prCount++; prPairs.push([d, prCount]); }
+      if (v > best) { best = v; prDates.push(d); }
     });
   });
+  prDates.sort();
+  const prCount = prDates.length;
+  const prPairs = prDates.map((d, i) => [d, i + 1]);
   /* 連続週（週1回以上トレした週の連続。週の始まりは月曜） */
   const monday = ds => { const p = ds.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
   const weekFirst = {};
@@ -1430,6 +1434,7 @@ PARTS.menu = {
 /* ===== 種目別の目標重量（simple_goals：{ 種目名: 目標kg }）。保存の窓口（transact）へ登録 ===== */
 let goalsData = loadJson('simple_goals', {});
 if (!goalsData || typeof goalsData !== 'object' || Array.isArray(goalsData)) goalsData = {};
+if (typeof sanitizeGoals === 'function') goalsData = sanitizeGoals(goalsData); /* 復元時と同じ検証を、起動時の読み込みにもかける */
 PARTS.goals = {
   keys: ['simple_goals'],
   get: () => goalsData,
@@ -2598,7 +2603,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v45',
+  version: 'extras v46',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,

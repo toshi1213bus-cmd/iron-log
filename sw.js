@@ -15,7 +15,7 @@
    ③ 最初の保存で、ファイルが1つ欠けていても全体が失敗しない。
    ============================================================ */
 
-const CACHE_NAME = 'ppl-cache-v3';   /* ← 名前を変えると、古い保存が全部消える */
+const CACHE_NAME = 'ppl-cache-v4';   /* ← 名前を変えると、古い保存が全部消える */
 const NET_TIMEOUT_MS = 4000;         /* ネットを待つ最大時間（ミリ秒） */
 
 /* 最初に保存しておくアプリ本体のファイル */
@@ -39,17 +39,24 @@ function keyOf(request) {
   return u.href;
 }
 
-/* インストール時：本体ファイルを1つずつ保存する（1つ失敗しても続ける） */
+/* インストール時：本体ファイルを1つずつ保存する。
+   ただし必須ファイルが1つでも欠けたら、この版は使わず前の版のままにする
+   （不完全な保存で前の版を消してしまうと、オフラインで開けなくなるため） */
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => Promise.all(CORE_FILES.map((file) => {
         const req = new Request(file, { cache: 'reload' });
         return fetch(req)
-          .then((res) => (res && res.status === 200) ? cache.put(keyOf(req), res) : null)
-          .catch(() => null);
+          .then((res) => (res && res.status === 200) ? cache.put(keyOf(req), res).then(() => true) : false)
+          .catch(() => false);
       })))
-      .then(() => self.skipWaiting())
+      .then((results) => {
+        if (results.some((ok) => !ok)) {
+          return caches.delete(CACHE_NAME).then(() => { throw new Error('core files incomplete'); });
+        }
+        return self.skipWaiting();
+      })
   );
 });
 

@@ -126,6 +126,25 @@ async function main() {
     const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
     return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
   });
+  test('PR実績の達成日（複数種目）', () => {
+    /* 2種目のPRが日付で入り混じるデータ。PRは 種目A: -25,-20,-15,-10,-5 / 種目B: -28,-27,-26,-24,-23 に発生し、
+       時系列では10回目が -5日。種目ごとに集めた順で数えると達成日が -23日 にズレる（過去の不具合） */
+    const mk = (id, name, off, w) => ({ id: id, name: name, dateStr: iso(off), setList: [{ weight: w, reps: 10 }] });
+    T.swap({
+      workouts: [
+        mk('p1', '種目A', -30, 60), mk('p2', '種目B', -29, 60),
+        mk('p3', '種目B', -28, 65), mk('p4', '種目B', -27, 70), mk('p5', '種目B', -26, 75),
+        mk('p6', '種目A', -25, 65), mk('p7', '種目B', -24, 80), mk('p8', '種目B', -23, 85),
+        mk('p9', '種目A', -20, 70), mk('p10', '種目A', -15, 75), mk('p11', '種目A', -10, 80),
+        mk('p12', '種目A', -5, 85)
+      ],
+      cardios: [], dayPplMap: {}, goalsData: {}
+    });
+    const a = T.achievements();
+    const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
+    T.swap(fx); /* 後続の確認のために標準データへ戻す */
+    return pr.got === iso(-5);
+  });
   test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
   test('バックアップ出力', async () => {
     /* 実際の保存（共有シート・ダウンロード）は呼ばず、書き出される中身とファイル名だけを確認する */

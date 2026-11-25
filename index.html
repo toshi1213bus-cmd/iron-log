@@ -152,6 +152,10 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       </div>
       <div class="space-y-2 pt-3 border-t border-gray-700">
         <textarea id="importText" rows="4" placeholder="JSON貼り付け" class="w-full border p-3 text-xs focus:outline-none"></textarea>
+        <input type="file" id="importFile" accept=".json,application/json" class="hidden" onchange="importFromFile(this)">
+        <button type="button" onclick="document.getElementById('importFile').click()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+          ファイルから復元
+        </button>
         <button type="button" onclick="importFromJsonText()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
           復元実行
         </button>
@@ -193,7 +197,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </nav>
 
 <script src="app-core.js"></script>
-<script src="extras.js?v=45"></script>
+<script src="extras.js?v=46"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

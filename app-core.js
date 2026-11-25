@@ -729,6 +729,7 @@ function saveWorkout() {
   const prDate = editingId ? (workouts.find(i => i.id === editingId) || {}).dateStr || day : (formDate || today);
   let prBefore = null;
   try { if (typeof prSnap === 'function') prBefore = prSnap(name, prDate); } catch (e) { console.log(e); }
+  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
   const ok = transact(['workouts', 'dayPpl', 'menu'], () => {
     if (editingId) {
       const target = workouts.find(i => i.id === editingId);
@@ -760,7 +761,6 @@ function saveWorkout() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
-  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* その日最初の保存でスナップショットを作る */
   /* 2回目以降で過去最高を超えたときだけ、金色の NEW RECORD!! とバイブ（初回記録は出さない） */
   try { if (prBefore && prCheck(prBefore)) showPRModal(); } catch (e) { console.log(e); }
   return true;
@@ -778,6 +778,7 @@ function saveCardio() {
     return false;
   }
   const dateStr = cardioDate || todayStr();
+  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
   const ok = transact(['cardios'], () => {
     const existingCardio = cardios.find(i => i.dateStr === dateStr);
     if (existingCardio) {
@@ -798,7 +799,6 @@ function saveCardio() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
-  if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* その日最初の保存でスナップショットを作る */
   return true;
 }
 
@@ -1060,7 +1060,7 @@ async function exportData() {
     dayPplMap: dayPplMap,
     menu: menuData,
     menuTpl: window.tplExport ? window.tplExport() : null,
-    goals: PARTS.goals.get(), /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で受け取る */
+    goals: PARTS.goals ? PARTS.goals.get() : {}, /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で受け取る */
     body: PARTS.body ? PARTS.body.get() : null,
     weight: PARTS.weight ? PARTS.weight.get() : null
   };
@@ -1166,16 +1166,16 @@ async function importFromJsonText() {
   if (!(await askConfirm(msg, '復元'))) return;
   /* 3) 上書き前の状態を simple_pre_restore に控えてから、記録・有酸素・部位・メニューを1つの取引で入れ替える。
         失敗したらメモリ・保存領域とも全部元に戻す */
-  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData, goals: PARTS.goals.get(), body: PARTS.body ? PARTS.body.get() : null, weight: PARTS.weight ? PARTS.weight.get() : null };
+  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData, goals: PARTS.goals ? PARTS.goals.get() : {}, body: PARTS.body ? PARTS.body.get() : null, weight: PARTS.weight ? PARTS.weight.get() : null };
   const restoreParts = ['workouts', 'cardios', 'dayPpl', 'menu'];
-  if (rawGoals !== undefined) restoreParts.push('goals'); /* 目標入りのバックアップだけ、目標も入れ替える */
-  if (rawBody !== undefined) restoreParts.push('body');
-  if (rawWeight !== undefined) restoreParts.push('weight');
+  if (rawGoals !== undefined && PARTS.goals) restoreParts.push('goals'); /* 目標入りのバックアップだけ、目標も入れ替える */
+  if (rawBody !== undefined && PARTS.body) restoreParts.push('body');
+  if (rawWeight !== undefined && PARTS.weight) restoreParts.push('weight');
   const ok = transact(restoreParts, () => {
     if (!writeJson('simple_pre_restore', prevBackup)) return false;
     workouts = newWorkouts;
     cardios = newCardios;
-    if (rawGoals !== undefined) PARTS.goals.set(rawGoals); /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で差し替える */
+    if (rawGoals !== undefined && PARTS.goals) PARTS.goals.set(rawGoals); /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で差し替える */
     if (rawBody !== undefined && PARTS.body) PARTS.body.set(rawBody);
     if (rawWeight !== undefined && PARTS.weight) PARTS.weight.set(rawWeight);
     dayPplMap = sanitizeDayPpl(rawPpl);
@@ -1192,6 +1192,21 @@ async function importFromJsonText() {
   } catch (e) { console.log(e); }
   alert('データを正常に復元しました！' + (skipped > 0 ? '（除外 ' + skipped + '件）' : ''), skipped > 0 ? 5000 : undefined);
   importEl.value = '';
+}
+/* ファイルから復元：選んだファイルの中身を貼り付け欄に入れて、そのまま既存の復元処理（検証・確認・控え）を使う */
+function importFromFile(input) {
+  const file = input && input.files && input.files[0];
+  if (input) input.value = ''; /* 同じファイルを続けて選んでも反応するように戻す */
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const el = byId('importText');
+    if (!el) return;
+    el.value = String(reader.result || '');
+    importFromJsonText();
+  };
+  reader.onerror = () => alert('ファイルを読み込めませんでした。', 4000, 'err');
+  reader.readAsText(file);
 }
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
