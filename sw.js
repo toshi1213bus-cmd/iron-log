@@ -15,7 +15,7 @@
    ③ 最初の保存で、ファイルが1つ欠けていても全体が失敗しない。
    ============================================================ */
 
-const CACHE_NAME = 'ppl-cache-v4';   /* ← 名前を変えると、古い保存が全部消える */
+const CACHE_NAME = 'ppl-cache-v5';   /* ← 名前を変えると、古い保存が全部消える */
 const NET_TIMEOUT_MS = 4000;         /* ネットを待つ最大時間（ミリ秒） */
 
 /* 最初に保存しておくアプリ本体のファイル */
@@ -25,6 +25,7 @@ const CORE_FILES = [
   './app-core.js',
   './extras.js',
   './theme.css',
+  './bg.webp',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png'
