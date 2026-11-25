@@ -367,7 +367,7 @@ function renderAnalysis() {
   achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
   const pfLv = profileStats().lv;
   const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span><span class="ach-entry-ar">›</span></span></button>';
-  el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + achRow; /* 月間推移は週間・月間どちらでも常時表示 */
+  el.innerHTML = '<button type="button" class="ai-btn" data-an="ai">分析させる</button>' + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + achRow; /* 月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-an]');
@@ -387,6 +387,8 @@ document.addEventListener('click', e => {
     if (x && x.ym !== anSel) { anSel = x.ym; paintAnGraph(); }
   } else if (b.dataset.an === 'ach') {
     openAchievements();
+  } else if (b.dataset.an === 'ai') {
+    openAiAnalysis();
   } else if (b.dataset.an === 'period') {
     const p = b.dataset.p;
     if ((p !== 'week' && p !== 'month') || p === anPeriod) return;
@@ -572,6 +574,106 @@ function achPageHtml() {
       '<div class="ach-sub">' + (x.got ? fmtD(x.got) + ' 達成' : x.prog) + '</div></div>').join('') + '</div>';
   });
   return h + '</div>';
+}
+/* ===== ローカル分析（「分析させる」）：端末内の記録だけから文章を組み立てる。外部AI・通信は一切なし ===== */
+let aiEl = null; /* ローカル分析ページ（全画面） */
+/* 種目ごとの目立つ変化（プラトー／絶好調／目標／長期空き）を最大2件拾う */
+function aiPickups() {
+  const today = dstr(new Date());
+  const out = { plat: [], hot: [], goalDone: [], goalNear: [], absent: [] };
+  const names = [...new Set(workouts.map(w => w.name.trim()).filter(Boolean))];
+  names.forEach(name => {
+    const s = seriesAll(name);
+    if (!s.length) return;
+    const last = s[s.length - 1];
+    const ago = Math.round((Date.parse(today) - Date.parse(last.d)) / 86400000);
+    if (s.length >= 3) {
+      const tr = trendOf(s.map(x => x.v));
+      if (tr.txt === 'プラトー検知！！') out.plat.push(escapeHtml(name) + '：プラトー検知！！（直近3回横ばい）');
+      else if (tr.txt === '絶好調！！') out.hot.push(escapeHtml(name) + '：絶好調！！ 推定1RM ' + fmtKg(last.rm) + 'kg');
+    }
+    const g = goalsData[name];
+    if (g) {
+      const best = maxWeightOf(name);
+      if (best >= g) out.goalDone.push(escapeHtml(name) + '：目標' + fmtKg(g) + 'kg達成済み！');
+      else if (best > 0 && best / g >= 0.8) out.goalNear.push(escapeHtml(name) + '：目標まであと' + fmtKg(g - best) + 'kg（達成率' + Math.round(best / g * 100) + '%）');
+    }
+    if (ago >= 14 && s.length >= 3) out.absent.push(escapeHtml(name) + '：' + ago + '日空いています（最終 ' + fmtD(last.d) + '）');
+  });
+  return [...out.plat, ...out.hot, ...out.goalDone, ...out.goalNear, ...out.absent].slice(0, 2);
+}
+/* 分析コメント（最大5行）。集計は分析カードと同じ trainIn / cardioIn を使い、数字を言い換える */
+function aiComment() {
+  if (!workouts.length && !cardios.length) return ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'];
+  const r = anRanges(), vol = volByDay(), wk = anPeriod === 'week';
+  const inCur = wk ? (d => d >= r.ws && d <= r.we) : (d => d.slice(0, 7) === r.ym);
+  const inPrev = wk ? (d => d >= r.pws && d <= r.pwe) : (d => d.slice(0, 7) === r.pym);
+  const cur = trainIn(vol, inCur), prev = trainIn(vol, inPrev), cc = cardioIn(inCur), cp = cardioIn(inPrev);
+  const P = wk ? '今週' : '今月', PP = wk ? '前週' : '前月';
+  if (cur.days === 0 && cc.min === 0) return [P + 'はまだ記録がありません。最初の1回を記録すると分析が始まります。'];
+  const lines = [];
+  let s1 = P + 'はトレ' + cur.days + '日・総負荷' + nf(cur.vol) + 'kg。';
+  if (prev.vol > 0) { const pc = Math.round((cur.vol - prev.vol) / prev.vol * 100); s1 += PP + '比 ' + (pc >= 0 ? '+' : '') + pc + '%。'; }
+  else if (cur.vol > 0) s1 += PP + 'の記録はないため、比較は次回から。';
+  lines.push(s1);
+  if (cur.days > 0) {
+    const parts = ['PUSH', 'PULL', 'LEGS'].map(t => ({ t: t, d: cur.by[t].days }));
+    const zeros = parts.filter(x => x.d === 0).map(x => x.t);
+    const mx = parts.reduce((a, b) => b.d > a.d ? b : a, parts[0]);
+    const mn = parts.reduce((a, b) => b.d < a.d ? b : a, parts[0]);
+    if (zeros.length && zeros.length < 3) lines.push('部位バランス：' + zeros.join('・') + 'は' + P + 'まだ実施なし。最多は' + mx.t + '（' + mx.d + '日）。');
+    else if (mx.d === mn.d) lines.push('部位バランス：PUSH・PULL・LEGSを均等に回せています。');
+    else lines.push('部位バランス：' + mx.t + 'が最多（' + mx.d + '日）、' + mn.t + 'が最少（' + mn.d + '日）。');
+  }
+  if (cc.min > 0) {
+    let s3 = '有酸素は合計' + nf(cc.min) + '分（約' + nf(cc.kcal) + 'kcal）。';
+    if (cp.min > 0) { const df = cc.min - cp.min; s3 += PP + '比 ' + (df >= 0 ? '+' : '') + df + '分。'; }
+    lines.push(s3);
+  } else {
+    lines.push('有酸素は' + P + 'まだ実施なし。');
+  }
+  return lines.concat(aiPickups()).slice(0, 5);
+}
+function aiPageHtml() {
+  const r = anRanges(), wk = anPeriod === 'week';
+  const range = wk ? fmtD(r.ws) + '〜' + fmtD(r.we) : fmtD(r.ms) + '〜' + fmtD(r.me);
+  return '<div class="dt-head"><div class="dt-ttl"><div class="dt-name">AI分析</div><div class="hm-en">' + (wk ? '週間' : '月間') + ' ' + range + '</div></div>' +
+    '<button type="button" class="dt-x" data-ai="close" aria-label="閉じる">✕</button></div>' +
+    '<div class="dt-body"><div class="ai-per">' +
+    ['week', 'month'].map(p => '<button type="button" class="gr-btn' + (anPeriod === p ? ' on' : '') + '" data-ai="per" data-p="' + p + '">' + (p === 'week' ? '週間' : '月間') + '</button>').join('') + '</div>' +
+    '<div class="ai-card">' + aiComment().map(t => '<div class="ai-line"><span class="ai-dot">◆</span><span>' + t + '</span></div>').join('') + '</div>' +
+    '<div class="ai-note">この分析は端末内の記録だけから自動生成しています（外部AI・通信は使っていません）。</div></div>';
+}
+function openAiAnalysis() {
+  openLayer('ai', () => !aiEl && !achEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    aiEl = document.createElement('div');
+    aiEl.id = 'aiPage';
+    aiEl.setAttribute('role', 'dialog');
+    aiEl.setAttribute('aria-modal', 'true');
+    aiEl.addEventListener('click', onAiClick);
+    document.body.appendChild(aiEl);
+    return () => { aiEl.innerHTML = aiPageHtml(); };
+  });
+}
+function removeAiPage() {
+  if (!aiEl) return;
+  aiEl.remove();
+  aiEl = null;
+}
+function leaveAiPage() {
+  if (!aiEl) return;
+  removeAiPage();
+  leaveLayer();
+}
+function onAiClick(e) {
+  const b = e.target.closest('[data-ai]');
+  if (b && b.dataset.ai === 'close') { leaveAiPage(); return; }
+  if (b && b.dataset.ai === 'per') {
+    const p = b.dataset.p;
+    if ((p === 'week' || p === 'month') && p !== anPeriod) { anPeriod = p; aiEl.innerHTML = aiPageHtml(); paintAnCard(); }
+    return;
+  }
+  if (e.target === aiEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAiPage();
 }
 let achEl = null; /* 実績ページ（全画面） */
 function openAchievements() {
@@ -1488,7 +1590,7 @@ function navDone() {
   navQueue = [];
   q.forEach(f => { try { f(); } catch (e) { console.log(e); } });
 }
-function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach)); }
+function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach || s.ai)); }
 function enterLayer(flag) {
   try {
     if (layerFlagged()) history.replaceState({ [flag]: 1 }, ''); /* すでに重なり用の履歴があれば差し替え（増やさない） */
@@ -1522,6 +1624,7 @@ window.addEventListener('popstate', () => {
   if (!s.me) closeEditor();
   if (!s.ex) removeDetail();
   if (!s.ach) removeAch();
+  if (!s.ai) removeAiPage();
   navDone();
 });
 function leaveEditor() {
@@ -1872,7 +1975,7 @@ function goalRowHtml(st) {
       '</div></div>';
   }
   if (!g) {
-    return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="dt-v goal-none">未設定</span><span class="dt-date">タップで設定</span></div></div>';
+    return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="goal-chip">未設定</span></div></div>';
   }
   const pct = Math.floor(bestW / g * 100);
   const sub = bestW >= g ? '<span class="dt-date goal-done">達成！</span>' : '<span class="dt-date goal-sub">あと' + fmtKg(g - bestW) + 'kg・' + pct + '%</span>';
