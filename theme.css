@@ -17,6 +17,8 @@
 :root {
   --bg: #0a0a0b;
   --surface: #131314;
+  --bg-rgb: 10, 10, 11;
+  --surface-rgb: 19, 19, 20;
   --line: #2a2a2c;
   --text: #ece8dd;
   --text-3: #b9b4a6;
@@ -44,6 +46,8 @@
 :root[data-theme="ocean"] {
   --bg: #060d16;
   --surface: #0c1826;
+  --bg-rgb: 6, 13, 22;
+  --surface-rgb: 12, 24, 38;
   --line: #1d3247;
   --text: #e3eef6;
   --text-3: #b3c7d6;
@@ -67,6 +71,8 @@
 :root[data-theme="forest"] {
   --bg: #0a110d;
   --surface: #121c16;
+  --bg-rgb: 10, 17, 13;
+  --surface-rgb: 18, 28, 22;
   --line: #25372c;
   --text: #e4eee6;
   --text-3: #b5c7ba;
@@ -104,9 +110,9 @@ body .bg-gray-800.border.rounded-2xl {
   border-radius: 0;
 }
 /* 面・線・角丸 */
-body .bg-gray-800 { background: var(--surface); }
+body .bg-gray-800 { background: rgba(var(--surface-rgb), .72); }
 body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bgimg); }
-body .bg-gray-900 { background: var(--bg); }
+body .bg-gray-900 { background: rgba(var(--bg-rgb), .80); }
 body .border-gray-700,
 body .border-gray-800 { border-color: var(--line); }
 body .divide-gray-700 > :not([hidden]) ~ :not([hidden]) { border-color: var(--line); }
@@ -377,7 +383,7 @@ body .ex-toggle-icon.is-open {
   max-width: 28rem;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: var(--bg);
+  background: rgba(var(--bg-rgb), .85);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 50;
@@ -654,7 +660,7 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
   max-height: 86vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: rgba(var(--bg-rgb), .92);
   border-top: 1px solid var(--line);
   border-radius: 4px 4px 0 0;
   animation: sheetUp .22s ease-out;
@@ -764,8 +770,8 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 
 /* ================= UI/UX仕上げ（v24）：雰囲気合わせ＋動き＋空状態＋タブアイコン ================= */
 /* --- 雰囲気合わせ：Tailwind側の色だけをテーマ変数へ寄せる（文字サイズ・余白は変更しない） --- */
-.bg-gray-900 { background-color: var(--bg) !important; }
-.bg-gray-800 { background-color: var(--surface) !important; }
+.bg-gray-900 { background-color: rgba(var(--bg-rgb), .80) !important; }
+.bg-gray-800 { background-color: rgba(var(--surface-rgb), .72) !important; }
 .bg-gray-700 { background-color: var(--line) !important; }
 .border-gray-700, .border-gray-800 { border-color: var(--line) !important; }
 .divide-gray-700 > * { border-color: var(--line) !important; }
@@ -797,7 +803,7 @@ button:active { transform: scale(.95); }
 #bottomNav button.on svg { filter: drop-shadow(0 0 6px rgba(var(--gold-rgb), .45)); }
 
 /* --- 空状態の作り込み --- */
-.empty-box { margin: 18px 14px 22px; padding: 26px 18px 22px; border: 1px solid var(--gold-line); border-radius: 4px; text-align: center; background: var(--surface); }
+.empty-box { margin: 18px 14px 22px; padding: 26px 18px 22px; border: 1px solid var(--gold-line); border-radius: 4px; text-align: center; background: rgba(var(--surface-rgb), .72); }
 .empty-ic { width: 46px; height: 46px; margin: 0 auto 12px; border: 1px solid var(--gold-line); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold); }
 .empty-ic svg { width: 22px; height: 22px; }
 .empty-t { font-size: 14px; letter-spacing: .08em; color: var(--text); margin-bottom: 6px; }
@@ -807,7 +813,7 @@ button:active { transform: scale(.95); }
 /* ================= シャープ統一＋グラフ固定欄（v27） ================= */
 .rounded-2xl { border-color: var(--line) !important; border-radius: 3px !important; }
 .empty-box { border-radius: 3px; }
-.gr-info { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
+.gr-info { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 9px 12px; border: 1px solid var(--line); border-radius: 3px; background: rgba(var(--surface-rgb), .72); font-size: 12px; letter-spacing: .04em; color: var(--muted); }
 .gr-info b { color: var(--text); font-weight: 600; }
 .gr-info .gr-d { color: var(--gold); font-family: var(--num); font-size: 13px; letter-spacing: .08em; }
 #anInfo { margin: 0 14px 14px; }
@@ -818,7 +824,7 @@ button:active { transform: scale(.95); }
 .pt-hit { cursor: pointer; }
 
 /* ===== 実績（分析タブの入り口行＋専用ページ） ===== */
-.ach-entry { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; color: var(--text); font-size: 14px; cursor: pointer; }
+.ach-entry { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 12px; padding: 14px; background: rgba(var(--surface-rgb), .72); border: 1px solid var(--line); border-radius: 3px; color: var(--text); font-size: 14px; cursor: pointer; }
 .ach-entry-r { display: flex; align-items: center; gap: 8px; }
 .ach-entry-n { font-size: 12px; color: var(--muted); }
 .ach-entry-ar { color: var(--gold); font-size: 16px; }
@@ -844,7 +850,7 @@ button:active { transform: scale(.95); }
 .goal-btn.danger { color: #f87171; }
 
 /* ===== プロフィール（実績ページ上部のカード） ===== */
-.pf-card { margin: 14px 14px 4px; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; }
+.pf-card { margin: 14px 14px 4px; padding: 14px; background: rgba(var(--surface-rgb), .72); border: 1px solid var(--line); border-radius: 3px; }
 .pf-top { display: flex; gap: 14px; align-items: center; }
 .pf-lv { flex: none; width: 64px; height: 64px; border: 2px solid var(--gold); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .pf-lvn { font-size: 24px; font-weight: 700; color: var(--gold); line-height: 1; font-family: var(--num); }
