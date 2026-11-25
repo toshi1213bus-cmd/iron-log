@@ -16,7 +16,6 @@
    ■ index.html の要素に色系クラスを付けない：入力欄は「入力欄」ブロックだけで見た目を決める */
 :root {
   --bg: #0a0a0b;
-  --bgimg: linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,.12) 45%, rgba(0,0,0,.58)), url("bg.webp") center 22% / cover no-repeat;
   --surface: #131314;
   --line: #2a2a2c;
   --text: #ece8dd;
