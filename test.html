@@ -97,6 +97,15 @@ async function main() {
     return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
   });
   test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
+  test('バックアップ出力', () => {
+    let href = null;
+    const origClick = W.HTMLAnchorElement.prototype.click;
+    W.HTMLAnchorElement.prototype.click = function () { href = this.href; };
+    try { W.exportData(); } finally { W.HTMLAnchorElement.prototype.click = origClick; }
+    if (!href || href.indexOf('data:text/json') !== 0) return false;
+    const parsed = JSON.parse(decodeURIComponent(href.split(',').slice(1).join(',')));
+    return parsed.workouts.length === 6 && eq(parsed.goals, { 'ベンチプレス': 80 });
+  });
   test('スナップショット作成', () => {
     localStorage.removeItem('simple_snapshots');
     T.ensureDailySnapshot();

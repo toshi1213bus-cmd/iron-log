@@ -1191,7 +1191,7 @@ function exportData() {
     dayPplMap: dayPplMap,
     menu: menuData,
     menuTpl: window.tplExport ? window.tplExport() : null,
-    goals: goalsData
+    goals: PARTS.goals.get() /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で受け取る */
   };
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
   const a = document.createElement('a');
@@ -1296,14 +1296,14 @@ async function importFromJsonText() {
   if (!(await askConfirm(msg, '復元'))) return;
   /* 3) 上書き前の状態を simple_pre_restore に控えてから、記録・有酸素・部位・メニューを1つの取引で入れ替える。
         失敗したらメモリ・保存領域とも全部元に戻す */
-  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData, goals: goalsData };
+  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData, goals: PARTS.goals.get() };
   const restoreParts = ['workouts', 'cardios', 'dayPpl', 'menu'];
   if (rawGoals !== undefined) restoreParts.push('goals'); /* 目標入りのバックアップだけ、目標も入れ替える */
   const ok = transact(restoreParts, () => {
     if (!writeJson('simple_pre_restore', prevBackup)) return false;
     workouts = newWorkouts;
     cardios = newCardios;
-    if (rawGoals !== undefined) goalsData = rawGoals;
+    if (rawGoals !== undefined) PARTS.goals.set(rawGoals); /* 目標データは extras.js の中にあるので、登録窓口（PARTS）経由で差し替える */
     dayPplMap = sanitizeDayPpl(rawPpl);
     /* テンプレート：新形式はそのまま、旧形式は各部位の1枠目へ取り込む（メモリ上に作るだけ。保存は transact） */
     tplImport(rawTpl, rawMenu);
@@ -1322,7 +1322,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=42"></script>
+<script src="extras.js?v=41"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {
