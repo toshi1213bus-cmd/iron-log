@@ -577,62 +577,136 @@ function achPageHtml() {
 }
 /* ===== ローカル分析（「分析させる」）：端末内の記録だけから文章を組み立てる。外部AI・通信は一切なし ===== */
 let aiEl = null; /* ローカル分析ページ（全画面） */
-/* 種目ごとの目立つ変化（プラトー／絶好調／目標／長期空き）を最大2件拾う */
-function aiPickups() {
+/* 種目の動き：調子ラベル（全種目）・目標・デビュー・長期空きを目立つ順に最大8件 */
+function aiMoves(inCur, P) {
   const today = dstr(new Date());
-  const out = { plat: [], hot: [], goalDone: [], goalNear: [], absent: [] };
+  const B = { plat: [], hot: [], goalDone: [], goalNear: [], down: [], flat: [], up: [], debut: [], absent: [] };
   const names = [...new Set(workouts.map(w => w.name.trim()).filter(Boolean))];
   names.forEach(name => {
     const s = seriesAll(name);
     if (!s.length) return;
     const last = s[s.length - 1];
     const ago = Math.round((Date.parse(today) - Date.parse(last.d)) / 86400000);
-    if (s.length >= 3) {
-      const tr = trendOf(s.map(x => x.v));
-      if (tr.txt === 'プラトー検知！！') out.plat.push(escapeHtml(name) + '：プラトー検知！！（直近3回横ばい）');
-      else if (tr.txt === '絶好調！！') out.hot.push(escapeHtml(name) + '：絶好調！！ 推定1RM ' + fmtKg(last.rm) + 'kg');
+    const tr = trendOf(s.map(x => x.v));
+    if (tr) {
+      if (tr.cls === 'plat') B.plat.push(escapeHtml(name) + '：プラトー検知！！（直近3回横ばい）');
+      else if (tr.cls === 'hot') B.hot.push(escapeHtml(name) + '：絶好調！！ 推定1RM ' + fmtKg(last.rm) + 'kg');
+      else if (tr.cls === 'down') B.down.push(escapeHtml(name) + '：下降傾向（直近でスコア低下）');
+      else if (tr.cls === 'flat') B.flat.push(escapeHtml(name) + '：停滞注意（前回と横ばい）');
+      else if (tr.cls === 'up') B.up.push(escapeHtml(name) + '：上昇傾向');
     }
     const g = goalsData[name];
     if (g) {
       const best = maxWeightOf(name);
-      if (best >= g) out.goalDone.push(escapeHtml(name) + '：目標' + fmtKg(g) + 'kg達成済み！');
-      else if (best > 0 && best / g >= 0.8) out.goalNear.push(escapeHtml(name) + '：目標まであと' + fmtKg(g - best) + 'kg（達成率' + Math.round(best / g * 100) + '%）');
+      if (best >= g) B.goalDone.push(escapeHtml(name) + '：目標' + fmtKg(g) + 'kg達成済み！');
+      else if (best > 0 && best / g >= 0.8) B.goalNear.push(escapeHtml(name) + '：目標まであと' + fmtKg(g - best) + 'kg（達成率' + Math.round(best / g * 100) + '%）');
     }
-    if (ago >= 14 && s.length >= 3) out.absent.push(escapeHtml(name) + '：' + ago + '日空いています（最終 ' + fmtD(last.d) + '）');
+    if (inCur(s[0].d)) B.debut.push(escapeHtml(name) + '：' + P + 'デビュー');
+    if (ago >= 14 && s.length >= 3) B.absent.push(escapeHtml(name) + '：' + ago + '日空いています（最終 ' + fmtD(last.d) + '）');
   });
-  return [...out.plat, ...out.hot, ...out.goalDone, ...out.goalNear, ...out.absent].slice(0, 2);
+  return [...B.plat, ...B.hot, ...B.goalDone, ...B.goalNear, ...B.down, ...B.flat, ...B.up, ...B.debut, ...B.absent].slice(0, 8);
 }
-/* 分析コメント（最大5行）。集計は分析カードと同じ trainIn / cardioIn を使い、数字を言い換える */
-function aiComment() {
-  if (!workouts.length && !cardios.length) return ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'];
+/* ハイライト：期間内の自己ベスト更新と、推定1RMの伸び */
+function aiHighlights(inCur, startStr) {
+  const prs = [], gains = [];
+  const names = [...new Set(workouts.map(w => w.name.trim()).filter(Boolean))];
+  names.forEach(name => {
+    const s = seriesAll(name);
+    let runMax = -Infinity, prIn = false, rmBefore = 0, rmIn = 0;
+    s.forEach((x, i) => {
+      if (i > 0 && x.v > runMax && inCur(x.d)) prIn = true;
+      if (x.v > runMax) runMax = x.v;
+      if (x.d < startStr) rmBefore = Math.max(rmBefore, x.rm);
+      else if (inCur(x.d)) rmIn = Math.max(rmIn, x.rm);
+    });
+    if (prIn) prs.push(escapeHtml(name) + 'で自己ベスト更新！');
+    if (rmBefore > 0 && rmIn > rmBefore) gains.push({ name: name, d: rmIn - rmBefore });
+  });
+  const lines = prs.slice(0, 3);
+  if (gains.length) {
+    const best = gains.reduce((a, b) => b.d > a.d ? b : a, gains[0]);
+    lines.push('推定1RMが最も伸びたのは' + escapeHtml(best.name) + '（+' + fmtKg(best.d) + 'kg）');
+  }
+  return lines;
+}
+/* 通算・節目：レベル・連続週・次の実績メダル（プロフィールと実績の計算を流用） */
+function aiTotals() {
+  const p = profileStats();
+  if (!p.days) return [];
+  const lines = [];
+  const nextXp = 500 * p.lv * (p.lv + 1);
+  lines.push('現在 Lv.' + p.lv + '「' + p.title + '」。あと' + nf(nextXp - p.xp) + 'XPで Lv.' + (p.lv + 1) + '。');
+  const nt = TITLES.find(t => t[0] > p.lv);
+  if (nt && nt[0] !== p.lv + 1) lines.push('Lv.' + nt[0] + 'で称号「' + nt[1] + '」。');
+  if (p.curRun >= 2) lines.push('連続' + p.curRun + '週継続中（最長' + p.maxRun + '週）。');
+  let bestPct = null, firstLeft = null, allGot = true;
+  achievements().forEach(c => c.items.forEach(x => {
+    if (x.got) return;
+    allGot = false;
+    if (!firstLeft) firstLeft = x;
+    const m = /^(\d+)%$/.exec(x.prog || '');
+    if (m && (!bestPct || +m[1] > bestPct.pct)) bestPct = { name: x.name, pct: +m[1] };
+  }));
+  if (bestPct) lines.push('次の実績メダル：' + bestPct.name + '（進捗' + bestPct.pct + '%）');
+  else if (firstLeft) lines.push('次の実績メダル：' + firstLeft.name + '（' + firstLeft.prog + '）');
+  else if (allGot) lines.push('実績メダルは全制覇！');
+  return lines;
+}
+/* 分析レポート（セクション構成）。集計は分析カードと同じ trainIn / cardioIn を使う */
+function aiReport() {
+  if (!workouts.length && !cardios.length) return [{ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] }];
   const r = anRanges(), vol = volByDay(), wk = anPeriod === 'week';
   const inCur = wk ? (d => d >= r.ws && d <= r.we) : (d => d.slice(0, 7) === r.ym);
   const inPrev = wk ? (d => d >= r.pws && d <= r.pwe) : (d => d.slice(0, 7) === r.pym);
   const cur = trainIn(vol, inCur), prev = trainIn(vol, inPrev), cc = cardioIn(inCur), cp = cardioIn(inPrev);
   const P = wk ? '今週' : '今月', PP = wk ? '前週' : '前月';
-  if (cur.days === 0 && cc.min === 0) return [P + 'はまだ記録がありません。最初の1回を記録すると分析が始まります。'];
-  const lines = [];
-  let s1 = P + 'はトレ' + cur.days + '日・総負荷' + nf(cur.vol) + 'kg。';
-  if (prev.vol > 0) { const pc = Math.round((cur.vol - prev.vol) / prev.vol * 100); s1 += PP + '比 ' + (pc >= 0 ? '+' : '') + pc + '%。'; }
-  else if (cur.vol > 0) s1 += PP + 'の記録はないため、比較は次回から。';
-  lines.push(s1);
-  if (cur.days > 0) {
-    const parts = ['PUSH', 'PULL', 'LEGS'].map(t => ({ t: t, d: cur.by[t].days }));
-    const zeros = parts.filter(x => x.d === 0).map(x => x.t);
-    const mx = parts.reduce((a, b) => b.d > a.d ? b : a, parts[0]);
-    const mn = parts.reduce((a, b) => b.d < a.d ? b : a, parts[0]);
-    if (zeros.length && zeros.length < 3) lines.push('部位バランス：' + zeros.join('・') + 'は' + P + 'まだ実施なし。最多は' + mx.t + '（' + mx.d + '日）。');
-    else if (mx.d === mn.d) lines.push('部位バランス：PUSH・PULL・LEGSを均等に回せています。');
-    else lines.push('部位バランス：' + mx.t + 'が最多（' + mx.d + '日）、' + mn.t + 'が最少（' + mn.d + '日）。');
-  }
-  if (cc.min > 0) {
-    let s3 = '有酸素は合計' + nf(cc.min) + '分（約' + nf(cc.kcal) + 'kcal）。';
-    if (cp.min > 0) { const df = cc.min - cp.min; s3 += PP + '比 ' + (df >= 0 ? '+' : '') + df + '分。'; }
-    lines.push(s3);
+  const secs = [];
+  const sum = [];
+  const active = !(cur.days === 0 && cc.min === 0);
+  if (!active) {
+    sum.push(P + 'はまだ記録がありません。最初の1回を記録すると分析が始まります。');
   } else {
-    lines.push('有酸素は' + P + 'まだ実施なし。');
+    let s1 = P + 'はトレ' + cur.days + '日・総負荷' + nf(cur.vol) + 'kg。';
+    if (prev.vol > 0) { const pc = Math.round((cur.vol - prev.vol) / prev.vol * 100); s1 += PP + '比 ' + (pc >= 0 ? '+' : '') + pc + '%。'; }
+    else if (cur.vol > 0) s1 += PP + 'の記録はないため、比較は次回から。';
+    sum.push(s1);
+    let bd = null, bv = -1;
+    Object.keys(vol).forEach(d => { if (inCur(d) && vol[d] > bv) { bv = vol[d]; bd = d; } });
+    if (bd) sum.push((cur.days > 1 ? 'ベストデーは' : '実施日は') + fmtD(bd) + '（総負荷' + nf(Math.round(bv)) + 'kg）。');
   }
-  return lines.concat(aiPickups()).slice(0, 5);
+  secs.push({ t: '期間サマリー', lines: sum });
+  if (active) {
+    if (cur.days > 0) {
+      const parts = ['PUSH', 'PULL', 'LEGS'].map(t => ({ t: t, d: cur.by[t].days }));
+      const zeros = parts.filter(x => x.d === 0).map(x => x.t);
+      const mx = parts.reduce((a, b) => b.d > a.d ? b : a, parts[0]);
+      const mn = parts.reduce((a, b) => b.d < a.d ? b : a, parts[0]);
+      const bl = [];
+      if (zeros.length && zeros.length < 3) {
+        bl.push('部位バランス：' + zeros.join('・') + 'は' + P + 'まだ実施なし。最多は' + mx.t + '（' + mx.d + '日）。');
+        bl.push('次に' + zeros[0] + 'を入れると全体のバランスが整います。');
+      } else if (mx.d === mn.d) bl.push('部位バランス：PUSH・PULL・LEGSを均等に回せています。');
+      else bl.push('部位バランス：' + mx.t + 'が最多（' + mx.d + '日）、' + mn.t + 'が最少（' + mn.d + '日）。');
+      secs.push({ t: '部位バランス', lines: bl });
+    }
+    const cl = [];
+    if (cc.min > 0) {
+      const cDays = new Set(cardios.filter(c => inCur(c.dateStr)).map(c => c.dateStr)).size;
+      let s3 = '有酸素は合計' + nf(cc.min) + '分（約' + nf(cc.kcal) + 'kcal）・実施' + cDays + '日、1回平均' + Math.round(cc.min / Math.max(1, cDays)) + '分。';
+      if (cp.min > 0) { const df = cc.min - cp.min; s3 += PP + '比 ' + (df >= 0 ? '+' : '') + df + '分。'; }
+      cl.push(s3);
+    } else {
+      cl.push('有酸素は' + P + 'まだ実施なし。');
+    }
+    secs.push({ t: '有酸素', lines: cl });
+    const mv = aiMoves(inCur, P);
+    if (mv.length) secs.push({ t: '種目の動き', lines: mv });
+    const hl = aiHighlights(inCur, wk ? r.ws : r.ms);
+    if (hl.length) secs.push({ t: 'ハイライト', lines: hl });
+  }
+  const tt = aiTotals();
+  if (tt.length) secs.push({ t: '通算・節目', lines: tt });
+  return secs;
 }
 function aiPageHtml() {
   const r = anRanges(), wk = anPeriod === 'week';
@@ -641,7 +715,7 @@ function aiPageHtml() {
     '<button type="button" class="dt-x" data-ai="close" aria-label="閉じる">✕</button></div>' +
     '<div class="dt-body"><div class="ai-per">' +
     ['week', 'month'].map(p => '<button type="button" class="gr-btn' + (anPeriod === p ? ' on' : '') + '" data-ai="per" data-p="' + p + '">' + (p === 'week' ? '週間' : '月間') + '</button>').join('') + '</div>' +
-    '<div class="ai-card">' + aiComment().map(t => '<div class="ai-line"><span class="ai-dot">◆</span><span>' + t + '</span></div>').join('') + '</div>' +
+    aiReport().map(s => (s.t ? '<div class="dt-sec">' + s.t + '</div>' : '') + '<div class="ai-card">' + s.lines.map(t => '<div class="ai-line"><span class="ai-dot">◆</span><span>' + t + '</span></div>').join('') + '</div>').join('') +
     '<div class="ai-note">この分析は端末内の記録だけから自動生成しています（外部AI・通信は使っていません）。</div></div>';
 }
 function openAiAnalysis() {
