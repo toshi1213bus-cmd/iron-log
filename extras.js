@@ -567,6 +567,10 @@ function achPageHtml() {
   cats.forEach(c => c.items.forEach(x => { total++; if (x.got) gotN++; }));
   let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">プロフィール</span><span class="ach-count">実績 ' + gotN + '/' + total + '</span></div>' +
     '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">' + profileCardHtml();
+  const bc0 = bodyCalc(), bw0 = latestWeight();
+  h += '<button type="button" class="ach-entry" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
+    (bw0 ? fmtKg(bw0.kg) + 'kg' + (bc0 ? '・目標 ' + nf(bc0.kcal) + 'kcal' : '') : '未入力') +
+    '</span><span class="ach-entry-ar">›</span></span></button>';
   cats.forEach(c => {
     h += '<div class="dt-sec">' + c.label + '</div><div class="ach-grid">' + c.items.map(x =>
       '<div class="ach-item' + (x.got ? '' : ' off') + '">' + achMedal(!!x.got) +
@@ -772,6 +776,7 @@ function leaveAch() {
   leaveLayer();
 }
 function onAchClick(e) {
+  if (e.target.closest('[data-ach="body"]')) { openBodyPage(); return; }
   if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
   if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
 }
@@ -1019,11 +1024,11 @@ padEl.innerHTML =
   '<button type="button" class="np-k np-w2 np-ok" data-k="ok">完了</button>';
 document.body.appendChild(padEl);
 let padInput = null;
-const padKind = el => el.id === 'cardioMinutes' ? 'min' : el.classList.contains('weight-input') ? 'kg' : 'rep';
+const padKind = el => el.id === 'cardioMinutes' ? 'min' : el.id === 'bdKcal' ? 'kcal' : el.classList.contains('weight-input') ? 'kg' : 'rep';
 function padLimitOk(kind, str) {
   const n = parseFloat(str);
   if (!isFinite(n)) return false;
-  return kind === 'kg' ? n <= LIMITS.weight : kind === 'rep' ? n <= LIMITS.reps : n <= CARDIO_MAX;
+  return kind === 'kg' ? n <= LIMITS.weight : kind === 'rep' ? n <= LIMITS.reps : kind === 'kcal' ? n <= 6000 : n <= CARDIO_MAX;
 }
 function syncPad() {
   const half = padEl.querySelector('[data-k="half"]');
@@ -1040,7 +1045,7 @@ window.addEventListener('resize', () => { if (padInput) padMetrics(); });
 function openPad(el) {
   if (padInput && padInput !== el) padInput.classList.remove('np-active');
   padInput = el;
-  padEl.classList.toggle('np-over', !!(el.closest && el.closest('#exDetail, #achPage, #menuEditor'))); /* 全画面ページの中の入力欄では、テンキーをページより手前に出す */
+  padEl.classList.toggle('np-over', !!(el.closest && el.closest('#exDetail, #achPage, #menuEditor, #bodyPage'))); /* 全画面ページの中の入力欄では、テンキーをページより手前に出す */
   padMetrics();
   el.classList.add('np-active');
   padEl.classList.add('show');
@@ -1419,6 +1424,24 @@ PARTS.goals = {
   set: v => { goalsData = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; },
   save: () => writeJson('simple_goals', goalsData)
 };
+/* ===== 身体データ（simple_body：設定／simple_weight：体重ログ）。保存の窓口（transact）へ登録 ===== */
+let bodyData = loadJson('simple_body', null);
+if (!bodyData || typeof bodyData !== 'object' || Array.isArray(bodyData)) bodyData = {};
+if (typeof sanitizeBody === 'function') bodyData = sanitizeBody(bodyData);
+let weightData = (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog(loadJson('simple_weight', null)) : [];
+PARTS.body = {
+  keys: ['simple_body'],
+  get: () => bodyData,
+  set: v => { bodyData = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; },
+  save: () => writeJson('simple_body', bodyData)
+};
+PARTS.weight = {
+  keys: ['simple_weight'],
+  get: () => weightData,
+  set: v => { weightData = Array.isArray(v) ? v : []; },
+  save: () => writeJson('simple_weight', weightData)
+};
+
 window.tplExport = function () { ensureMenu(); return JSON.parse(JSON.stringify(tplData)); };
 /* 復元：新形式はそのまま、旧形式（menuのみ）は各部位の1枠目へ。メモリ上に作るだけ（保存は呼び出し側の transact） */
 window.tplImport = function (rawTpl, rawMenu) {
@@ -1664,7 +1687,7 @@ function navDone() {
   navQueue = [];
   q.forEach(f => { try { f(); } catch (e) { console.log(e); } });
 }
-function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach || s.ai)); }
+function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach || s.ai || s.body)); }
 function enterLayer(flag) {
   try {
     if (layerFlagged()) history.replaceState({ [flag]: 1 }, ''); /* すでに重なり用の履歴があれば差し替え（増やさない） */
@@ -1699,6 +1722,7 @@ window.addEventListener('popstate', () => {
   if (!s.ex) removeDetail();
   if (!s.ach) removeAch();
   if (!s.ai) removeAiPage();
+  if (!s.body) removeBodyPage();
   navDone();
 });
 function leaveEditor() {
@@ -2210,7 +2234,7 @@ window.switchTab = function (name) { showTab(name); };
    復元は JSON 復元の仕組み（検証・件数確認・復元前の控え保存）をそのまま使う ===== */
 const SNAP_KEY = 'simple_snapshots', SNAP_MAX = 7;
 function snapData() {
-  return { version: BACKUP_VERSION, workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, menu: menuData, menuTpl: window.tplExport ? window.tplExport() : null, goals: goalsData };
+  return { version: BACKUP_VERSION, workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, menu: menuData, menuTpl: window.tplExport ? window.tplExport() : null, goals: goalsData, body: bodyData, weight: weightData };
 }
 function loadSnaps() {
   const s = loadJson(SNAP_KEY, []);
@@ -2269,11 +2293,231 @@ function requestPersist() {
   } catch (e) {}
 }
 
+
+/* ===== 身体データ（プロフィールから開く専用ページ）
+   simple_body … 設定 { heightCm, age, sex, goal, life, targetKg, kcalManual }
+   simple_weight … 体重ログ [{ d, kg }]（1日1件・日付順）
+   計算は目安：基礎代謝（ミフリン式）×活動量（日常の動き＋直近4週の運動量）→ 維持カロリー → 目標タイプで調整 → PFC配分 ===== */
+const BODY_GOALS = { cut: { label: '減量', adj: -400 }, bulk: { label: '増量', adj: 250 }, recomp: { label: 'リコンプ', adj: 0 } };
+const BODY_LIFE = { low: { label: '座り中心', f: 1.2 }, mid: { label: '普通', f: 1.375 }, high: { label: 'よく動く', f: 1.55 } };
+function weightOn(ds) { const e = weightData.find(x => x.d === ds); return e ? e.kg : null; }
+function latestWeight() { return weightData.length ? weightData[weightData.length - 1] : null; }
+function weightAvg(fromDs, toDs) {
+  const xs = weightData.filter(x => x.d >= fromDs && x.d <= toDs);
+  return xs.length ? xs.reduce((a, x) => a + x.kg, 0) / xs.length : null;
+}
+function weeklyAvgWeight() { return weightAvg(dstr(new Date(Date.now() - 6 * 86400000)), dstr(new Date())); }
+function bmrOf(b, kg) { const base = 10 * kg + 6.25 * b.heightCm - 5 * b.age; return b.sex === 'f' ? base - 161 : base + 5; }
+/* 活動量：日常の動き（設定）＋運動分（直近4週のトレ日数・有酸素から自動。上限つき） */
+function activityFactor() {
+  let f = (BODY_LIFE[bodyData.life] || BODY_LIFE.mid).f;
+  const since = dstr(new Date(Date.now() - 27 * 86400000));
+  const days = new Set(workouts.filter(w => w.dateStr >= since).map(w => w.dateStr)).size;
+  const cmin = cardios.filter(c => c.dateStr >= since).reduce((a, c) => a + c.minutes, 0);
+  const bonus = Math.min(0.17, (days / 4) * 0.03 + (cmin / 4 / 60) * 0.01);
+  return { f: f + bonus, trainWk: days / 4, cardioWk: Math.round(cmin / 4) };
+}
+/* 推奨カロリー・PFCの計算。材料（身長・年齢・性別・体重）が足りなければ null */
+function bodyCalc() {
+  const b = bodyData, lw = latestWeight();
+  if (!lw || !(b.heightCm > 0) || !(b.age > 0) || (b.sex !== 'm' && b.sex !== 'f')) return null;
+  const kg = lw.kg;
+  const act = activityFactor();
+  const maint = Math.round(bmrOf(b, kg) * act.f / 10) * 10;
+  const goal = BODY_GOALS[b.goal] ? b.goal : 'recomp';
+  const kcal = b.kcalManual > 0 ? b.kcalManual : maint + BODY_GOALS[goal].adj;
+  const pG = Math.round(kg * 2), fG = Math.round(kcal * 0.25 / 9);
+  const cG = Math.max(0, Math.round((kcal - pG * 4 - fG * 9) / 4));
+  return { kg: kg, date: lw.d, avg: weeklyAvgWeight(), bmi: Math.round(kg / Math.pow(b.heightCm / 100, 2) * 10) / 10,
+    bmr: Math.round(bmrOf(b, kg)), factor: act.f, maint: maint, goal: goal, kcal: kcal, manual: b.kcalManual > 0,
+    pG: pG, fG: fG, cG: cG, trainWk: act.trainWk, cardioWk: act.cardioWk };
+}
+let bodyEl = null; /* 身体データページ（全画面） */
+let bodyState = { date: null, form: null };
+function shiftDate(ds, n) { const p = ds.split('-').map(Number); return dstr(new Date(p[0], p[1] - 1, p[2] + n)); }
+function openBodyPage() {
+  openLayer('body', () => !bodyEl && !aiEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    if (achEl) removeAch();
+    bodyState = { date: dstr(new Date()),
+      form: { height: bodyData.heightCm || '', age: bodyData.age || '', sex: bodyData.sex || '',
+        goal: bodyData.goal || 'recomp', life: bodyData.life || 'mid',
+        target: bodyData.targetKg || '', kcal: bodyData.kcalManual || '' } };
+    bodyEl = document.createElement('div');
+    bodyEl.id = 'bodyPage';
+    bodyEl.setAttribute('role', 'dialog');
+    bodyEl.setAttribute('aria-modal', 'true');
+    bodyEl.addEventListener('click', onBodyClick);
+    document.body.appendChild(bodyEl);
+    return () => { bodyEl.innerHTML = bodyPageHtml(); };
+  });
+}
+function removeBodyPage() {
+  if (!bodyEl) return;
+  closePad();
+  bodyEl.remove();
+  bodyEl = null;
+}
+function leaveBodyPage() {
+  if (!bodyEl) return;
+  removeBodyPage();
+  leaveLayer();
+}
+function paintBodyPage() { if (bodyEl) bodyEl.innerHTML = bodyPageHtml(); }
+/* 再描画の前に、設定フォームの入力途中を下書きへ退避する（描き直しで消えないように） */
+function stashBodyForm() {
+  if (!bodyEl || !bodyState.form) return;
+  const g = id => { const e = bodyEl.querySelector(id); return e ? e.value : ''; };
+  bodyState.form.height = g('#bdHeight'); bodyState.form.age = g('#bdAge');
+  bodyState.form.target = g('#bdTarget'); bodyState.form.kcal = g('#bdKcal');
+}
+function bodyPageHtml() {
+  const b = bodyData, f = bodyState.form, c = bodyCalc(), lw = latestWeight();
+  const row = (k, v) => '<div class="dt-row"><div class="hm-lb">' + k + '</div><div><span class="dt-v">' + v + '</span></div></div>';
+  let h = '<div class="dt-head"><div class="dt-ttl"><div class="dt-name">身体データ</div><div class="hm-en">BODY DATA</div></div>' +
+    '<button type="button" class="dt-x" data-bd="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
+  /* 現在 */
+  h += '<div class="dt-sec">現在</div>';
+  if (lw) {
+    h += row('最新体重', fmtKg(lw.kg) + 'kg') + '<div class="dt-row"><div class="hm-lb">記録日</div><div><span class="dt-date">' + fmtD(lw.d) + '</span></div></div>';
+    const avg = weeklyAvgWeight();
+    if (avg !== null) h += row('週平均体重', fmtKg(Math.round(avg * 10) / 10) + 'kg');
+    if (b.heightCm > 0) h += row('BMI', String(Math.round(lw.kg / Math.pow(b.heightCm / 100, 2) * 10) / 10));
+    if (b.targetKg > 0) {
+      const diff = Math.round((lw.kg - b.targetKg) * 10) / 10;
+      let prog = '';
+      const first = weightData[0];
+      if (first && first.kg !== b.targetKg) {
+        const p = Math.round((first.kg - lw.kg) / (first.kg - b.targetKg) * 100);
+        if (p > 0 && p < 100) prog = '<div class="pf-bar"><i style="width:' + p + '%"></i></div>';
+      }
+      h += row('目標体重', fmtKg(b.targetKg) + 'kg') +
+        row('目標まで', diff === 0 ? '達成！' : 'あと' + fmtKg(Math.abs(diff)) + 'kg') + prog;
+    }
+  } else {
+    h += '<div class="ai-card"><div class="ai-line"><span>まだ体重の記録がありません。下の「体重を記録」から入れてください。</span></div></div>';
+  }
+  /* 体重を記録 */
+  const d = bodyState.date, cur = weightOn(d), today = dstr(new Date());
+  h += '<div class="dt-sec">体重を記録</div><div class="bd-form">' +
+    '<div class="bd-daterow"><button type="button" class="snap-btn" data-bd="dprev">◀</button>' +
+    '<span class="bd-date">' + fmtD(d) + (d === today ? '（今日）' : '') + '</span>' +
+    '<button type="button" class="snap-btn" data-bd="dnext"' + (d >= today ? ' disabled' : '') + '>▶</button></div>' +
+    '<div class="bd-wrow"><input id="bdWeight" class="bd-input weight-input" type="text" readonly inputmode="none" placeholder="体重 kg" value="' + (cur !== null ? cur : '') + '">' +
+    '<button type="button" class="goal-btn" data-bd="wsave">保存</button>' +
+    (cur !== null ? '<button type="button" class="goal-btn danger" data-bd="wdel">削除</button>' : '') + '</div></div>';
+  /* 推移グラフ（直近30件：日々の体重＋週平均＋目標線） */
+  h += '<div class="dt-sec">推移</div>';
+  if (weightData.length >= 2) {
+    const xs = weightData.slice(-30);
+    const vs = xs.map(x => x.kg);
+    const av = xs.map(x => { const a = weightAvg(shiftDate(x.d, -6), x.d); return a === null ? x.kg : Math.round(a * 10) / 10; });
+    let mn = Math.min(...vs, ...av), mx = Math.max(...vs, ...av);
+    if (b.targetKg > 0) { mn = Math.min(mn, b.targetKg); mx = Math.max(mx, b.targetKg); }
+    h += '<div class="bd-graph"><div class="bd-leg"><span class="lg-g">体重</span><span class="lg-r">週平均</span></div>' +
+      line(vs, 340, 170, xs.map(x => x.d), av, null, { min: Math.floor(mn - 1), max: Math.ceil(mx + 1), fmtV: x => x }, null, b.targetKg > 0 ? b.targetKg : null) + '</div>';
+  } else {
+    h += '<div class="ai-card"><div class="ai-line"><span>2日分たまると推移グラフが出ます。</span></div></div>';
+  }
+  /* 記録リスト（新しい順・最大14件） */
+  if (weightData.length) {
+    h += '<div class="dt-sec">記録</div>' + weightData.slice(-14).reverse().map(x =>
+      '<div class="dt-row bd-witem" data-bd="wload" data-d="' + x.d + '" role="button"><div class="hm-lb">' + fmtD(x.d) + '</div><div><span class="dt-v">' + fmtKg(x.kg) + 'kg</span></div></div>').join('');
+  }
+  /* 設定 */
+  const chips = (key, opts, val) => '<span class="bd-chips">' + opts.map(o =>
+    '<button type="button" class="gr-btn' + (val === o[0] ? ' on' : '') + '" data-bd="' + key + '" data-v="' + o[0] + '">' + o[1] + '</button>').join('') + '</span>';
+  const frow = (k, inner) => '<div class="dt-row"><div class="hm-lb">' + k + '</div><div>' + inner + '</div></div>';
+  h += '<div class="dt-sec">設定</div>' +
+    frow('身長', '<input id="bdHeight" class="bd-input reps-input" type="text" readonly inputmode="none" placeholder="cm" value="' + f.height + '"> cm') +
+    frow('年齢', '<input id="bdAge" class="bd-input reps-input" type="text" readonly inputmode="none" placeholder="歳" value="' + f.age + '"> 歳') +
+    frow('性別', chips('sex', [['m', '男'], ['f', '女']], f.sex)) +
+    frow('目標', chips('goal', [['cut', '減量'], ['bulk', '増量'], ['recomp', 'リコンプ']], f.goal)) +
+    frow('日常の動き', chips('life', [['low', '座り中心'], ['mid', '普通'], ['high', 'よく動く']], f.life)) +
+    frow('目標体重', '<input id="bdTarget" class="bd-input weight-input" type="text" readonly inputmode="none" placeholder="kg" value="' + f.target + '"> kg') +
+    frow('目標カロリー', '<input id="bdKcal" class="bd-input reps-input" type="text" readonly inputmode="none" placeholder="自動" value="' + f.kcal + '"> kcal') +
+    '<div class="bd-saverow"><button type="button" class="goal-btn" data-bd="save">設定を保存</button></div>' +
+    '<div class="ai-note">目標カロリーを空にすると自動計算になります。手入力した間は自動補正（第2弾）も止まります。</div>';
+  /* 推奨 */
+  h += '<div class="dt-sec">推奨</div>';
+  if (c) {
+    h += row('基礎代謝', nf(c.bmr) + 'kcal') +
+      row('維持カロリー推定', nf(c.maint) + 'kcal') +
+      '<div class="ai-card"><div class="ai-line"><span>活動量は「' + (BODY_LIFE[b.life] || BODY_LIFE.mid).label + '」＋運動分（直近4週：トレ週' + (Math.round(c.trainWk * 10) / 10) + '回・有酸素週' + c.cardioWk + '分）で計算しています。</span></div></div>' +
+      row('目標カロリー', nf(c.kcal) + 'kcal' + (c.manual ? '（手入力）' : '')) +
+      row('目標PFC', 'P ' + c.pG + 'g ／ F ' + c.fG + 'g ／ C ' + c.cG + 'g') +
+      '<div class="ai-note">P＝体重×2g、F＝目標カロリーの25%、残りをCで計算した目安です。</div>';
+  } else {
+    h += '<div class="ai-card"><div class="ai-line"><span>身長・年齢・性別と体重がそろうと、推奨カロリーと目標PFCを計算します。</span></div></div>';
+  }
+  return h + '</div>';
+}
+async function onBodyClick(e) {
+  const btn = e.target.closest('[data-bd]');
+  if (!btn) {
+    if (e.target === bodyEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveBodyPage();
+    return;
+  }
+  const act = btn.dataset.bd;
+  if (act === 'close') { leaveBodyPage(); return; }
+  if (act === 'sex' || act === 'goal' || act === 'life') {
+    bodyState.form[act] = btn.dataset.v;
+    btn.parentElement.querySelectorAll('.gr-btn').forEach(x => x.classList.toggle('on', x === btn));
+    return;
+  }
+  if (act === 'dprev' || act === 'dnext') {
+    stashBodyForm();
+    const nd = shiftDate(bodyState.date, act === 'dprev' ? -1 : 1);
+    if (nd <= dstr(new Date())) { bodyState.date = nd; paintBodyPage(); }
+    return;
+  }
+  if (act === 'wload') { stashBodyForm(); bodyState.date = btn.dataset.d; paintBodyPage(); const sc = bodyEl.querySelector('.dt-body'); if (sc) sc.scrollTop = 0; return; }
+  if (act === 'wsave') {
+    const inp = bodyEl.querySelector('#bdWeight');
+    const v = inp ? parseFloat(inp.value) : NaN;
+    if (!isFinite(v) || v < 30 || v > 300) { alert('体重は30〜300kgで入れてください。'); return; }
+    const kg = Math.round(v * 10) / 10, d = bodyState.date;
+    const ok = transact(['weight'], () => {
+      const i = weightData.findIndex(x => x.d === d);
+      if (i >= 0) weightData[i].kg = kg; else { weightData.push({ d: d, kg: kg }); weightData.sort((a, z) => a.d < z.d ? -1 : 1); }
+    });
+    if (ok) { stashBodyForm(); paintBodyPage(); alert('体重を保存しました。'); }
+    return;
+  }
+  if (act === 'wdel') {
+    const d = bodyState.date;
+    if (!(await ask(fmtD(d) + 'の体重記録を削除しますか？', '削除'))) return;
+    const ok = transact(['weight'], () => { const i = weightData.findIndex(x => x.d === d); if (i >= 0) weightData.splice(i, 1); });
+    if (ok) { stashBodyForm(); paintBodyPage(); }
+    return;
+  }
+  if (act === 'save') {
+    stashBodyForm();
+    const f = bodyState.form;
+    const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+    const height = num(f.height), age = num(f.age), target = num(f.target), kcal = num(f.kcal);
+    if (height !== null && (height < 100 || height > 230)) { alert('身長は100〜230cmで入れてください。'); return; }
+    if (age !== null && (age < 10 || age > 100)) { alert('年齢は10〜100で入れてください。'); return; }
+    if (target !== null && (target < 30 || target > 300)) { alert('目標体重は30〜300kgで入れてください。'); return; }
+    if (kcal !== null && (kcal < 800 || kcal > 6000)) { alert('目標カロリーは800〜6000kcalで入れてください。'); return; }
+    const nb = {};
+    if (height !== null) nb.heightCm = Math.round(height);
+    if (age !== null) nb.age = Math.round(age);
+    if (f.sex === 'm' || f.sex === 'f') nb.sex = f.sex;
+    nb.goal = BODY_GOALS[f.goal] ? f.goal : 'recomp';
+    nb.life = BODY_LIFE[f.life] ? f.life : 'mid';
+    if (target !== null) nb.targetKg = Math.round(target * 10) / 10;
+    if (kcal !== null) nb.kcalManual = Math.round(kcal);
+    const ok = transact(['body'], () => { bodyData = nb; });
+    if (ok) { bodyState.form = { height: nb.heightCm || '', age: nb.age || '', sex: nb.sex || '', goal: nb.goal, life: nb.life, target: nb.targetKg || '', kcal: nb.kcalManual || '' }; paintBodyPage(); alert('設定を保存しました。'); }
+    return;
+  }
+}
+
 /* ===== テスト用窓口（test.html 専用。通常の画面からは使われない）
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v42',
+  version: 'extras v43',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2283,13 +2527,22 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData }; },
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight,
+  sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
+  sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
+  data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },
   swap: function (fx) {
-    const keep = { w: workouts, c: cardios, p: dayPplMap, g: goalsData };
+    const keep = { w: workouts, c: cardios, p: dayPplMap, g: goalsData, b: bodyData, wt: weightData };
     workouts = fx.workouts || []; cardios = fx.cardios || []; dayPplMap = fx.dayPplMap || {}; goalsData = fx.goalsData || {};
+    if (fx.bodyData !== undefined) bodyData = fx.bodyData;
+    if (fx.weightData !== undefined) weightData = fx.weightData;
     return keep;
   },
-  restore: function (keep) { workouts = keep.w; cardios = keep.c; dayPplMap = keep.p; goalsData = keep.g; }
+  restore: function (keep) {
+    workouts = keep.w; cardios = keep.c; dayPplMap = keep.p; goalsData = keep.g;
+    if (keep.b !== undefined) bodyData = keep.b;
+    if (keep.wt !== undefined) weightData = keep.wt;
+  }
 };
 
 /* 起動：1手順ずつ実行し、要素が無いなどで1つ失敗しても後続の初期化を止めない

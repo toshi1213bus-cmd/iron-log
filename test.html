@@ -178,6 +178,27 @@ async function main() {
     return d.workouts.length === 1 && d.workouts[0].name === 'デッドリフト' && d.workouts[0].setList[0].weight === 100;
   });
 
+  test('身体計算', () => {
+    T.swap({ workouts: [], cardios: [], dayPplMap: {}, goalsData: {},
+      bodyData: { heightCm: 170, age: 30, sex: 'm', goal: 'cut', life: 'mid' },
+      weightData: [{ d: iso(0), kg: 70 }] });
+    const c = T.bodyCalc();
+    return !!c && c.maint === 2220 && c.kcal === 1820 && c.pG === 140 && c.fG === 51 && c.cG === 200 && c.bmi === 24.2;
+  });
+  test('週平均体重', () => {
+    T.swap({ workouts: [], cardios: [], dayPplMap: {}, goalsData: {}, bodyData: {},
+      weightData: [{ d: iso(-10), kg: 80 }, { d: iso(-6), kg: 72 }, { d: iso(-3), kg: 71 }, { d: iso(0), kg: 70 }] });
+    return T.weeklyAvgWeight() === 71;
+  });
+  test('体重データの検証', () => {
+    const out = T.sanitizeWeightLog([
+      { d: iso(-1), kg: 70.04 }, { d: '2026-02-30', kg: 70 }, { d: iso(-2), kg: 500 }, { d: iso(-1), kg: 71 }
+    ]);
+    return out.length === 1 && out[0].d === iso(-1) && out[0].kg === 71;
+  });
+  test('身体設定の検証', () => eq(T.sanitizeBody({ heightCm: 170.4, age: 30, sex: 'x', goal: 'cut', life: 'mid', targetKg: 65.54, kcalManual: 100 }),
+    { heightCm: 170, age: 30, goal: 'cut', life: 'mid', targetKg: 65.5 }));
+
   const backup = dumpStorage();
   const keep = T.swap(fx);
   const results = [];

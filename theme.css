@@ -455,7 +455,7 @@ body .ex-toggle-icon.is-open {
 /* ================= 種目の編集 ================= */
 .ms-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; }
 .ms-t { flex: none; width: 52px; font-size: 11px; letter-spacing: 0.2em; color: var(--gold); font-weight: 500; }
-#menuEditor, #exDetail, #achPage, #aiPage { position: fixed; inset: 0; max-width: 28rem; margin: 0 auto; background: var(--bg); z-index: 120; display: flex; flex-direction: column; }
+#menuEditor, #exDetail, #achPage, #aiPage, #bodyPage { position: fixed; inset: 0; max-width: 28rem; margin: 0 auto; background: var(--bg); z-index: 120; display: flex; flex-direction: column; }
 .me-head { padding: 14px 16px 0; border-bottom: 1px solid var(--line); }
 .me-tabs { display: grid; grid-template-columns: repeat(4, 1fr); margin: 12px -16px 0; }
 .me-tabs button { padding: 12px 0; font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
@@ -883,3 +883,21 @@ button:active { transform: scale(.95); }
 /* ===== スナップショット（設定の自動バックアップ欄） ===== */
 .snap-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 12px; color: var(--text); }
 .snap-btn { flex: none; padding: 5px 12px; background: none; border: 1px solid var(--gold-line); border-radius: 3px; color: var(--gold); font-size: 11px; cursor: pointer; }
+
+/* ================= 身体データページ ================= */
+.bd-input { width: 110px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--text); font-size: 14px; }
+.bd-form { padding: 4px 14px 0; }
+.bd-daterow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.bd-date { font-size: 14px; }
+.bd-wrow { display: flex; align-items: center; gap: 8px; }
+.bd-chips { display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.bd-saverow { padding: 12px 14px 0; }
+.bd-graph { margin: 0 14px; }
+.bd-graph .hm-leg { display: none; }
+.bd-leg { display: flex; justify-content: flex-end; gap: 14px; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+.bd-leg span { display: inline-flex; align-items: center; gap: 5px; }
+.bd-leg span::before { content: ''; display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
+.bd-leg .lg-g::before { background: #c9a96a; }
+.bd-leg .lg-r { color: #e58984; }
+.bd-leg .lg-r::before { background: #d96b66; }
+.bd-witem { cursor: pointer; }
