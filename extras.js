@@ -1795,6 +1795,69 @@ function detailDaysHtml(st, visible) {
       sets.map((s, i) => '<div class="dt-set"><span class="dt-sn">' + (i + 1) + '.</span><span>' + fmtSet(s) + '</span></div>').join('') + '</div></div>';
   }).join('');
 }
+/* ===== 種目名の変更・統合（詳細ページの「名前変更」から）
+   記録・目標・メニューの名前を一括で書き換える。既存の名前に変えると統合になる（元に戻せないので確認を強めにし、変更前の控えを残す） ===== */
+function renameCandidates() {
+  const cur = detailState.name.trim();
+  const set = new Set();
+  workouts.forEach(w => { const n = w.name.trim(); if (n && n !== cur) set.add(n); });
+  return [...set].sort();
+}
+function renameEditorHtml() {
+  const others = renameCandidates();
+  return '<div class="dt-sec">種目名の変更</div><div class="ren-box">' +
+    '<input id="renInput" class="ren-input" type="text" placeholder="新しい種目名">' +
+    '<div class="ren-note">既存の種目名に変更すると、その種目と統合されます（統合は元に戻せません）。</div>' +
+    (others.length ? '<div class="ren-chips">' + others.map((n, i) => '<button type="button" class="ren-chip" data-dt="rename-pick" data-i="' + i + '">' + escapeHtml(n) + '</button>').join('') + '</div>' : '') +
+    '<div class="ren-btns"><button type="button" class="goal-btn" data-dt="rename-save">変更する</button><button type="button" class="goal-btn" data-dt="rename-cancel">キャンセル</button></div></div>';
+}
+function renameInMenu(oldName, newName) {
+  ensureMenu();
+  if (!tplData) return;
+  TYPES.forEach(t => {
+    tplData[t].slots.forEach(s => {
+      const mapped = { on: s.on.map(n => String(n).trim() === oldName ? newName : n), off: s.off.map(n => String(n).trim() === oldName ? newName : n) };
+      const fixed = normMenu({ [t]: mapped })[t]; /* 重複の除去と on/off の競合解消は既存の正規化に任せる */
+      s.on = fixed.on;
+      s.off = fixed.off;
+    });
+  });
+  syncMenuFromTpl();
+}
+/* 名前書き換えの実処理（記録・目標・メニュー）。呼び出し側の transact の中で使う */
+function applyRename(oldName, newName, goalKeys) {
+  workouts.forEach(w => { if (w.name.trim() === oldName) w.name = newName; });
+  (goalKeys || [oldName]).forEach(k => {
+    if (Object.prototype.hasOwnProperty.call(goalsData, k)) {
+      if (!Object.prototype.hasOwnProperty.call(goalsData, newName)) goalsData[newName] = goalsData[k];
+      delete goalsData[k];
+    }
+  });
+  renameInMenu(oldName, newName);
+}
+async function renameExercise(rawName, newName) {
+  const oldName = rawName.trim();
+  const cnt = n => workouts.filter(w => w.name.trim() === n).length;
+  const oldCount = cnt(oldName), targetCount = cnt(newName);
+  const merging = targetCount > 0;
+  const msg = merging
+    ? '『' + escapeHtml(oldName) + '』の記録 ' + oldCount + '件を、既存の『' + escapeHtml(newName) + '』（' + targetCount + '件）と統合します。合計 ' + (oldCount + targetCount) + '件になります。<br>統合は元に戻せません。よろしいですか？'
+    : '『' + escapeHtml(oldName) + '』の記録 ' + oldCount + '件の名前を『' + escapeHtml(newName) + '』に変更します。よろしいですか？';
+  if (!(await ask(msg, merging ? '統合' : '変更'))) return;
+  const goalKeys = [...new Set([rawName, oldName])];
+  const ok = transact(['workouts', 'goals', 'menu'], () => {
+    if (!writeJson('simple_pre_restore', { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, menu: menuData, goals: goalsData })) return false;
+    applyRename(oldName, newName, goalKeys);
+  }, { failMsg: '名前の変更に失敗しました。元のデータに戻しました。' });
+  if (ok) {
+    detailState.name = newName;
+    detailState.rename = false;
+    detailState.g = null;
+    renderDetail();
+    requestRender('all');
+    alert('種目名を' + (merging ? '統合' : '変更') + 'しました');
+  }
+}
 /* 目標の行（自己ベストの下に1行＋細いバーだけ。スクロール無しで見える今の詳細ページを崩さない） */
 function fmtKg(v) { return String(Math.round(v * 10) / 10); }
 function goalRowHtml(st) {
@@ -1820,14 +1883,14 @@ function renderDetail() {
   if (!detailEl || !detailState) return;
   const st = detailStats(detailState.name);
   let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">' + escapeHtml(detailState.name) + '</span>' + lastDoneHtml(st) + '</div>' +
-    '<button type="button" class="dt-x" data-dt="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
+    '<button type="button" class="dt-ren" data-dt="rename">名前変更</button><button type="button" class="dt-x" data-dt="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
   if (!st.days.length) {
-    detailEl.innerHTML = h + '<div class="hm-sub dt-pad">この種目の記録がまだありません。</div></div>';
+    detailEl.innerHTML = h + (detailState.rename ? renameEditorHtml() : '') + '<div class="hm-sub dt-pad">この種目の記録がまだありません。</div></div>';
     return;
   }
   const best = x => x ? '<div class="dt-row"><div class="hm-lb">' + x.k + '</div><div><span class="dt-v">' + x.v + '</span><span class="dt-date">' + fmtD(x.d) + '</span></div></div>' : '';
   const cellv = (k, v, u) => '<div class="dt-cell"><div class="hm-lb">' + k + '</div><div class="dt-v">' + v + '<span class="dt-u">' + u + '</span></div></div>';
-  h += '<div class="dt-sec">基本サマリー</div><div class="dt-grid">' +
+  h += (detailState.rename ? renameEditorHtml() : '') + '<div class="dt-sec">基本サマリー</div><div class="dt-grid">' +
     cellv('総実施回数', st.days.length, '回') + cellv('累計総負荷', Math.round(st.vol).toLocaleString(), 'kg') + '</div>' +
     '<div class="dt-sec">自己ベスト（PR）</div>' +
     best(st.pw && { k: '最大重量', v: st.pw.v + 'kg', d: st.pw.d }) +
@@ -1867,6 +1930,24 @@ function onDetailClick(e) {
   } else if (a === 'pt') {
     const i = parseInt(b.dataset.gi, 10);
     if (!isNaN(i)) { detailState.g = i; paintDetailGraph(); }
+  } else if (a === 'rename') {
+    detailState.rename = true;
+    renderDetail();
+    const rin = detailEl.querySelector('#renInput');
+    if (rin) { rin.value = detailState.name; rin.focus(); }
+  } else if (a === 'rename-cancel') {
+    detailState.rename = false;
+    renderDetail();
+  } else if (a === 'rename-pick') {
+    const rin = detailEl.querySelector('#renInput');
+    const picked = renameCandidates()[parseInt(b.dataset.i, 10)];
+    if (rin && picked) rin.value = picked;
+  } else if (a === 'rename-save') {
+    const rin = detailEl.querySelector('#renInput');
+    const newName = rin ? rin.value.trim().slice(0, LIMITS.name) : '';
+    if (!newName) { alert('新しい種目名を入力してください。'); return; }
+    if (newName === detailState.name.trim()) { detailState.rename = false; renderDetail(); return; }
+    renameExercise(detailState.name, newName);
   } else if (a === 'goal') {
     detailState.goalEdit = true;
     renderDetail();
