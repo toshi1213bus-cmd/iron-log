@@ -1136,6 +1136,15 @@ PARTS.menu = {
   set: v => { tplData = v.tpl; menuData = v.menu; },
   save: () => { syncMenuFromTpl(); return writeJson(TPL_KEY, tplData) && writeJson('simple_menu', menuData); }
 };
+/* ===== 種目別の目標重量（simple_goals：{ 種目名: 目標kg }）。保存の窓口（transact）へ登録 ===== */
+let goalsData = loadJson('simple_goals', {});
+if (!goalsData || typeof goalsData !== 'object' || Array.isArray(goalsData)) goalsData = {};
+PARTS.goals = {
+  keys: ['simple_goals'],
+  get: () => goalsData,
+  set: v => { goalsData = (v && typeof v === 'object' && !Array.isArray(v)) ? v : {}; },
+  save: () => writeJson('simple_goals', goalsData)
+};
 window.tplExport = function () { ensureMenu(); return JSON.parse(JSON.stringify(tplData)); };
 /* 復元：新形式はそのまま、旧形式（menuのみ）は各部位の1枠目へ。メモリ上に作るだけ（保存は呼び出し側の transact） */
 window.tplImport = function (rawTpl, rawMenu) {
@@ -1688,6 +1697,27 @@ function detailDaysHtml(st, visible) {
       sets.map((s, i) => '<div class="dt-set"><span class="dt-sn">' + (i + 1) + '.</span><span>' + fmtSet(s) + '</span></div>').join('') + '</div></div>';
   }).join('');
 }
+/* 目標の行（自己ベストの下に1行＋細いバーだけ。スクロール無しで見える今の詳細ページを崩さない） */
+function fmtKg(v) { return String(Math.round(v * 10) / 10); }
+function goalRowHtml(st) {
+  const g = goalsData[detailState.name];
+  const bestW = st.pw ? st.pw.v : 0;
+  if (detailState.goalEdit) {
+    return '<div class="dt-row"><div class="hm-lb">目標</div><div class="goal-edit">' +
+      '<input id="goalInput" class="goal-input" type="text" inputmode="decimal" placeholder="目標kg" value="' + (g ? fmtKg(g) : '') + '">' +
+      '<button type="button" class="goal-btn" data-dt="goal-save">保存</button>' +
+      '<button type="button" class="goal-btn" data-dt="goal-cancel">取消</button>' +
+      (g ? '<button type="button" class="goal-btn danger" data-dt="goal-del">削除</button>' : '') +
+      '</div></div>';
+  }
+  if (!g) {
+    return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="dt-v goal-none">未設定</span><span class="dt-date">タップで設定</span></div></div>';
+  }
+  const pct = Math.floor(bestW / g * 100);
+  const sub = bestW >= g ? '<span class="dt-date goal-done">達成！</span>' : '<span class="dt-date">あと' + fmtKg(g - bestW) + 'kg・' + pct + '%</span>';
+  return '<div class="dt-row goal-row" data-dt="goal" role="button"><div class="hm-lb">目標</div><div><span class="dt-v">' + fmtKg(g) + 'kg</span>' + sub + '</div></div>' +
+    '<div class="goal-bar"><i style="width:' + Math.min(100, pct) + '%"></i></div>';
+}
 function renderDetail() {
   if (!detailEl || !detailState) return;
   const st = detailStats(detailState.name);
@@ -1705,6 +1735,7 @@ function renderDetail() {
     best(st.pw && { k: '最大重量', v: st.pw.v + 'kg', d: st.pw.d }) +
     best(st.p1 && { k: '推定1RM', v: st.p1.v + 'kg', d: st.p1.d }) +
     best(st.ps && { k: '1日スコア', v: st.ps.v, d: st.ps.d }) +
+    goalRowHtml(st) +
     '<div class="dt-sec dt-sec-row"><span>グラフ・推移</span><div class="dt-n">' +
     DETAIL_COUNTS.map(n => '<button type="button" class="gr-btn' + (n === detailState.n ? ' on' : '') + '" data-dt="n" data-n="' + n + '" aria-pressed="' + (n === detailState.n ? 'true' : 'false') + '">' + n + '件</button>').join('') +
     '</div></div><div class="dt-graph" id="dtGraph">' + detailGraphHtml(detailState.name, detailState.n) + '</div><div class="gr-info" id="dtInfo">' + detailInfoHtml(detailState.name, detailState.n) + '</div>' +
@@ -1738,6 +1769,23 @@ function onDetailClick(e) {
   } else if (a === 'pt') {
     const i = parseInt(b.dataset.gi, 10);
     if (!isNaN(i)) { detailState.g = i; paintDetailGraph(); }
+  } else if (a === 'goal') {
+    detailState.goalEdit = true;
+    renderDetail();
+    const inp = detailEl.querySelector('#goalInput');
+    if (inp) { inp.focus(); inp.select(); }
+  } else if (a === 'goal-cancel') {
+    detailState.goalEdit = false;
+    renderDetail();
+  } else if (a === 'goal-save') {
+    const inp = detailEl.querySelector('#goalInput');
+    const v = inp ? parseFloat(String(inp.value).replace(/[^0-9.]/g, '')) : NaN;
+    if (!(v > 0) || v > LIMITS.weight) { alert('目標は 0 より大きく ' + LIMITS.weight + 'kg 以下で入力してください。'); return; }
+    const nm = detailState.name;
+    if (transact(['goals'], () => { goalsData[nm] = Math.round(v * 10) / 10; })) { detailState.goalEdit = false; renderDetail(); }
+  } else if (a === 'goal-del') {
+    const nm = detailState.name;
+    if (transact(['goals'], () => { delete goalsData[nm]; })) { detailState.goalEdit = false; renderDetail(); }
   } else if (a === 'day') {
     const body = b.nextElementSibling, ic = b.querySelector('.ex-toggle-icon');
     if (!body) return;

@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=31">
+<link rel="stylesheet" href="theme.css?v=32">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -302,6 +302,17 @@ function sanitizeDayPpl(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   Object.keys(raw).forEach(k => {
     if (isRealDate(k) && PPL_TYPES.includes(raw[k])) out[k] = raw[k];
+  });
+  return out;
+}
+/* 目標（{ 種目名: 目標kg }）の検証：名前と数値の範囲が正しいものだけ通す */
+function sanitizeGoals(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.keys(raw).forEach(k => {
+    const name = String(k).trim().slice(0, LIMITS.name);
+    const v = typeof raw[k] === 'number' ? raw[k] : parseFloat(raw[k]);
+    if (name && isFinite(v) && v > 0 && v <= LIMITS.weight) out[name] = Math.round(v * 10) / 10;
   });
   return out;
 }
@@ -1171,7 +1182,8 @@ function exportData() {
     cardios: cardios,
     dayPplMap: dayPplMap,
     menu: menuData,
-    menuTpl: window.tplExport ? window.tplExport() : null
+    menuTpl: window.tplExport ? window.tplExport() : null,
+    goals: goalsData
   };
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
   const a = document.createElement('a');
@@ -1230,7 +1242,7 @@ async function importFromJsonText() {
     alert('JSONの形式が正しくありません。入力内容を確認してください。');
     return;
   }
-  let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null;
+  let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null, rawGoals; /* rawGoals が undefined の間は「バックアップに目標なし＝今の目標を残す」 */
   let oldVersionLabel = null; /* 古い版のバックアップのときだけ入る（警告に使う） */
   if (Array.isArray(imported)) {
     rawWorkouts = imported;
@@ -1255,6 +1267,7 @@ async function importFromJsonText() {
     rawCardios = Array.isArray(imported.cardios) ? imported.cardios : [];
     rawPpl = imported.dayPplMap || {};
     rawMenu = (imported.menu && typeof imported.menu === 'object') ? imported.menu : null;
+    rawGoals = (imported.goals && typeof imported.goals === 'object' && !Array.isArray(imported.goals)) ? sanitizeGoals(imported.goals) : undefined;
     rawTpl = (imported.menuTpl && typeof imported.menuTpl === 'object' && !Array.isArray(imported.menuTpl)) ? imported.menuTpl : null;
   } else {
     alert('バックアップの形式が違います。記録は変更していません。');
@@ -1269,17 +1282,20 @@ async function importFromJsonText() {
     return;
   }
   /* 2) 件数を見せて確認（除外があればその件数も） */
-  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件で上書きします。` +
+  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件` + (rawGoals !== undefined ? `・目標 ${Object.keys(rawGoals).length}件` : '') + `で上書きします。` +
     (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') +
     (oldVersionLabel ? `<br>⚠ 古い版（${oldVersionLabel}）のバックアップです。内容を確認してください。` : '') + 'よろしいですか？';
   if (!(await askConfirm(msg, '復元'))) return;
   /* 3) 上書き前の状態を simple_pre_restore に控えてから、記録・有酸素・部位・メニューを1つの取引で入れ替える。
         失敗したらメモリ・保存領域とも全部元に戻す */
-  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData };
-  const ok = transact(['workouts', 'cardios', 'dayPpl', 'menu'], () => {
+  const prevBackup = { workouts, cardios, dayPplMap, menu: menuData, goals: goalsData };
+  const restoreParts = ['workouts', 'cardios', 'dayPpl', 'menu'];
+  if (rawGoals !== undefined) restoreParts.push('goals'); /* 目標入りのバックアップだけ、目標も入れ替える */
+  const ok = transact(restoreParts, () => {
     if (!writeJson('simple_pre_restore', prevBackup)) return false;
     workouts = newWorkouts;
     cardios = newCardios;
+    if (rawGoals !== undefined) goalsData = rawGoals;
     dayPplMap = sanitizeDayPpl(rawPpl);
     /* テンプレート：新形式はそのまま、旧形式は各部位の1枠目へ取り込む（メモリ上に作るだけ。保存は transact） */
     tplImport(rawTpl, rawMenu);
@@ -1298,7 +1314,7 @@ async function importFromJsonText() {
 paintLastBackup();
 /* 起動時の描画・タブ切り替えは extras.js（showTab → requestRender）が1回だけ行う */
 </script>
-<script src="extras.js?v=32"></script>
+<script src="extras.js?v=33"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {
