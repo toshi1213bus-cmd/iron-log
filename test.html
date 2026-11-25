@@ -27,7 +27,7 @@
 <div id="list"></div>
 <button type="button" onclick="location.reload()">もう一度診断する</button>
 
-<iframe id="app" src="index.html" style="position:absolute;left:-9999px;top:0;width:380px;height:700px;border:0" aria-hidden="true"></iframe>
+<iframe id="app" style="position:absolute;left:-9999px;top:0;width:380px;height:700px;border:0" aria-hidden="true"></iframe>
 
 <script>
 function iso(off) {
@@ -44,8 +44,38 @@ function restoreStorage(o) {
   localStorage.clear();
   Object.keys(o).forEach(k => localStorage.setItem(k, o[k]));
 }
+/* 安全装置：診断中は実データを触るため、開始前に「退避コピー」を別のキーに置く。
+   正常に終われば自動で消える。途中で止まった（アプリが落ちた等）場合は、次に開いたとき復旧を案内する */
+const GUARD_KEY = 'iron_test_guard';
+function showRecovery(raw) {
+  let ts = '';
+  try { ts = JSON.parse(raw).ts || ''; } catch (e) {}
+  document.getElementById('summary').textContent = '前回の診断が途中で止まった可能性があります';
+  document.getElementById('list').innerHTML =
+    '<div class="sub">診断前の実データの退避コピー（' + (ts ? ts.replace('T', ' ').slice(0, 16) : '日時不明') + '）が残っています。<br>' +
+    '「元に戻す」を押すと、診断前の状態へ戻します（診断中に変わった記録は戻る前の状態になります）。<br>' +
+    '記録が正常に見えている場合は「破棄」で退避コピーだけ消せます。</div>' +
+    '<button type="button" id="gRestore">元に戻す</button> <button type="button" id="gDiscard">破棄</button>';
+  document.getElementById('gRestore').onclick = function () {
+    try {
+      const saved = JSON.parse(raw).data;
+      restoreStorage(saved);
+      localStorage.removeItem(GUARD_KEY);
+      location.reload();
+    } catch (e) { alert('元に戻せませんでした：' + e.message); }
+  };
+  document.getElementById('gDiscard').onclick = function () {
+    localStorage.removeItem(GUARD_KEY);
+    location.reload();
+  };
+}
 async function main() {
   const frame = document.getElementById('app');
+  /* 前回の診断が途中で止まっていないか確認（アプリを読み込む前に行う） */
+  let leftover = null;
+  try { leftover = localStorage.getItem(GUARD_KEY); } catch (e) {}
+  if (leftover) { showRecovery(leftover); return; }
+  frame.src = 'index.html';
   let W = null;
   for (let i = 0; i < 50; i++) {
     try { if (frame.contentWindow && frame.contentWindow.PPLTest) { W = frame.contentWindow; break; } } catch (e) {}
@@ -97,14 +127,37 @@ async function main() {
     return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
   });
   test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
-  test('バックアップ出力', () => {
-    let href = null;
-    const origClick = W.HTMLAnchorElement.prototype.click;
-    W.HTMLAnchorElement.prototype.click = function () { href = this.href; };
-    try { W.exportData(); } finally { W.HTMLAnchorElement.prototype.click = origClick; }
-    if (!href || href.indexOf('data:text/json') !== 0) return false;
-    const parsed = JSON.parse(decodeURIComponent(href.split(',').slice(1).join(',')));
+  test('バックアップ出力', async () => {
+    /* 実際の保存（共有シート・ダウンロード）は呼ばず、書き出される中身とファイル名だけを確認する */
+    let saved = null;
+    const origSave = W.saveBackupFile;
+    W.saveBackupFile = function (name, json) { saved = { name: name, json: json }; return Promise.resolve(true); };
+    try { await W.exportData(); } finally { W.saveBackupFile = origSave; }
+    if (!saved || !/^ppl_workout_backup_\d{4}-\d{2}-\d{2}\.json$/.test(saved.name)) return false;
+    const parsed = JSON.parse(saved.json);
     return parsed.workouts.length === 6 && eq(parsed.goals, { 'ベンチプレス': 80 });
+  });
+  test('バックアップ出力（取りやめ時は最終バックアップ日を更新しない）', async () => {
+    localStorage.removeItem('iron_last_backup');
+    const origSave = W.saveBackupFile;
+    W.saveBackupFile = function () { return Promise.resolve(false); };
+    try { await W.exportData(); } finally { W.saveBackupFile = origSave; }
+    return localStorage.getItem('iron_last_backup') === null;
+  });
+  test('バックアップのファイル保存（通常ダウンロード）', async () => {
+    /* 共有シートを使わない経路で、ダウンロード用リンクが作られて押されることを確認 */
+    const origClick = W.HTMLAnchorElement.prototype.click;
+    let href = null, dl = null;
+    W.HTMLAnchorElement.prototype.click = function () { href = this.href; dl = this.download; };
+    const origShare = W.navigator.share;
+    try { Object.defineProperty(W.navigator, 'share', { value: undefined, configurable: true }); } catch (e) {}
+    let ok;
+    try { ok = await W.saveBackupFile('t.json', '{"a":1}'); }
+    finally {
+      W.HTMLAnchorElement.prototype.click = origClick;
+      try { delete W.navigator.share; } catch (e) {}
+    }
+    return ok === true && typeof href === 'string' && href.indexOf('blob:') === 0 && dl === 't.json';
   });
   test('スナップショット作成', () => {
     localStorage.removeItem('simple_snapshots');
@@ -225,9 +278,43 @@ async function main() {
     return Array.isArray(secs) && !secs.some(s => s.t === '身体・栄養');
   });
 
+  test('保存失敗時の巻き戻し（transact）', () => {
+    /* 保存領域への書き込みをわざと失敗させ、メモリも保存領域も変更前のままか確認する */
+    const beforeMem = JSON.stringify(T.data().workouts);
+    const beforeRaw = localStorage.getItem('simple_workouts');
+    const proto = W.Storage.prototype;
+    const origSet = proto.setItem, origAlert = W.alert;
+    let alerted = 0, ok = null;
+    proto.setItem = function () { throw new Error('quota'); };
+    W.alert = function () { alerted++; };
+    try {
+      ok = W.transact(['workouts'], () => {
+        T.data().workouts.push({ id: 'zz9', name: '巻き戻しテスト', dateStr: iso(0), setList: [{ weight: 1, reps: 1 }] });
+      });
+    } finally { proto.setItem = origSet; W.alert = origAlert; }
+    return ok === false && alerted === 1 &&
+      JSON.stringify(T.data().workouts) === beforeMem &&
+      localStorage.getItem('simple_workouts') === beforeRaw;
+  });
+  test('保存成功時は保存される（transact）', () => {
+    const n = T.data().workouts.length;
+    const ok = W.transact(['workouts'], () => {
+      T.data().workouts.push({ id: 'zz8', name: '保存テスト', dateStr: iso(0), setList: [{ weight: 1, reps: 1 }] });
+    });
+    const saved = JSON.parse(localStorage.getItem('simple_workouts') || '[]');
+    return ok === true && T.data().workouts.length === n + 1 && saved.some(w => w.id === 'zz8');
+  });
+
   test('容量警告の判定', () => T.usageWarn(5 * 1024 * 1024 * 0.8) === true && T.usageWarn(1024) === false && T.KCAL_PER_MIN === 3.5);
 
   const backup = dumpStorage();
+  /* 安全装置：実データの退避コピーを保存。書けなかった場合は、実データを触らずに診断を中止する */
+  try {
+    localStorage.setItem(GUARD_KEY, JSON.stringify({ ts: new Date().toISOString(), data: backup }));
+  } catch (e) {
+    document.getElementById('summary').textContent = '保存容量に余裕がないため、安全のため診断を中止しました（実データは変更していません）。';
+    return;
+  }
   const keep = T.swap(fx);
   const results = [];
   try {
@@ -238,6 +325,7 @@ async function main() {
   } finally {
     T.restore(keep);
     restoreStorage(backup);
+    try { localStorage.removeItem(GUARD_KEY); } catch (e) {} /* 正常終了：退避コピーを消す */
   }
 
   const pass = results.filter(r => r.ok).length;

@@ -1019,7 +1019,40 @@ function drawCardioList() {
 }
 
 /* ===================== バックアップ ===================== */
-function exportData() {
+/* ファイルの保存。共有シート（保存先を選べる）が使えるときはそれを優先し、
+   使えないときは通常のダウンロード。成功なら true、取りやめ・失敗なら false を返す。
+   ※ iPhone などで「保存されず画面に表示されるだけ」になるのを避けるため。
+   ※ 共有シートを使いたくない場合は、下の BACKUP_USE_SHARE を false にする */
+const BACKUP_USE_SHARE = true;
+async function saveBackupFile(fileName, json) {
+  try {
+    if (BACKUP_USE_SHARE && typeof File === 'function' && navigator.canShare && navigator.share) {
+      const file = new File([json], fileName, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: fileName });
+          return true;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return false; /* 本人が閉じた＝保存していない */
+          /* それ以外の失敗は、下の通常ダウンロードへ進む */
+        }
+      }
+    }
+    const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    return true;
+  } catch (e) {
+    console.log(e);
+    return false;
+  }
+}
+async function exportData() {
   const exportObj = {
     version: BACKUP_VERSION,
     workouts: workouts,
@@ -1031,13 +1064,10 @@ function exportData() {
     body: PARTS.body ? PARTS.body.get() : null,
     weight: PARTS.weight ? PARTS.weight.get() : null
   };
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObj));
-  const a = document.createElement('a');
-  a.href = dataStr;
-  a.download = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const fileName = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
+  /* 注意：共有シートは「ボタンを押した直後」にしか開けないため、saveBackupFile の前に await を置かない */
+  const saved = await saveBackupFile(fileName, JSON.stringify(exportObj));
+  if (!saved) return; /* 取りやめ・失敗のときは「最終バックアップ日」を更新しない */
   try { localStorage.setItem('iron_last_backup', new Date().toISOString()); } catch (e) {}
   paintLastBackup();
   if (window.paintDataUsage) window.paintDataUsage(); /* 最終バックアップ日の保存でも使用量が変わる */
