@@ -296,6 +296,16 @@ async function main() {
     const secs = T.aiReport();
     return Array.isArray(secs) && !secs.some(s => s.t === '身体・栄養');
   });
+  test('分析の信頼度', () => {
+    T.swap({ workouts: fx.workouts, cardios: fx.cardios, dayPplMap: fx.dayPplMap, goalsData: fx.goalsData, bodyData: {}, weightData: [] });
+    const c = T.aiConfidence();
+    return !!c && c.days === 4 && c.lv === '低';
+  });
+  test('ゴリラの一言', () => {
+    T.swap({ workouts: fx.workouts, cardios: fx.cardios, dayPplMap: fx.dayPplMap, goalsData: fx.goalsData, bodyData: {}, weightData: [] });
+    const w1 = T.gorillaWord(), w2 = T.gorillaWord();
+    return typeof w1 === 'string' && w1.length > 0 && w1 === w2;
+  });
 
   test('保存失敗時の巻き戻し（transact）', () => {
     /* 保存領域への書き込みをわざと失敗させ、メモリも保存領域も変更前のままか確認する */

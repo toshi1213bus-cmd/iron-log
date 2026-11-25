@@ -666,6 +666,40 @@ function aiTotals() {
   return lines;
 }
 /* 分析レポート（セクション構成）。集計は分析カードと同じ trainIn / cardioIn を使う */
+/* 分析の信頼度：通算トレ日数から（記録が増えるほど分析が当たる、の目安表示） */
+function aiConfidence() {
+  try {
+    const days = profileStats().days;
+    if (!days) return null;
+    return { lv: days >= 30 ? '高' : days >= 10 ? '中' : '低', days: days };
+  } catch (e) { return null; }
+}
+/* ゴリラの一言：今日の記録の状態に反応する一言。同じ日は同じ文（日付シードで選択） */
+function gorillaWord() {
+  try { return gorillaWordPick(); } catch (e) { return '今日も積む。それだけでいい。'; }
+}
+function gorillaWordPick() {
+  const today = dstr(new Date());
+  const days = dayList();
+  const seed = today.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const pick = arr => arr[seed % arr.length];
+  if (!days.length && !cardios.length) return pick(['最初の一歩が一番重い。軽い日でいい、始めよう。', '記録はゼロでも、やる気はここにある。']);
+  if (days.includes(today)) {
+    const names = [...new Set(workouts.filter(w => w.dateStr === today).map(w => w.name.trim()))];
+    if (names.some(n => isPR(n, today))) return pick(['新記録だ。昨日の自分を超えた日は、静かに誇っていい。', '記録更新。積み上げてきた者だけが立てる場所だ。', '限界は昨日までの話。今日も強くなった。']);
+    const vol = volByDay();
+    const prevDay = days.filter(d => d < today).pop();
+    if (prevDay && (vol[today] || 0) > (vol[prevDay] || 0)) return pick(['前回より重い一日だった。確実に前に進んでいる。', '総負荷アップ。地味だが、これが一番強い。']);
+    return pick(['今日も積んだ。それだけで十分すごい。', '淡々とやる者が最後に残る。今日もその一日。', '派手さはいらない。続けることが力だ。']);
+  }
+  if (cardios.some(c => c.dateStr === today)) return pick(['有酸素の日。心臓も筋肉のうちだ。', '走る日も鍛える日。いいリズムだ。']);
+  const last = days[days.length - 1];
+  if (!last) return pick(['有酸素からでもいい。体を動かす日を作ろう。']);
+  const gap = Math.round((new Date(today) - new Date(last)) / 864e5);
+  if (gap === 1) return pick(['昨日よくやった。今日は休んで育てる日。', '休むのも訓練のうち。食べて、寝て、育て。']);
+  if (gap >= 4) return pick(['少し空いたな。でも戻ってくれば、それで続いていることになる。', '間が空いても終わりじゃない。軽い日から再開しよう。']);
+  return pick(['今日はどうする？ 動くなら軽くてもいい。', '整える日。次の一回のために体を休めよう。']);
+}
 function aiReport() {
   if (!workouts.length && !cardios.length) {
     const out0 = [{ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] }];
@@ -730,11 +764,13 @@ function aiReport() {
 }
 function aiPageHtml() {
   const r = anRanges(), wk = anPeriod === 'week';
+  const cf = aiConfidence();
+  const confHtml = cf ? '<div class="ai-conf">分析の信頼度<span class="ai-conf-b">' + cf.lv + '</span><span>記録' + cf.days + '日分をもとに判定</span></div>' : '';
   const range = wk ? fmtD(r.ws) + '〜' + fmtD(r.we) : fmtD(r.ms) + '〜' + fmtD(r.me);
   return '<div class="dt-head"><div class="dt-ttl"><div class="dt-name">AI分析</div><div class="hm-en">' + (wk ? '週間' : '月間') + ' ' + range + '</div></div>' +
     '<button type="button" class="dt-x" data-ai="close" aria-label="閉じる">✕</button></div>' +
     '<div class="dt-body"><div class="ai-per">' +
-    ['week', 'month'].map(p => '<button type="button" class="gr-btn' + (anPeriod === p ? ' on' : '') + '" data-ai="per" data-p="' + p + '">' + (p === 'week' ? '週間' : '月間') + '</button>').join('') + '</div>' +
+    ['week', 'month'].map(p => '<button type="button" class="gr-btn' + (anPeriod === p ? ' on' : '') + '" data-ai="per" data-p="' + p + '">' + (p === 'week' ? '週間' : '月間') + '</button>').join('') + '</div>' + confHtml +
     aiReport().map(s => (s.t ? '<div class="dt-sec">' + s.t + '</div>' : '') + '<div class="ai-card">' + s.lines.map(t => '<div class="ai-line"><span class="ai-dot">◆</span><span>' + t + '</span></div>').join('') + '</div>').join('') +
     '<div class="ai-note">この分析は端末内の記録だけから自動生成しています（外部AI・通信は使っていません）。</div></div>';
 }
@@ -1578,7 +1614,7 @@ function renderHome() {
   const allDone = names.length > 0 && doneN === names.length;
   /* 選択中の部位のメニューを全完了したときだけ、部位文字（.hm-big）の右横に勲章を出す */
   let h = '<div class="hm-card"><div class="hm-pad"><div class="hm-lb">今日のおすすめ</div><div class="hm-top"><div class="hm-big">' + type +
-    '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-sub">' + sub + '</div><div class="hm-ord">' + chips + '</div></div></div>';
+    '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-sub">' + sub + '</div><div class="hm-word"><span class="hm-word-lb">ゴリラの一言</span>' + escapeHtml(gorillaWord()) + '</div><div class="hm-ord">' + chips + '</div></div></div>';
   if (!names.length) {
     el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。「編集・分析/設定」→「設定」の「種目の編集」から追加できます。</div></div>';
     return;
@@ -2389,6 +2425,8 @@ function aiBody() {
     applyBodyCorrection();
     const b = bodyData, lw = latestWeight();
     if (!lw) return lines;
+    const wn = weightData.length;
+    lines.push('体重データの信頼度：' + (wn >= 14 ? '高' : wn >= 4 ? '中' : '低') + '（記録' + wn + '件）');
     const avg = weeklyAvgWeight();
     lines.push('最新体重は' + fmtKg(lw.kg) + 'kg（' + fmtD(lw.d) + '）' + (avg !== null ? '、週平均は' + fmtKg(Math.round(avg * 10) / 10) + 'kg' : '') + '。');
     const today = dstr(new Date());
@@ -2603,7 +2641,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v46',
+  version: 'extras v47',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2613,7 +2651,7 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
   sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
   sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
   data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },
