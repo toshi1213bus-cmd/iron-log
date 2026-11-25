@@ -365,7 +365,8 @@ function renderAnalysis() {
   const achCats = achievements();
   let achTotal = 0, achGot = 0;
   achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
-  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>実績</span><span class="ach-entry-r"><span class="ach-entry-n">達成 ' + achGot + '/' + achTotal + '</span><span class="ach-entry-ar">›</span></span></button>';
+  const pfLv = profileStats().lv;
+  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span><span class="ach-entry-ar">›</span></span></button>';
   el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + achRow; /* 月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
@@ -393,6 +394,90 @@ document.addEventListener('click', e => {
     paintAnCard();
   }
 });
+/* ===== プロフィール（経験値・レベル・称号・得意種目。全部「記録から計算」する＝記録そのものが成長になる） =====
+   経験値の式：トレ1日=100XP／総負荷100kgごとに1XP／PR更新=50XP／有酸素10分ごとに1XP */
+const XP_RULE = { day: 100, volPer: 100, pr: 50, cardioPer: 10 };
+const TITLES = [[1, '駆け出し'], [3, '鍛錬者'], [5, '鉄の挑戦者'], [7, '筋力の求道者'], [9, '鉄人'], [12, '鋼の番人'], [15, '伝説の鍛錬者'], [20, '神話級']];
+const MASTERY_DAYS = [1, 3, 5, 10, 20, 35, 50, 75, 100]; /* 得意種目レベル：実施日数が届いた段の数 */
+function levelFor(xp) { let lv = 1; while (500 * lv * (lv + 1) <= xp) lv++; return lv; } /* Lv.n の必要累計XP = 500×(n-1)×n */
+function profileStats() {
+  const byDateId = (a, b) => a.dateStr === b.dateStr ? Number(a.id) - Number(b.id) : (a.dateStr < b.dateStr ? -1 : 1);
+  const ws = [...workouts].sort(byDateId);
+  const dayList = [...new Set(ws.map(w => w.dateStr))].sort();
+  let vol = 0;
+  ws.forEach(w => w.setList.forEach(s => { vol += (s.weight || 0) * (s.reps || 0); }));
+  const byName = {};
+  ws.forEach(w => {
+    const n = w.name.trim();
+    (byName[n] = byName[n] || {});
+    (byName[n][w.dateStr] = byName[n][w.dateStr] || []).push(...w.setList);
+  });
+  let prTotal = 0;
+  const exList = Object.keys(byName).map(n => {
+    const ds = Object.keys(byName[n]).sort();
+    let best = null, pr = 0, rm = 0;
+    ds.forEach(d => {
+      const sets = byName[n][d];
+      const v = metric(sets);
+      rm = Math.max(rm, est1RM(sets));
+      if (best === null) best = v;
+      else if (v > best) { best = v; pr++; }
+    });
+    prTotal += pr;
+    return { name: n, days: ds.length, pr: pr, rm: rm };
+  });
+  const monday = ds => { const p = ds.split('-').map(Number), d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+  const weekSet = new Set(dayList.map(d => monday(d).getTime()));
+  const weekTimes = [...weekSet].sort((a, b) => a - b);
+  let run = 0, maxRun = 0, lastRun = 0, prevT = null;
+  weekTimes.forEach(t => {
+    run = (prevT !== null && t - prevT === 7 * 864e5) ? run + 1 : 1;
+    prevT = t;
+    lastRun = run;
+    if (run > maxRun) maxRun = run;
+  });
+  const thisMon = monday(toDateStr(new Date())).getTime();
+  const curRun = weekTimes.length && weekTimes[weekTimes.length - 1] >= thisMon - 7 * 864e5 ? lastRun : 0;
+  let mins = 0;
+  cardios.forEach(c => { mins += c.minutes || 0; });
+  const xp = dayList.length * XP_RULE.day + Math.floor(vol / XP_RULE.volPer) + prTotal * XP_RULE.pr + Math.floor(mins / XP_RULE.cardioPer);
+  const lv = levelFor(xp);
+  const title = TITLES.reduce((a, t) => lv >= t[0] ? t[1] : a, TITLES[0][1]);
+  let ageDays = 0;
+  if (dayList.length) {
+    const p = dayList[0].split('-').map(Number), n = new Date();
+    ageDays = Math.round((new Date(n.getFullYear(), n.getMonth(), n.getDate()) - new Date(p[0], p[1] - 1, p[2])) / 864e5) + 1;
+  }
+  const top = exList.slice().sort((a, b) => b.days - a.days || b.pr - a.pr).slice(0, 3);
+  const ace = exList.reduce((a, x) => x.rm > 0 && (!a || x.rm > a.rm) ? x : a, null);
+  return { days: dayList.length, vol: vol, prTotal: prTotal, mins: mins, xp: xp, lv: lv, title: title, curRun: curRun, maxRun: maxRun, ageDays: ageDays, top: top, ace: ace };
+}
+function profileCardHtml() {
+  const p = profileStats();
+  const prev = 500 * (p.lv - 1) * p.lv, next = 500 * p.lv * (p.lv + 1);
+  const pct = Math.min(100, Math.floor((p.xp - prev) / (next - prev) * 100));
+  const stat = (k, v) => '<div><div class="hm-lb">' + k + '</div><div class="pf-sv">' + v + '</div></div>';
+  let h = '<div class="pf-card"><div class="pf-top"><div class="pf-lv"><span class="pf-lvn">' + p.lv + '</span><span class="pf-lvl">LEVEL</span></div>' +
+    '<div class="pf-main"><div class="pf-title">' + escapeHtml(p.title) + '</div>' +
+    '<div class="pf-xp">経験値 ' + p.xp.toLocaleString() + ' XP（次のレベルまで あと' + (next - p.xp).toLocaleString() + '）</div>' +
+    '<div class="pf-bar"><i style="width:' + pct + '%"></i></div></div></div>' +
+    '<div class="pf-stats">' +
+    stat('トレ歴', p.ageDays ? p.ageDays + '日' : '—') +
+    stat('通算トレ日数', p.days + '日') +
+    stat('総負荷', (Math.round(p.vol / 100) / 10) + 't') +
+    stat('現在の連続週', p.curRun + '週') +
+    stat('最長連続週', p.maxRun + '週') +
+    stat('PR更新', p.prTotal + '回') +
+    '</div>';
+  if (p.ace) h += '<div class="pf-line">看板種目：' + escapeHtml(p.ace.name) + '（推定1RM ' + p.ace.rm + 'kg）</div>';
+  if (p.top.length) {
+    h += '<div class="pf-sec">得意種目</div>' + p.top.map(x => {
+      const mlv = MASTERY_DAYS.filter(t => x.days >= t).length;
+      return '<div class="pf-ex"><span>' + escapeHtml(x.name) + '</span><span class="pf-exd">Lv.' + mlv + '（' + x.days + '日・PR ' + x.pr + '回）</span></div>';
+    }).join('');
+  }
+  return h + '</div>';
+}
 /* ===== 実績（記録から計算するだけ。保存データは増やさない） =====
    各実績は { name, got（達成日 dateStr／未達成は null）, prog（未達成時の進み具合） } */
 function achTierDates(pairs, tiers) {
@@ -478,8 +563,8 @@ function achPageHtml() {
   const cats = achievements();
   let total = 0, gotN = 0;
   cats.forEach(c => c.items.forEach(x => { total++; if (x.got) gotN++; }));
-  let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">実績</span><span class="ach-count">達成 ' + gotN + '/' + total + '</span></div>' +
-    '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">';
+  let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">プロフィール</span><span class="ach-count">実績 ' + gotN + '/' + total + '</span></div>' +
+    '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">' + profileCardHtml();
   cats.forEach(c => {
     h += '<div class="dt-sec">' + c.label + '</div><div class="ach-grid">' + c.items.map(x =>
       '<div class="ach-item' + (x.got ? '' : ' off') + '">' + achMedal(!!x.got) +
@@ -779,6 +864,7 @@ window.addEventListener('resize', () => { if (padInput) padMetrics(); });
 function openPad(el) {
   if (padInput && padInput !== el) padInput.classList.remove('np-active');
   padInput = el;
+  padEl.classList.toggle('np-over', !!(el.closest && el.closest('#exDetail, #achPage, #menuEditor'))); /* 全画面ページの中の入力欄では、テンキーをページより手前に出す */
   padMetrics();
   el.classList.add('np-active');
   padEl.classList.add('show');
@@ -792,6 +878,7 @@ function openPad(el) {
 function closePad() {
   if (padInput) padInput.classList.remove('np-active');
   padInput = null;
+  padEl.classList.remove('np-over');
   padEl.classList.remove('show');
   padEl.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('np-open');
@@ -1715,7 +1802,7 @@ function goalRowHtml(st) {
   const bestW = st.pw ? st.pw.v : 0;
   if (detailState.goalEdit) {
     return '<div class="dt-row"><div class="hm-lb">目標</div><div class="goal-edit">' +
-      '<input id="goalInput" class="goal-input" type="text" inputmode="decimal" placeholder="目標kg" value="' + (g ? fmtKg(g) : '') + '">' +
+      '<input id="goalInput" class="goal-input weight-input" type="text" readonly inputmode="none" placeholder="目標kg" value="' + (g ? fmtKg(g) : '') + '">' +
       '<button type="button" class="goal-btn" data-dt="goal-save">保存</button>' +
       '<button type="button" class="goal-btn" data-dt="goal-cancel">取消</button>' +
       (g ? '<button type="button" class="goal-btn danger" data-dt="goal-del">削除</button>' : '') +
@@ -1820,6 +1907,7 @@ function openDetail(name) {
 /* 閉じる：ホームで開いていた種目は閉じた状態に戻す（ホームを描き直す） */
 function removeDetail() {
   if (!detailEl) return;
+  closePad(); /* 目標入力のテンキーが開いたままページだけ消えないように */
   detailEl.remove();
   detailEl = null;
   detailState = null;
