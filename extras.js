@@ -2273,12 +2273,17 @@ function requestPersist() {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v41',
+  version: 'extras v42',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
   loadSnaps: loadSnaps, ensureDailySnapshot: ensureDailySnapshot,
   sanitizeGoals: (typeof sanitizeGoals === 'function') ? sanitizeGoals : null,
+  sanitizeWorkouts: (typeof sanitizeWorkouts === 'function') ? sanitizeWorkouts : null,
+  sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
+  sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
+  applyRename: applyRename,
+  data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData }; },
   swap: function (fx) {
     const keep = { w: workouts, c: cardios, p: dayPplMap, g: goalsData };
     workouts = fx.workouts || []; cardios = fx.cardios || []; dayPplMap = fx.dayPplMap || {}; goalsData = fx.goalsData || {};

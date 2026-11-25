@@ -19,7 +19,7 @@
 <body>
 <h1>PPL 自己診断</h1>
 <div class="sub">
-  アプリ本体の計算・集計が壊れていないかを、テスト用データで自動チェックします。<br>
+  アプリ本体の計算・集計・保存まわりが壊れていないかを、テスト用データで自動チェックします。<br>
   実データはテスト前に自動で退避し、終わったら元に戻します。<b>テスト中はこのページを閉じないでください。</b><br>
   <span id="ver"></span>
 </div>
@@ -58,11 +58,8 @@ async function main() {
   const T = W.PPLTest;
   document.getElementById('ver').textContent = '対象: ' + T.version;
   const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  const results = [];
-  const test = (name, fn) => {
-    try { results.push({ name: name, ok: fn() === true, note: '' }); }
-    catch (e) { results.push({ name: name, ok: false, note: String((e && e.message) || e) }); }
-  };
+  const tests = [];
+  const test = (name, fn) => tests.push({ name: name, fn: fn });
 
   /* テスト用データ（今日を基準にした4週間分） */
   const fx = {
@@ -84,42 +81,102 @@ async function main() {
   fx.dayPplMap[iso(-21)] = 'PUSH'; fx.dayPplMap[iso(-14)] = 'PUSH';
   fx.dayPplMap[iso(-7)] = 'LEGS'; fx.dayPplMap[iso(0)] = 'PUSH';
 
+  test('日付の変換', () => T.dstr(new Date()) === iso(0) && typeof T.fmtD(iso(0)) === 'string' && T.fmtD(iso(0)).length > 0);
+  test('最大重量の取得', () => T.maxWeightOf('ベンチプレス') === 70);
+  test('種目の推移データ', () => { const s = T.seriesAll('ベンチプレス'); return s.length === 4 && s[0].d === iso(-21) && s[3].d === iso(0); });
+  test('トレンド判定（上昇）', () => T.trendOf([1, 2, 3, 4]).txt === '絶好調！！');
+  test('トレンド判定（停滞）', () => T.trendOf([5, 5, 5, 5]).txt === 'プラトー検知！！' && T.trendOf([1]) === null);
+  test('総負荷の集計', () => T.volByDay()[iso(0)] === 1200);
+  test('期間集計（今日）', () => { const r = T.trainIn(T.volByDay(), ds => ds === iso(0)); return r.days === 1 && r.vol === 1200; });
+  test('有酸素の集計', () => { const r = T.cardioIn(() => true); return r.min === 50 && r.kcal === 175; });
+  test('プロフィール計算', () => { const p = T.profileStats(); return p.days === 4 && p.vol === 3650 && p.prTotal === 2 && p.xp === 541 && p.lv === 1 && p.title === '駆け出し'; });
+  test('実績メダルの進捗', () => {
+    const a = T.achievements();
+    const first = a.find(c => c.label === '継続').items.find(i => i.name === '通算10日');
+    const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
+    return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
+  });
+  test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
+  test('スナップショット作成', () => {
+    localStorage.removeItem('simple_snapshots');
+    T.ensureDailySnapshot();
+    const s = T.loadSnaps();
+    if (!(s.length === 1 && s[0].date === iso(0) && s[0].data.workouts.length === 6)) return false;
+    T.ensureDailySnapshot();
+    return T.loadSnaps().length === 1;
+  });
+  test('PR判定（更新あり）', () => {
+    const snap = W.prSnap('スクワット', iso(0));
+    fx.workouts.find(w => w.id === 'b2').setList.push({ weight: 110, reps: 5 });
+    return W.prCheck(snap) === true;
+  });
+  test('PR判定（更新なし）', () => {
+    const snap = W.prSnap('ベンチプレス', iso(0));
+    return W.prCheck(snap) === false;
+  });
+  test('記録データの検証（筋トレ）', () => {
+    const stat = { skipped: 0 };
+    const out = T.sanitizeWorkouts([
+      { id: 'v1', name: 'ベンチプレス', dateStr: iso(-1), setList: [{ weight: 50, reps: 10 }] },
+      { id: 'x1', name: 'ベンチ', dateStr: '2026-02-30', setList: [{ weight: 50, reps: 10 }] },
+      { id: 'x2', name: 'ベンチ', dateStr: iso(-1), setList: [{ weight: -5, reps: 10 }] },
+      { id: 'v2', name: '', dateStr: iso(-1), setList: [{ weight: 20, reps: 5 }] }
+    ], stat);
+    return out.length === 2 && stat.skipped === 2 && out[1].name === '不明な種目';
+  });
+  test('記録データの検証（有酸素）', () => {
+    const stat = { skipped: 0 };
+    const out = T.sanitizeCardios([
+      { id: 'c1', minutes: 30, dateStr: iso(-1) },
+      { id: 'c2', minutes: 25, dateStr: '2026-02-30' }
+    ], stat);
+    return out.length === 1 && out[0].minutes === 30 && stat.skipped === 1;
+  });
+  test('曜日タイプの検証', () => eq(T.sanitizeDayPpl({ '2026-01-05': 'PUSH', '2026-02-30': 'PULL', '2026-01-06': 'XXX' }), { '2026-01-05': 'PUSH' }));
+  test('種目の統合', () => {
+    T.swap({
+      workouts: [
+        { id: 'r1', name: 'ワイドラットプル', dateStr: iso(-7), setList: [{ weight: 50, reps: 10 }] },
+        { id: 'r2', name: 'ワイドラットプル', dateStr: iso(0), setList: [{ weight: 55, reps: 10 }] },
+        { id: 'r3', name: 'パラレルラット', dateStr: iso(0), setList: [{ weight: 60, reps: 10 }] }
+      ],
+      cardios: [], dayPplMap: {}, goalsData: { 'ワイドラットプル': 60, 'パラレルラット': 70 }
+    });
+    T.applyRename('ワイドラットプル', 'パラレルラット', ['ワイドラットプル']);
+    const d = T.data();
+    return d.workouts.length === 3 && d.workouts.every(w => w.name === 'パラレルラット') && eq(d.goalsData, { 'パラレルラット': 70 });
+  });
+  test('種目の名前変更', () => {
+    T.applyRename('パラレルラット', 'ラットプル', ['パラレルラット']);
+    const d = T.data();
+    return d.workouts.every(w => w.name === 'ラットプル') && eq(d.goalsData, { 'ラットプル': 70 });
+  });
+  test('スナップショットから復元', async () => {
+    T.swap({
+      workouts: [{ id: 's1', name: 'デッドリフト', dateStr: iso(-3), setList: [{ weight: 100, reps: 5 }] }],
+      cardios: [], dayPplMap: {}, goalsData: {}
+    });
+    localStorage.removeItem('simple_snapshots');
+    T.ensureDailySnapshot();
+    T.swap({
+      workouts: [{ id: 's2', name: 'ベンチプレス', dateStr: iso(0), setList: [{ weight: 40, reps: 10 }] }],
+      cardios: [], dayPplMap: {}, goalsData: {}
+    });
+    const origAsk = W.askConfirm;
+    W.askConfirm = () => Promise.resolve(true);
+    try { await W.restoreSnapshot(iso(0)); } finally { W.askConfirm = origAsk; }
+    const d = T.data();
+    return d.workouts.length === 1 && d.workouts[0].name === 'デッドリフト' && d.workouts[0].setList[0].weight === 100;
+  });
+
   const backup = dumpStorage();
   const keep = T.swap(fx);
+  const results = [];
   try {
-    test('日付の変換', () => T.dstr(new Date()) === iso(0) && typeof T.fmtD(iso(0)) === 'string' && T.fmtD(iso(0)).length > 0);
-    test('最大重量の取得', () => T.maxWeightOf('ベンチプレス') === 70);
-    test('種目の推移データ', () => { const s = T.seriesAll('ベンチプレス'); return s.length === 4 && s[0].d === iso(-21) && s[3].d === iso(0); });
-    test('トレンド判定（上昇）', () => T.trendOf([1, 2, 3, 4]).txt === '絶好調！！');
-    test('トレンド判定（停滞）', () => T.trendOf([5, 5, 5, 5]).txt === 'プラトー検知！！' && T.trendOf([1]) === null);
-    test('総負荷の集計', () => T.volByDay()[iso(0)] === 1200);
-    test('期間集計（今日）', () => { const r = T.trainIn(T.volByDay(), ds => ds === iso(0)); return r.days === 1 && r.vol === 1200; });
-    test('有酸素の集計', () => { const r = T.cardioIn(() => true); return r.min === 50 && r.kcal === 175; });
-    test('プロフィール計算', () => { const p = T.profileStats(); return p.days === 4 && p.vol === 3650 && p.prTotal === 2 && p.xp === 541 && p.lv === 1 && p.title === '駆け出し'; });
-    test('実績メダルの進捗', () => {
-      const a = T.achievements();
-      const first = a.find(c => c.label === '継続').items.find(i => i.name === '通算10日');
-      const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
-      return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
-    });
-    test('目標データの検証', () => eq(T.sanitizeGoals({ 'ベンチプレス': 80.04, 'bad': -5, 'heavy': 2000, '': 50 }), { 'ベンチプレス': 80 }));
-    test('スナップショット作成', () => {
-      localStorage.removeItem('simple_snapshots');
-      T.ensureDailySnapshot();
-      const s = T.loadSnaps();
-      if (!(s.length === 1 && s[0].date === iso(0) && s[0].data.workouts.length === 6)) return false;
-      T.ensureDailySnapshot();
-      return T.loadSnaps().length === 1;
-    });
-    test('PR判定（更新あり）', () => {
-      const snap = W.prSnap('スクワット', iso(0));
-      fx.workouts.find(w => w.id === 'b2').setList.push({ weight: 110, reps: 5 });
-      return W.prCheck(snap) === true;
-    });
-    test('PR判定（更新なし）', () => {
-      const snap = W.prSnap('ベンチプレス', iso(0));
-      return W.prCheck(snap) === false;
-    });
+    for (const t of tests) {
+      try { results.push({ name: t.name, ok: (await t.fn()) === true, note: '' }); }
+      catch (e) { results.push({ name: t.name, ok: false, note: String((e && e.message) || e) }); }
+    }
   } finally {
     T.restore(keep);
     restoreStorage(backup);
