@@ -2244,6 +2244,7 @@ async function restoreSnapshot(date) {
   el.value = keep;
   paintSnapshots();
 }
+window.restoreSnapshot = restoreSnapshot; /* 設定のスナップショット欄の「復元」ボタン（onclick）から呼ぶため */
 function paintSnapshots() {
   const pin = document.getElementById('snapPersistInfo');
   if (pin && navigator.storage && navigator.storage.persisted) {
@@ -2267,6 +2268,24 @@ function requestPersist() {
     navigator.storage.persisted().then(p => { if (!p) return navigator.storage.persist(); }).catch(() => {});
   } catch (e) {}
 }
+
+/* ===== テスト用窓口（test.html 専用。通常の画面からは使われない）
+   自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
+   swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
+window.PPLTest = {
+  version: 'extras v41',
+  dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
+  volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
+  achievements: achievements, profileStats: profileStats,
+  loadSnaps: loadSnaps, ensureDailySnapshot: ensureDailySnapshot,
+  sanitizeGoals: (typeof sanitizeGoals === 'function') ? sanitizeGoals : null,
+  swap: function (fx) {
+    const keep = { w: workouts, c: cardios, p: dayPplMap, g: goalsData };
+    workouts = fx.workouts || []; cardios = fx.cardios || []; dayPplMap = fx.dayPplMap || {}; goalsData = fx.goalsData || {};
+    return keep;
+  },
+  restore: function (keep) { workouts = keep.w; cardios = keep.c; dayPplMap = keep.p; goalsData = keep.g; }
+};
 
 /* 起動：1手順ずつ実行し、要素が無いなどで1つ失敗しても後続の初期化を止めない
    （保存済みテーマを適用 → 履歴・有酸素・ホームを showTab で1回ずつ描く） */
