@@ -1124,7 +1124,7 @@ setInterval(() => safe(paintRing), 100);
 
 /* ===== 専用テンキー（kg／回／有酸素の分。OSのキーボードは出さない） =====
    ・入力欄は readonly。タップで金枠ハイライト＋画面下にテンキー
-   ・.5 は kg のときだけ有効（付与／すでに付いていれば外すトグル）
+   ・. は kg のときだけ有効（1回だけ／小数点以下は2桁まで）
    ・完了：kg → 同じ行の回へ移動（テンキーは開いたまま）／回・分 → 閉じる ===== */
 const PAD_SEL = '.weight-input, .reps-input, #cardioMinutes';
 const CARDIO_MAX = 1440;
@@ -1143,7 +1143,7 @@ padEl.innerHTML =
   '<button type="button" class="np-k" data-k="7">7</button>' +
   '<button type="button" class="np-k" data-k="8">8</button>' +
   '<button type="button" class="np-k" data-k="9">9</button>' +
-  '<button type="button" class="np-k np-fn" data-k="half">.5</button>' +
+  '<button type="button" class="np-k np-fn" data-k="dot">.</button>' +
   '<button type="button" class="np-k np-w2" data-k="0">0</button>' +
   '<button type="button" class="np-k np-w2 np-ok" data-k="ok">完了</button>';
 document.body.appendChild(padEl);
@@ -1155,8 +1155,8 @@ function padLimitOk(kind, str) {
   return kind === 'kg' ? n <= LIMITS.weight : kind === 'rep' ? n <= LIMITS.reps : kind === 'kcal' ? n <= 6000 : n <= CARDIO_MAX;
 }
 function syncPad() {
-  const half = padEl.querySelector('[data-k="half"]');
-  half.disabled = !padInput || padKind(padInput) !== 'kg';
+  const dot = padEl.querySelector('[data-k="dot"]');
+  dot.disabled = !padInput || padKind(padInput) !== 'kg';
 }
 /* 下タブ(#bottomNav)は出したまま、その上にテンキーを載せる。高さを測って CSS 変数に渡す（本文の下余白に使う） */
 const navEl = document.getElementById('bottomNav');
@@ -1193,20 +1193,19 @@ function padPress(k) {
   const kind = padKind(padInput);
   let v = padInput.value;
   if (/^\d$/.test(k)) {
-    if (v.indexOf('.') >= 0) return; /* .5 が付いているときは先に ⌫ で外す */
-    const nx = v === '0' ? k : v + k;
+    const di = v.indexOf('.');
+    if (di >= 0 && v.length - di - 1 >= 2) return; /* 小数点以下は2桁まで */
+    const nx = v === '0' && di < 0 ? k : v + k;
     if (!padLimitOk(kind, nx)) return;
     v = nx;
-  } else if (k === 'half') {
+  } else if (k === 'dot') {
     if (kind !== 'kg') return;
-    if (v.endsWith('.5')) v = v.slice(0, -2);
-    else {
-      const nx = (v === '' ? '0' : v) + '.5';
-      if (!padLimitOk('kg', nx)) return;
-      v = nx;
-    }
+    if (v.indexOf('.') >= 0) return; /* . は1回だけ */
+    const nx = (v === '' ? '0' : v) + '.';
+    if (!padLimitOk('kg', nx)) return;
+    v = nx;
   } else if (k === 'back') {
-    v = v.endsWith('.5') ? v.slice(0, -2) : v.slice(0, -1);
+    v = v.slice(0, -1);
   } else if (k === 'clear') {
     v = '';
   } else if (k === 'ok') {
@@ -1634,39 +1633,7 @@ window.homeWarmup = function () {
   switchTab('workout');
   startWarmup(WARMUP.map(p => ({ weight: Math.round(max * p[0] / 10) * 10 || Math.max(1, Math.round(max * p[0])), reps: p[1] })));
 };
-/* ===== 勲章バッジ（選択中の部位のメニューを全完了したときだけ、部位文字の右横に出す）
-   放射光条（金）・月桂樹（銀）・帯（青のエナメル）・中央メダリオン（深い赤＋金の星）の多色。実物らしさのため色は固定（テーマでは変えない） ===== */
-function medalSvg(uid, label) { /* uid … 複数の勲章を並べても gradient の id が重ならないようにする接尾辞 */
-  const C = 32, f = x => x.toFixed(2);
-  const pt = (a, r) => f(C + Math.sin(a) * r) + ',' + f(C - Math.cos(a) * r);
-  let rays = '', leaves = '', star = '';
-  for (let i = 0; i < 16; i++) {
-    const a = i / 16 * Math.PI * 2;
-    rays += '<polygon points="' + pt(a - 0.13, 18) + ' ' + pt(a, i % 2 ? 27.5 : 31.5) + ' ' + pt(a + 0.13, 18) + '" fill="url(#mdG)"/>';
-  }
-  for (let k = 0; k < 8; k++) { /* 下から上へ向かう月桂樹の枝（左右対称）。葉は外向きに少し傾ける */
-    const deg = 172 - k * 20, th = deg * Math.PI / 180;
-    const x = C + Math.sin(th) * 22.6, y = C - Math.cos(th) * 22.6, x2 = 64 - x;
-    leaves += '<ellipse cx="' + f(x) + '" cy="' + f(y) + '" rx="3.9" ry="1.6" transform="rotate(' + f(deg + 32) + ' ' + f(x) + ' ' + f(y) + ')" fill="url(#mdS)" stroke="#4b5260" stroke-width=".25"/>' +
-      '<ellipse cx="' + f(x2) + '" cy="' + f(y) + '" rx="3.9" ry="1.6" transform="rotate(' + f(-(deg + 32)) + ' ' + f(x2) + ' ' + f(y) + ')" fill="url(#mdS)" stroke="#4b5260" stroke-width=".25"/>';
-  }
-  for (let i = 0; i < 10; i++) star += (i ? ' ' : '') + pt(i * Math.PI / 5, i % 2 ? 2.9 : 7);
-  return ('<svg class="md" viewBox="0 0 64 64" role="img" aria-label="' + label + '"><defs>' +
-    '<linearGradient id="mdG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e3a6"/><stop offset=".5" stop-color="#d1a847"/><stop offset="1" stop-color="#8a6420"/></linearGradient>' +
-    '<linearGradient id="mdS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4f6f9"/><stop offset=".55" stop-color="#aab1bd"/><stop offset="1" stop-color="#6c7482"/></linearGradient>' +
-    '<linearGradient id="mdB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b7bc4"/><stop offset="1" stop-color="#1a3470"/></linearGradient>' +
-    '<radialGradient id="mdR" cx=".38" cy=".32" r=".8"><stop offset="0" stop-color="#e0434b"/><stop offset=".55" stop-color="#a3202a"/><stop offset="1" stop-color="#5a0b14"/></radialGradient></defs>' +
-    rays +
-    '<circle cx="32" cy="32" r="20.4" fill="#10182b" stroke="url(#mdG)" stroke-width=".9"/>' +
-    leaves +
-    '<circle cx="32" cy="32" r="17" fill="none" stroke="url(#mdB)" stroke-width="3.6"/>' +
-    '<circle cx="32" cy="32" r="18.9" fill="none" stroke="url(#mdG)" stroke-width=".7"/>' +
-    '<circle cx="32" cy="32" r="15.1" fill="none" stroke="url(#mdG)" stroke-width=".7"/>' +
-    '<circle cx="32" cy="32" r="12.4" fill="url(#mdR)" stroke="url(#mdG)" stroke-width="1.3"/>' +
-    '<polygon points="' + star + '" fill="url(#mdG)"/>' +
-    '<path class="md-shine" d="M' + pt(-1.9, 10.4) + ' A10.4 10.4 0 0 1 ' + pt(-0.35, 10.4) + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.1" stroke-linecap="round"/>' +
-    '</svg>').replace(/mdG|mdS|mdB|mdR/g, m => m + uid);
-}
+/* ===== 完遂バッジ（朱印。選択中の部位のメニューを全完了したときだけ、部位文字の右横に出す） ===== */
 const MEDAL_HTML = '<div class="hm-medal"><span class="seal" role="img" aria-label="今日のメニュー全完了"></span><div class="hm-medal-lb">完遂</div></div>';
 /* PRミニ勲章（種目名の右。CSS で約24px。下に小さく PR） */
 const prMedal = i => '<span class="hm-pr"><span class="seal" role="img" aria-label="PR更新"></span><span class="hm-medal-lb">PR</span></span>';
@@ -1676,10 +1643,6 @@ function renderHome() {
   if (!el) return;
   ensureMenu();
   const today = dstr(new Date()), type = todayType();
-  const days = dayList(), last = days.filter(d => d < today).pop();
-  const yday = dstr(new Date(Date.now() - 864e5));
-  const sub = days.includes(today) ? '今日は ' + pplOf(today) + ' を記録中'
-    : last ? (last === yday ? '昨日' : '前回') + 'は ' + pplOf(last) + '（' + fmtD(last) + '）' : 'まだ記録がありません';
   const chips = TYPES.map(t => '<button type="button" class="' + (t === type ? 'cur' : '') + '" onclick="homeType(\'' + t + '\')">' + t + '</button>').join('');
   const names = menuData[type].on;
   homeNames = names;
@@ -1687,8 +1650,8 @@ function renderHome() {
   const doneN = names.filter(n => todays.some(t => t.name.trim() === n)).length;
   const allDone = names.length > 0 && doneN === names.length;
   /* 選択中の部位のメニューを全完了したときだけ、部位文字（.hm-big）の右横に勲章を出す */
-  let h = '<div class="hm-card"><div class="hm-pad"><div class="hm-lb">今日のおすすめ</div><div class="hm-top"><div class="hm-big">' + type +
-    '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-sub">' + sub + '</div><div class="hm-word"><span class="hm-word-lb">ゴリラの一言</span>' + escapeHtml(gorillaWord()) + '</div><div class="hm-ord">' + chips + '</div></div></div>';
+  let h = '<div class="hm-card"><div class="hm-pad"><div class="hm-top"><div class="hm-big">' + type +
+    '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-word"><span class="hm-word-lb">ゴリラの一言</span>' + escapeHtml(gorillaWord()) + '</div><div class="hm-ord">' + chips + '</div></div></div>';
   if (!names.length) {
     el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。「編集・分析/設定」→「設定」の「種目の編集」から追加できます。</div></div>';
     return;
@@ -2597,8 +2560,6 @@ function bodyPageHtml() {
     '<span class="bd-date">' + fmtD(d) + (d === today ? '（今日）' : '') + '</span>' +
     '<button type="button" class="snap-btn" data-bd="dnext"' + (d >= today ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="bd-wrow"><input id="bdWeight" class="bd-input weight-input" type="text" readonly inputmode="none" placeholder="体重 kg" value="' + (cur !== null ? cur : '') + '">' +
-    '<button type="button" class="goal-btn" data-bd="wstep" data-d="-0.1">−0.1</button>' +
-    '<button type="button" class="goal-btn" data-bd="wstep" data-d="0.1">+0.1</button>' +
     '<button type="button" class="goal-btn" data-bd="wsave">保存</button>' +
     (cur !== null ? '<button type="button" class="goal-btn danger" data-bd="wdel">削除</button>' : '') + '</div></div>';
   /* 推移グラフ（直近30件：日々の体重＋週平均＋目標線） */
@@ -2668,13 +2629,6 @@ async function onBodyClick(e) {
     return;
   }
   if (act === 'wload') { stashBodyForm(); bodyState.date = btn.dataset.d; paintBodyPage(); const sc = bodyEl.querySelector('.dt-body'); if (sc) sc.scrollTop = 0; return; }
-  if (act === 'wstep') {
-    const inp = bodyEl.querySelector('#bdWeight');
-    const v = inp ? parseFloat(inp.value) : NaN;
-    if (!isFinite(v)) return; /* 空欄のときは動かさない */
-    inp.value = Math.min(300, Math.max(30, Math.round((v + parseFloat(btn.dataset.d)) * 10) / 10));
-    return;
-  }
   if (act === 'wsave') {
     const inp = bodyEl.querySelector('#bdWeight');
     const v = inp ? parseFloat(inp.value) : NaN;
@@ -2722,7 +2676,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v52',
+  version: 'extras v53',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,

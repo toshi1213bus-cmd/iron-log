@@ -405,7 +405,7 @@ body .ex-toggle-icon.is-open {
 .hm-pad { padding: 14px; }
 .hm-lb { font-size: 11px; letter-spacing: 0.15em; color: var(--muted); }
 .hm-gold { color: var(--gold); }
-.hm-big { font-family: var(--num); font-weight: 300; font-size: 46px; letter-spacing: 0.12em; line-height: 1.1; background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hm-big { font-family: var(--num); font-weight: 300; font-size: 46px; letter-spacing: 0.12em; line-height: 1.1; color: var(--gold-hi); }
 /* 部位文字の右横に勲章（選択中の部位のメニューを全完了したときだけ）。勲章は実物らしく固定色（赤・金・銀・青）でテーマに依らない */
 .hm-top { display: flex; align-items: center; gap: 14px; }
 .hm-medal { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px; animation: medalFloat 3s ease-in-out infinite; }
