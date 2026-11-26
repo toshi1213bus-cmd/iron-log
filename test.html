@@ -213,6 +213,8 @@ async function main() {
     ], stat);
     return out.length === 1 && out[0].minutes === 30 && stat.skipped === 1;
   });
+  test('HIIT実施日の検証', () => eq(T.sanitizeHiitDays(['2026-11-27', '2026-02-30', 'x', '2026-11-27', '2026-11-26', 20261127]),
+    ['2026-11-26', '2026-11-27']));
   test('曜日タイプの検証', () => eq(T.sanitizeDayPpl({ '2026-01-05': 'PUSH', '2026-02-30': 'PULL', '2026-01-06': 'XXX' }), { '2026-01-05': 'PUSH' }));
   test('種目の統合', () => {
     T.swap({

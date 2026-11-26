@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=61">
+<link rel="stylesheet" href="theme.css?v=62">
   <link rel="stylesheet" href="bg.css">
   <link rel="stylesheet" href="bgw.css">
   <link rel="stylesheet" href="bgc.css">
@@ -100,6 +100,36 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
         <button type="button" id="saveCardioBtn" onclick="saveCardio()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 border-t border-gray-700 transition active:scale-[0.98]">
           保存
         </button>
+      </div>
+    </div>
+    <div id="hiitSection" class="card-sep">
+      <div class="p-3.5">
+        <button type="button" id="hiitBtn" class="hiit-btn" onclick="toggleHiit()">HIITタイマー<span class="ex-toggle-icon" id="hiitChev"></span></button>
+        <div id="hiitBody" class="hidden">
+          <div id="hiitSetup">
+            <div class="hiit-presets">
+              <button type="button" class="hiit-chip" data-hp="0" onclick="hiitPreset(0)"><b>タバタ</b><span>20秒/10秒×8</span></button>
+              <button type="button" class="hiit-chip" data-hp="1" onclick="hiitPreset(1)"><b>ハード</b><span>30秒/15秒×10</span></button>
+              <button type="button" class="hiit-chip" data-hp="2" onclick="hiitPreset(2)"><b>イージー</b><span>30秒/30秒×6</span></button>
+            </div>
+            <div class="hiit-srow"><span class="hiit-k">運動</span><span class="hiit-v"><input type="text" readonly inputmode="none" id="hiitWork" class="hiit-in" maxlength="3" value="20"><small>秒</small></span></div>
+            <div class="hiit-srow"><span class="hiit-k">休憩</span><span class="hiit-v"><input type="text" readonly inputmode="none" id="hiitRest" class="hiit-in" maxlength="3" value="10"><small>秒</small></span></div>
+            <div class="hiit-srow"><span class="hiit-k">ラウンド</span><span class="hiit-v"><input type="text" readonly inputmode="none" id="hiitRounds" class="hiit-in" maxlength="2" value="8"><small>周</small></span></div>
+            <div class="hiit-total" id="hiitTotal"></div>
+            <button type="button" class="hiit-start" onclick="hiitStart()">スタート</button>
+          </div>
+          <div id="hiitRun" class="hidden">
+            <div class="hiit-phase" id="hiitPhase">準備</div>
+            <div id="hiitDisplay">00:10</div>
+            <div class="hiit-round" id="hiitRound"></div>
+            <div class="hiit-bar"><i id="hiitBarFill"></i></div>
+            <div class="hiit-ctrls">
+              <button type="button" class="hiit-cbtn hiit-pause" id="hiitPauseBtn" onclick="hiitPause()">一時停止</button>
+              <button type="button" class="hiit-cbtn hiit-stop" onclick="hiitStop()">終了</button>
+            </div>
+            <div class="hiit-next" id="hiitNext"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div id="cardioListWrapper" class="card-sep hidden">
@@ -204,7 +234,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </nav>
 
 <script src="app-core.js"></script>
-<script src="extras.js?v=63"></script>
+<script src="extras.js?v=64"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

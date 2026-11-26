@@ -1172,7 +1172,7 @@ setInterval(() => safe(paintRing), 100);
    ・入力欄は readonly。タップで金枠ハイライト＋画面下にテンキー
    ・. は kg のときだけ有効（1回だけ／小数点以下は2桁まで）
    ・完了：kg → 同じ行の回へ移動（テンキーは開いたまま）／回・分 → 閉じる ===== */
-const PAD_SEL = '.weight-input, .reps-input, #cardioMinutes';
+const PAD_SEL = '.weight-input, .reps-input, #cardioMinutes, #hiitWork, #hiitRest, #hiitRounds';
 const CARDIO_MAX = 1440;
 const padEl = document.createElement('div');
 padEl.id = 'numpad';
@@ -1194,11 +1194,11 @@ padEl.innerHTML =
   '<button type="button" class="np-k np-w2 np-ok" data-k="ok">完了</button>';
 document.body.appendChild(padEl);
 let padInput = null;
-const padKind = el => el.id === 'cardioMinutes' ? 'min' : el.id === 'bdKcal' ? 'kcal' : el.classList.contains('weight-input') ? 'kg' : 'rep';
+const padKind = el => el.id === 'cardioMinutes' ? 'min' : el.id === 'bdKcal' ? 'kcal' : (el.id === 'hiitWork' || el.id === 'hiitRest') ? 'sec' : el.id === 'hiitRounds' ? 'round' : el.classList.contains('weight-input') ? 'kg' : 'rep';
 function padLimitOk(kind, str) {
   const n = parseFloat(str);
   if (!isFinite(n)) return false;
-  return kind === 'kg' ? n <= LIMITS.weight : kind === 'rep' ? n <= LIMITS.reps : kind === 'kcal' ? n <= 6000 : n <= CARDIO_MAX;
+  return kind === 'kg' ? n <= LIMITS.weight : kind === 'rep' ? n <= LIMITS.reps : kind === 'kcal' ? n <= 6000 : kind === 'sec' ? n <= 3600 : kind === 'round' ? n <= 99 : n <= CARDIO_MAX;
 }
 function syncPad() {
   const dot = padEl.querySelector('[data-k="dot"]');
@@ -2206,7 +2206,7 @@ window.calShift = function (d) {
 function renderCalendar() {
   const el = document.getElementById('calendarCard');
   if (!el) return;
-  const tDays = new Set(workouts.map(w => w.dateStr)), cDays = new Set(cardios.map(c => c.dateStr));
+  const tDays = new Set(workouts.map(w => w.dateStr)), cDays = new Set(cardios.map(c => c.dateStr)), hDays = new Set(hiitDays);
   const n = new Date(), today = dstr(n);
   const first = new Date(cal.y, cal.m, 1).getDay(), len = new Date(cal.y, cal.m + 1, 0).getDate();
   const atCur = cal.y * 12 + cal.m >= n.getFullYear() * 12 + n.getMonth();
@@ -2215,12 +2215,12 @@ function renderCalendar() {
   for (let d = 1; d <= len; d++) {
     const s = cal.y + '-' + pad(cal.m + 1) + '-' + pad(d);
     g += '<div class="cal-d' + (s === today ? ' today' : '') + '" data-d="' + s + '" role="button"><span>' + d + '</span><span class="cal-m">' +
-      (tDays.has(s) ? '<i class="cal-dot"></i>' : '') + (cDays.has(s) ? '<i class="cal-ring"></i>' : '') +
+      (tDays.has(s) ? '<i class="cal-dot"></i>' : '') + (cDays.has(s) ? '<i class="cal-ring"></i>' : '') + (hDays.has(s) ? '<span class="cal-fire">🔥</span>' : '') +
       '</span></div>';
   }
   el.innerHTML = '<div class="cal-head"><button type="button" onclick="calShift(-1)">‹</button><div class="cal-title">' + cal.y + '年' + (cal.m + 1) +
     '月</div><button type="button" onclick="calShift(1)"' + (atCur ? ' disabled' : '') + '>›</button></div><div class="cal-grid">' + g +
-    '</div><div class="cal-legend"><span><i class="cal-dot"></i>トレーニング</span><span><i class="cal-ring"></i>有酸素</span></div>';
+    '</div><div class="cal-legend"><span><i class="cal-dot"></i>トレーニング</span><span><i class="cal-ring"></i>有酸素</span><span>🔥 HIIT</span></div>';
 }
 
 /* ===== 日付タップ：ボトムシート
@@ -2254,7 +2254,9 @@ function sheetHtml(d) {
   h += '<div class="sh-sec">有酸素</div>';
   if (cs.length) {
     h += '<div class="space-y-2">' + cs.map(c => '<div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">' +
-      c.minutes + '分 / 約' + Math.round(c.minutes * KCAL_PER_MIN) + 'kcal</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
+      c.minutes + '分 / 約' + Math.round(c.minutes * KCAL_PER_MIN) + 'kcal' + (hiitDoneOn(d) ? ' 🔥' : '') + '</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
+  } else if (hiitDoneOn(d)) {
+    h += '<div class="hm-sub">🔥 HIITをやった日</div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
   }
@@ -2985,6 +2987,196 @@ async function onBodyClick(e) {
 /* ===== テスト用窓口（test.html 専用。通常の画面からは使われない）
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
+/* ===== HIITタイマー（有酸素タブのアコーディオンの中で設定→実行まで完結する）
+   保存するのは「実施した日付」だけ（app-core の simple_hiit_days）。分数・kcal・設定内容は記録に残さない。
+   設定（前回値）だけは端末内に覚える（iron_hiit_cfg。バックアップには入れない） ===== */
+const HIIT_PRESETS = [
+  { name: 'タバタ', work: 20, rest: 10, rounds: 8 },
+  { name: 'ハード', work: 30, rest: 15, rounds: 10 },
+  { name: 'イージー', work: 30, rest: 30, rounds: 6 }
+];
+const HIIT_PREP_SEC = 10;
+let hiitCfg = { name: 'タバタ', work: 20, rest: 10, rounds: 8 };
+try {
+  const sv = JSON.parse(localStorage.getItem('iron_hiit_cfg') || 'null');
+  if (sv && isFinite(sv.work) && isFinite(sv.rest) && isFinite(sv.rounds)) {
+    hiitCfg = { name: typeof sv.name === 'string' ? sv.name : 'カスタム', work: sv.work | 0, rest: sv.rest | 0, rounds: sv.rounds | 0 };
+  }
+} catch (e) {}
+let hiitState = null; /* 実行中：{ cfg, phases, i, endAt, timer, paused, remainMs, totalSec, dateStr, wake } */
+
+function hiitSaveCfg() { try { localStorage.setItem('iron_hiit_cfg', JSON.stringify(hiitCfg)); } catch (e) {} }
+function hiitPhases(cfg) {
+  const ph = [{ k: 'prep', sec: HIIT_PREP_SEC, round: 0 }];
+  for (let r = 1; r <= cfg.rounds; r++) {
+    ph.push({ k: 'work', sec: cfg.work, round: r });
+    if (r < cfg.rounds && cfg.rest > 0) ph.push({ k: 'rest', sec: cfg.rest, round: r });
+  }
+  return ph;
+}
+function hiitTotalSec(cfg) { return HIIT_PREP_SEC + cfg.work * cfg.rounds + (cfg.rest > 0 ? cfg.rest * (cfg.rounds - 1) : 0); }
+function hiitCfgFromInputs() {
+  const w = parseInt(document.getElementById('hiitWork').value, 10);
+  const r = parseInt(document.getElementById('hiitRest').value, 10);
+  const n = parseInt(document.getElementById('hiitRounds').value, 10);
+  const work = isFinite(w) ? w : 0, rest = isFinite(r) ? r : 0, rounds = isFinite(n) ? n : 0;
+  if (work < 5 || work > 3600 || rest < 0 || rest > 3600 || rounds < 1 || rounds > 99) return null;
+  const hit = HIIT_PRESETS.find(pp => pp.work === work && pp.rest === rest && pp.rounds === rounds);
+  return { name: hit ? hit.name : 'カスタム', work: work, rest: rest, rounds: rounds };
+}
+function hiitPaintChips() {
+  const w = parseInt(document.getElementById('hiitWork').value, 10);
+  const r = parseInt(document.getElementById('hiitRest').value, 10);
+  const n = parseInt(document.getElementById('hiitRounds').value, 10);
+  document.querySelectorAll('.hiit-chip').forEach(ch => {
+    const pp = HIIT_PRESETS[+ch.dataset.hp];
+    ch.classList.toggle('on', !!pp && pp.work === w && pp.rest === r && pp.rounds === n);
+  });
+}
+function hiitPaintTotal() {
+  const c = hiitCfgFromInputs();
+  const tot = c ? hiitTotalSec(c) : 0;
+  document.getElementById('hiitTotal').innerHTML = c
+    ? '合計 <b>' + (tot >= 60 ? '約' + Math.round(tot / 60) + '分' : tot + '秒') + '</b>（準備' + HIIT_PREP_SEC + '秒を含む）'
+    : '合計 ―';
+}
+function hiitOnInput() {
+  const c = hiitCfgFromInputs();
+  if (c) { hiitCfg = c; hiitSaveCfg(); }
+  hiitPaintChips();
+  hiitPaintTotal();
+}
+function hiitSyncSetup() {
+  document.getElementById('hiitWork').value = hiitCfg.work;
+  document.getElementById('hiitRest').value = hiitCfg.rest;
+  document.getElementById('hiitRounds').value = hiitCfg.rounds;
+  hiitPaintChips();
+  hiitPaintTotal();
+}
+window.hiitPreset = function (i) {
+  const pp = HIIT_PRESETS[i];
+  if (!pp) return;
+  document.getElementById('hiitWork').value = pp.work;
+  document.getElementById('hiitRest').value = pp.rest;
+  document.getElementById('hiitRounds').value = pp.rounds;
+  hiitOnInput();
+};
+window.toggleHiit = function () {
+  const body = document.getElementById('hiitBody');
+  if (!body) return;
+  const nowHidden = body.classList.toggle('hidden');
+  document.getElementById('hiitChev').classList.toggle('is-open', !nowHidden);
+  if (!nowHidden) { if (hiitState) hiitRenderRun(); else hiitSyncSetup(); }
+};
+function hiitLockWake() {
+  try {
+    if (navigator.wakeLock && navigator.wakeLock.request) {
+      navigator.wakeLock.request('screen').then(w => { if (hiitState) hiitState.wake = w; }).catch(() => {});
+    }
+  } catch (e) {}
+}
+function hiitRenderRun() {
+  const st = hiitState;
+  if (!st) return;
+  const ph = st.phases[st.i];
+  const remainMs = st.paused ? st.remainMs : Math.max(0, st.endAt - Date.now());
+  const remainSec = Math.ceil(remainMs / 1000);
+  const phaseEl = document.getElementById('hiitPhase');
+  phaseEl.textContent = ph.k === 'prep' ? '準備' : ph.k === 'work' ? '運動' : '休憩';
+  phaseEl.style.color = ph.k === 'work' ? 'var(--np-red)' : ph.k === 'rest' ? 'var(--gold)' : '';
+  document.getElementById('hiitDisplay').textContent = fmtTimer(remainSec);
+  document.getElementById('hiitRound').innerHTML = ph.k === 'prep'
+    ? 'まもなく開始 ・ ' + escapeHtml(st.cfg.name)
+    : 'ラウンド <b>' + ph.round + '</b> / ' + st.cfg.rounds + ' ・ ' + escapeHtml(st.cfg.name);
+  let el = 0;
+  for (let j = 0; j < st.i; j++) el += st.phases[j].sec;
+  el += ph.sec - remainSec;
+  document.getElementById('hiitBarFill').style.width = Math.min(100, Math.round(el / st.totalSec * 100)) + '%';
+  const nx = st.phases[st.i + 1];
+  document.getElementById('hiitNext').textContent = nx ? '次は ' + (nx.k === 'work' ? '運動' : '休憩') + ' ' + nx.sec + '秒' : '次で終了';
+}
+function hiitBeginPhase(i) {
+  const st = hiitState;
+  if (!st) return;
+  st.i = i;
+  st.paused = false;
+  st.endAt = Date.now() + st.phases[i].sec * 1000;
+  document.getElementById('hiitPauseBtn').textContent = '一時停止';
+  hiitRenderRun();
+  if (st.timer) clearInterval(st.timer);
+  st.timer = setInterval(hiitTick, 200);
+}
+function hiitTick() {
+  const st = hiitState;
+  if (!st || st.paused) return;
+  if (st.endAt - Date.now() > 0) { hiitRenderRun(); return; }
+  if (st.i >= st.phases.length - 1) { hiitFinish(); return; }
+  playSingleBeep();
+  buzz(150);
+  hiitBeginPhase(st.i + 1);
+}
+window.hiitStart = function () {
+  const cfg = hiitCfgFromInputs();
+  if (!cfg) { alert('運動は5秒以上・ラウンドは1以上で入力してください'); return; }
+  hiitCfg = cfg;
+  hiitSaveCfg();
+  hiitState = {
+    cfg: cfg, phases: hiitPhases(cfg), i: 0, endAt: 0, timer: null, paused: false, remainMs: 0,
+    totalSec: hiitTotalSec(cfg), dateStr: cardioDate || dstr(new Date()), wake: null
+  };
+  document.getElementById('hiitSetup').classList.add('hidden');
+  document.getElementById('hiitRun').classList.remove('hidden');
+  hiitLockWake();
+  hiitBeginPhase(0);
+};
+window.hiitPause = function () {
+  const st = hiitState;
+  if (!st) return;
+  if (st.paused) {
+    st.paused = false;
+    st.endAt = Date.now() + st.remainMs;
+    document.getElementById('hiitPauseBtn').textContent = '一時停止';
+  } else {
+    st.paused = true;
+    st.remainMs = Math.max(0, st.endAt - Date.now());
+    document.getElementById('hiitPauseBtn').textContent = '再開';
+    hiitRenderRun();
+  }
+};
+function hiitCleanup() {
+  if (hiitState && hiitState.timer) clearInterval(hiitState.timer);
+  if (hiitState && hiitState.wake) { try { hiitState.wake.release(); } catch (e) {} }
+  hiitState = null;
+}
+function hiitShowSetup() {
+  document.getElementById('hiitRun').classList.add('hidden');
+  document.getElementById('hiitSetup').classList.remove('hidden');
+  hiitSyncSetup();
+}
+window.hiitStop = function () {
+  hiitCleanup();
+  hiitShowSetup();
+};
+function hiitFinish() {
+  const st = hiitState;
+  if (!st) return;
+  const d = st.dateStr;
+  playSingleBeep();
+  setTimeout(playSingleBeep, 280);
+  setTimeout(playSingleBeep, 560);
+  buzz([160, 90, 160, 90, 320]);
+  hiitCleanup();
+  hiitShowSetup();
+  markHiitDay(d);
+  requestRender('all');
+  alert('HIIT完了！🔥');
+}
+(function hiitInit() {
+  if (!document.getElementById('hiitWork')) return;
+  hiitSyncSetup();
+  ['hiitWork', 'hiitRest', 'hiitRounds'].forEach(id => document.getElementById(id).addEventListener('input', hiitOnInput));
+})();
+
 window.PPLTest = {
   version: 'extras v54',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
@@ -2994,6 +3186,7 @@ window.PPLTest = {
   sanitizeGoals: (typeof sanitizeGoals === 'function') ? sanitizeGoals : null,
   sanitizeWorkouts: (typeof sanitizeWorkouts === 'function') ? sanitizeWorkouts : null,
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
+  sanitizeHiitDays: (typeof sanitizeHiitDays === 'function') ? sanitizeHiitDays : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
   bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, plateauEx: plateauEx, gorillaHeads: gorillaHeads, trendWord: trendWord, snapData: snapData, buildBackupData: (typeof buildBackupData === 'function') ? buildBackupData : null, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
