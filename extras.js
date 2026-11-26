@@ -2597,6 +2597,8 @@ function bodyPageHtml() {
     '<span class="bd-date">' + fmtD(d) + (d === today ? '（今日）' : '') + '</span>' +
     '<button type="button" class="snap-btn" data-bd="dnext"' + (d >= today ? ' disabled' : '') + '>▶</button></div>' +
     '<div class="bd-wrow"><input id="bdWeight" class="bd-input weight-input" type="text" readonly inputmode="none" placeholder="体重 kg" value="' + (cur !== null ? cur : '') + '">' +
+    '<button type="button" class="goal-btn" data-bd="wstep" data-d="-0.1">−0.1</button>' +
+    '<button type="button" class="goal-btn" data-bd="wstep" data-d="0.1">+0.1</button>' +
     '<button type="button" class="goal-btn" data-bd="wsave">保存</button>' +
     (cur !== null ? '<button type="button" class="goal-btn danger" data-bd="wdel">削除</button>' : '') + '</div></div>';
   /* 推移グラフ（直近30件：日々の体重＋週平均＋目標線） */
@@ -2666,6 +2668,13 @@ async function onBodyClick(e) {
     return;
   }
   if (act === 'wload') { stashBodyForm(); bodyState.date = btn.dataset.d; paintBodyPage(); const sc = bodyEl.querySelector('.dt-body'); if (sc) sc.scrollTop = 0; return; }
+  if (act === 'wstep') {
+    const inp = bodyEl.querySelector('#bdWeight');
+    const v = inp ? parseFloat(inp.value) : NaN;
+    if (!isFinite(v)) return; /* 空欄のときは動かさない */
+    inp.value = Math.min(300, Math.max(30, Math.round((v + parseFloat(btn.dataset.d)) * 10) / 10));
+    return;
+  }
   if (act === 'wsave') {
     const inp = bodyEl.querySelector('#bdWeight');
     const v = inp ? parseFloat(inp.value) : NaN;
@@ -2713,7 +2722,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v51',
+  version: 'extras v52',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
