@@ -7,6 +7,7 @@
      askConfirm / alert    … 確認ダイアログ・トースト
      todayType / menuAddExercise / tplExport / tplImport … 部位・メニュー（PARTS.menu もここで登録）
      Numpad                … テンキーの窓口（close / followNewRow / release）
+     TextPad               … 文字パッドの窓口（close）。種目名などの文字入力欄にフリック／英字パッドを出す
    ■ PR演出：prSnap / prCheck / showPRModal（保存時の判定と、金色の「記録更新！！」モーダル＋ゴリ朱印の押印アニメ＋バイブ。初回記録は出さない）
    ■ ホームの種目行には開閉にかかわらず常に「詳細」ボタンがあり、種目別の詳細ページ（全画面）へ移動できる（openDetail）
      switchTab / switchSettingsSub / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
@@ -1264,6 +1265,256 @@ document.addEventListener('focusin', e => {
   if (t && t.closest && !t.closest(PAD_SEL) && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) closePad();
 });
 
+/* ===== 文字パッド（種目名などの文字入力欄。OSのキーボードの代わりに出す）
+   ・色と形は専用テンキー（.np-k）と共通：白地のパネル／黒キー／赤枠／金文字／赤の完了
+   ・カナ面はフリック入力（タップ・左・上・右・下）。漢字変換はできないため、
+     「キーボード」キーで通常のキーボードに切り替える逃げ道を用意する
+   ・入力欄は readonly。タップで金枠ハイライト（input.np-active を流用）＋画面下にパッド ===== */
+const TP_SEL = '#exerciseName, #meInput, #meName, #renInput';
+const tpEl = document.createElement('div');
+tpEl.id = 'textpad';
+tpEl.setAttribute('aria-hidden', 'true');
+tpEl.innerHTML =
+  '<div class="tp-head">' +
+    '<button type="button" class="tp-k tp-fn tp-tab on" data-tp-tab="kana">カナ</button>' +
+    '<button type="button" class="tp-k tp-fn tp-tab" data-tp-tab="alpha">英字</button>' +
+    '<button type="button" class="tp-k tp-fn tp-tab" data-tp-tab="hira">ひらがな</button>' +
+    '<button type="button" class="tp-k tp-ok" data-tp-act="ok">完了</button>' +
+  '</div>' +
+  '<div class="tp-flick" id="tpFlick"></div>' +
+  '<div class="tp-alpha" id="tpAlpha" style="display:none"></div>' +
+  '<div class="tp-foot">' +
+    '<button type="button" class="tp-k tp-fn" data-tp-act="kbd">キーボード</button>' +
+    '<button type="button" class="tp-k tp-fn" data-tp-act="space">空白</button>' +
+    '<button type="button" class="tp-k tp-fn" data-tp-act="clear">全消去</button>' +
+  '</div>';
+document.body.appendChild(tpEl);
+const tpGuide = document.createElement('div');
+tpGuide.id = 'tpguide';
+tpGuide.innerHTML = '<div class="tg gc"></div><div class="tg gl"></div><div class="tg gu"></div><div class="tg gr"></div><div class="tg gd"></div>';
+document.body.appendChild(tpGuide);
+
+let tpInput = null;
+let tpMode = 'kana';      /* kana | alpha */
+let tpKana = 'kata';      /* kata | hira */
+let tpShift = false;
+
+const tpToHira = s => s.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+const tpToKata = s => s.replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60));
+const tpConv = s => tpKana === 'kata' ? tpToKata(s) : tpToHira(s);
+const TP_DAKU = {'か':'が','き':'ぎ','く':'ぐ','け':'げ','こ':'ご','さ':'ざ','し':'じ','す':'ず','せ':'ぜ','そ':'ぞ','た':'だ','ち':'ぢ','つ':'づ','て':'で','と':'ど','は':'ば','ひ':'び','ふ':'ぶ','へ':'べ','ほ':'ぼ','う':'ゔ','ば':'ぱ','び':'ぴ','ぶ':'ぷ','べ':'ぺ','ぼ':'ぽ','ぱ':'は','ぴ':'ひ','ぷ':'ふ','ぺ':'へ','ぽ':'ほ','が':'か','ぎ':'き','ぐ':'く','げ':'け','ご':'こ','ざ':'さ','じ':'し','ず':'す','ぜ':'せ','ぞ':'そ','だ':'た','ぢ':'ち','づ':'つ','で':'て','ど':'と','ゔ':'う'};
+const TP_SMALL = {'あ':'ぁ','い':'ぃ','う':'ぅ','え':'ぇ','お':'ぉ','や':'ゃ','ゆ':'ゅ','よ':'ょ','つ':'っ','ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','ゃ':'や','ゅ':'ゆ','ょ':'よ','っ':'つ'};
+/* フリックの並び：[タップ, 左, 上, 右, 下] */
+const TP_FLICK = {
+  'あ': ['あ','い','う','え','お'], 'か': ['か','き','く','け','こ'], 'さ': ['さ','し','す','せ','そ'],
+  'た': ['た','ち','つ','て','と'], 'な': ['な','に','ぬ','ね','の'], 'は': ['は','ひ','ふ','へ','ほ'],
+  'ま': ['ま','み','む','め','も'], 'や': ['や','「','ゆ','」','よ'], 'ら': ['ら','り','る','れ','ろ'],
+  'わ': ['わ','を','ん','ー','・']
+};
+const tpFlickBox = tpEl.querySelector('#tpFlick');
+const tpAlphaBox = tpEl.querySelector('#tpAlpha');
+const tgCells = { c: tpGuide.querySelector('.gc'), l: tpGuide.querySelector('.gl'), u: tpGuide.querySelector('.gu'), r: tpGuide.querySelector('.gr'), d: tpGuide.querySelector('.gd') };
+
+function tpSetValue(v) {
+  if (!tpInput) return;
+  tpInput.value = v;
+  tpInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+function tpCap() { return tpInput && tpInput.maxLength > 0 ? tpInput.maxLength : (typeof LIMITS !== 'undefined' ? LIMITS.name : 60); }
+function tpAdd(ch) {
+  if (!tpInput || !tpInput.isConnected) { closeTextPad(); return; }
+  if (tpInput.value.length >= tpCap()) return;
+  tpSetValue(tpInput.value + ch);
+}
+function tpDel() {
+  if (!tpInput || !tpInput.isConnected) { closeTextPad(); return; }
+  tpSetValue(tpInput.value.slice(0, -1));
+}
+function tpTransform() {
+  if (!tpInput || !tpInput.isConnected) { closeTextPad(); return; }
+  const v = tpInput.value;
+  if (!v) return;
+  const h = tpToHira(v.slice(-1));
+  const out = TP_DAKU[h] || TP_SMALL[h];
+  if (!out) return;
+  tpSetValue(v.slice(0, -1) + (tpKana === 'kata' ? tpToKata(out) : out));
+}
+function tpShowGuide(keyEl, chars, dir) {
+  const r = keyEl.getBoundingClientRect();
+  let x = r.left + r.width / 2 - 66, y = r.top + r.height / 2 - 66;
+  x = Math.max(2, Math.min(x, window.innerWidth - 134));
+  y = Math.max(2, Math.min(y, window.innerHeight - 134));
+  tpGuide.style.left = x + 'px';
+  tpGuide.style.top = y + 'px';
+  tpGuide.style.display = 'block';
+  tgCells.c.textContent = tpConv(chars[0]);
+  tgCells.l.textContent = tpConv(chars[1]);
+  tgCells.u.textContent = tpConv(chars[2]);
+  tgCells.r.textContent = tpConv(chars[3]);
+  tgCells.d.textContent = tpConv(chars[4]);
+  ['c','l','u','r','d'].forEach(k => tgCells[k].classList.toggle('on', k === dir));
+}
+function tpHideGuide() { tpGuide.style.display = 'none'; }
+function tpAttachFlick(el, chars) {
+  let sx = 0, sy = 0, dir = 'c', active = false;
+  el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    active = true; sx = e.clientX; sy = e.clientY; dir = 'c';
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    tpShowGuide(el, chars, dir);
+  });
+  el.addEventListener('pointermove', e => {
+    if (!active) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy, ax = Math.abs(dx), ay = Math.abs(dy);
+    if (Math.max(ax, ay) < 20) dir = 'c';
+    else if (ax > ay) dir = dx < 0 ? 'l' : 'r';
+    else dir = dy < 0 ? 'u' : 'd';
+    tpShowGuide(el, chars, dir);
+  });
+  const finish = commit => {
+    if (!active) return;
+    active = false; tpHideGuide();
+    if (commit) tpAdd(tpConv(chars[{ c: 0, l: 1, u: 2, r: 3, d: 4 }[dir]]));
+  };
+  el.addEventListener('pointerup', () => finish(true));
+  el.addEventListener('pointercancel', () => finish(false));
+}
+function tpBuildFlick() {
+  tpFlickBox.innerHTML = '';
+  ['あ','か','さ','た','な','は','ま','や','ら'].forEach(head => {
+    const b = document.createElement('div');
+    b.className = 'tp-k tp-fkey';
+    b.textContent = tpConv(head);
+    tpAttachFlick(b, TP_FLICK[head]);
+    tpFlickBox.appendChild(b);
+  });
+  const daku = document.createElement('button');
+  daku.type = 'button'; daku.className = 'tp-k tp-fkey tp-fn'; daku.textContent = '゛゜小';
+  daku.addEventListener('click', tpTransform);
+  tpFlickBox.appendChild(daku);
+  const wa = document.createElement('div');
+  wa.className = 'tp-k tp-fkey';
+  wa.textContent = tpConv('わ');
+  tpAttachFlick(wa, TP_FLICK['わ']);
+  tpFlickBox.appendChild(wa);
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'tp-k tp-fkey tp-fn'; del.textContent = '⌫';
+  del.setAttribute('aria-label', '1文字削除');
+  del.addEventListener('click', tpDel);
+  tpFlickBox.appendChild(del);
+}
+function tpBuildAlpha() {
+  tpAlphaBox.innerHTML = '';
+  ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].forEach((row, ri) => {
+    row.split('').forEach(ch => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'tp-k tp-akey';
+      b.textContent = ri === 0 ? ch : (tpShift ? ch : ch.toLowerCase());
+      b.addEventListener('click', () => {
+        tpAdd(b.textContent);
+        if (tpShift && ri > 0) { tpShift = false; tpBuildAlpha(); }
+      });
+      tpAlphaBox.appendChild(b);
+    });
+  });
+  const sh = document.createElement('button');
+  sh.type = 'button'; sh.className = 'tp-k tp-akey tp-fn tp-w2'; sh.textContent = tpShift ? '⇧ ON' : '⇧ 大文字';
+  sh.addEventListener('click', () => { tpShift = !tpShift; tpBuildAlpha(); });
+  tpAlphaBox.appendChild(sh);
+  const un = document.createElement('button');
+  un.type = 'button'; un.className = 'tp-k tp-akey'; un.textContent = '_';
+  un.addEventListener('click', () => tpAdd('_'));
+  tpAlphaBox.appendChild(un);
+  const hy = document.createElement('button');
+  hy.type = 'button'; hy.className = 'tp-k tp-akey'; hy.textContent = '-';
+  hy.addEventListener('click', () => tpAdd('-'));
+  tpAlphaBox.appendChild(hy);
+}
+function tpSetMode(m) {
+  tpMode = m;
+  tpEl.querySelectorAll('[data-tp-tab]').forEach(t => {
+    const k = t.dataset.tpTab;
+    t.classList.toggle('on', k === m || (k === 'hira' && tpKana === 'hira'));
+  });
+  tpFlickBox.style.display = m === 'kana' ? 'grid' : 'none';
+  tpAlphaBox.style.display = m === 'alpha' ? 'grid' : 'none';
+  if (tpInput) tpMetrics();
+}
+function tpMetrics() {
+  const st = document.documentElement.style;
+  st.setProperty('--nav-h', (navEl ? navEl.offsetHeight : 0) + 'px');
+  st.setProperty('--tp-h', tpEl.offsetHeight + 'px');
+}
+function openTextPad(el) {
+  closePad();
+  if (tpInput && tpInput !== el) tpInput.classList.remove('np-active');
+  tpInput = el;
+  tpEl.classList.toggle('tp-over', !!(el.closest && el.closest('#exDetail, #menuEditor')));
+  tpSetMode(tpMode);
+  tpMetrics();
+  el.classList.add('np-active');
+  tpEl.classList.add('show');
+  tpEl.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('tp-open');
+  setTimeout(() => {
+    if (tpInput === el && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, 30);
+}
+function closeTextPad() {
+  if (tpInput) tpInput.classList.remove('np-active');
+  tpInput = null;
+  tpHideGuide();
+  tpEl.classList.remove('tp-over');
+  tpEl.classList.remove('show');
+  tpEl.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('tp-open');
+}
+/* 「キーボード」：通常のキーボードに切り替える（漢字変換用）。欄から離れたら readonly に戻す */
+function tpUseKeyboard() {
+  const el = tpInput;
+  if (!el) return;
+  closeTextPad();
+  el.removeAttribute('readonly');
+  el.focus();
+  el.addEventListener('blur', function h() {
+    el.setAttribute('readonly', '');
+    el.removeEventListener('blur', h);
+  });
+}
+tpEl.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tp-tab]');
+  if (tab) {
+    const k = tab.dataset.tpTab;
+    if (k === 'hira') { tpKana = tpKana === 'kata' ? 'hira' : 'kata'; tab.textContent = tpKana === 'kata' ? 'ひらがな' : 'カタカナ'; tpBuildFlick(); tpSetMode('kana'); }
+    else tpSetMode(k);
+    return;
+  }
+  const act = e.target.closest('[data-tp-act]');
+  if (!act) return;
+  const a = act.dataset.tpAct;
+  if (a === 'ok') closeTextPad();
+  else if (a === 'space') tpAdd(' ');
+  else if (a === 'clear') { if (tpInput && tpInput.isConnected) tpSetValue(''); }
+  else if (a === 'kbd') tpUseKeyboard();
+});
+document.addEventListener('click', e => {
+  const t = e.target.closest(TP_SEL);
+  if (t) { openTextPad(t); return; }
+  if (e.target.closest('#textpad')) return;
+  if (e.target.closest(PAD_SEL)) { closeTextPad(); return; }
+  if (e.target.closest('#suggestionBox')) { closeTextPad(); return; }
+  if (tpInput) closeTextPad();
+});
+document.addEventListener('focusin', e => {
+  const t = e.target;
+  if (t && t.closest && !t.closest(TP_SEL) && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) closeTextPad();
+});
+window.addEventListener('popstate', () => closeTextPad());
+window.addEventListener('resize', () => { if (tpInput) tpMetrics(); });
+tpBuildFlick();
+tpBuildAlpha();
+window.TextPad = { close: closeTextPad };
+
 /* ===== 折れ線グラフ（金の線＝総合・赤の実線＝推定1RM）。色はテーマで変えない ===== */
 let gid = 0;
 function curvePath(P) {
@@ -1772,10 +2023,10 @@ function renderEditor() {
   const offs = m.off.map((n, i) => '<div class="me-row"><div class="me-name dn">' + escapeHtml(n) + '</div><div class="me-ops"><button type="button" data-act="restore" data-i="' + i + '">戻す</button></div></div>').join('');
   const past = meSugHtml();
   o.innerHTML = '<div class="me-head"><div class="hm-lb">種目の編集</div><div class="me-tabs">' + tabs + '</div></div><div class="me-body">' +
-    '<div class="me-sec">テンプレート名（全角5文字まで）</div><div class="me-add"><input type="text" id="meName" placeholder="枠の名前" autocomplete="off" value="' +
+    '<div class="me-sec">テンプレート名（全角5文字まで）</div><div class="me-add"><input type="text" readonly inputmode="none" id="meName" placeholder="枠の名前" autocomplete="off" value="' +
     escapeHtml(m.name) + '"></div>' +
     '<div class="me-sec">メニュー（上から順に表示）</div>' + rows +
-    '<div class="me-sec">種目を追加</div><div class="me-add"><input type="text" id="meInput" placeholder="種目名を入力" autocomplete="off" value="' + escapeHtml(keep) +
+    '<div class="me-sec">種目を追加</div><div class="me-add"><input type="text" readonly inputmode="none" id="meInput" placeholder="種目名を入力" autocomplete="off" value="' + escapeHtml(keep) +
     '"><button type="button" data-act="add">追加</button></div>' +
     '<div class="me-chips" id="meSug"' + (past ? '' : ' style="display:none"') + '>' + past + '</div>' +
     (offs ? '<div class="me-sec">非表示の種目</div>' + offs : '') +
@@ -2132,7 +2383,7 @@ function renameCandidates() {
 function renameEditorHtml() {
   const others = renameCandidates();
   return '<div class="dt-sec">種目名の変更</div><div class="ren-box">' +
-    '<input id="renInput" class="ren-input" type="text" placeholder="新しい種目名">' +
+    '<input id="renInput" class="ren-input" type="text" readonly inputmode="none" placeholder="新しい種目名">' +
     '<div class="ren-note">既存の種目名に変更すると、その種目と統合されます（統合は元に戻せません）。</div>' +
     (others.length ? '<div class="ren-chips">' + others.map((n, i) => '<button type="button" class="ren-chip" data-dt="rename-pick" data-i="' + i + '">' + escapeHtml(n) + '</button>').join('') + '</div>' : '') +
     '<div class="ren-btns"><button type="button" class="goal-btn" data-dt="rename-save">変更する</button><button type="button" class="goal-btn" data-dt="rename-cancel">キャンセル</button></div></div>';

@@ -683,6 +683,72 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
   border-color: var(--np-red);
 }
 
+/* ================= 追加: 文字パッド（種目名などの文字入力。色と形は専用テンキーと共通） ================= */
+body.tp-open { padding-bottom: calc(var(--tp-h, 340px) + var(--nav-h, 56px) + 16px); }
+#textpad {
+  position: fixed;
+  left: 50%;
+  bottom: var(--nav-h, 56px); /* 下タブの上に載せる（テンキーと同じ） */
+  transform: translate(-50%, calc(100% + var(--nav-h, 56px)));
+  width: 100%;
+  max-width: 28rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: #fff; /* ボタンの後ろは白（テンキーと同じ） */
+  border-top: 1px solid var(--line);
+  z-index: 49;
+  visibility: hidden;
+  transition: transform .2s ease, visibility 0s .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#textpad.show { transform: translate(-50%, 0); visibility: visible; transition: transform .2s ease, visibility 0s; }
+#textpad.tp-over { z-index: 125; bottom: 0; } /* 全画面ページ（詳細／メニュー編集）の中で使うとき */
+.tp-head { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 6px; }
+.tp-flick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tp-alpha { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+.tp-foot { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 6px; }
+.tp-k {
+  background: var(--bg); /* 枠の中は黒（テンキーと同じ） */
+  border: 1px solid var(--np-red);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1;
+  padding: 0;
+  transition: transform .12s ease, box-shadow .18s ease, background .12s;
+}
+.tp-k:active { background: var(--hover-1); transform: scale(0.97); box-shadow: 0 0 10px rgba(192, 96, 90, .65), inset 0 0 6px rgba(192, 96, 90, .3); }
+.tp-fkey { height: 54px; font-size: 21px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: pointer; }
+.tp-akey { height: 46px; font-size: 15px; font-family: var(--num); }
+.tp-k.tp-fn { color: var(--gold); font-size: 14px; }
+.tp-fkey.tp-fn { font-size: 16px; }
+.tp-head .tp-k, .tp-foot .tp-k { height: 44px; font-size: 14px; }
+.tp-k.tp-ok {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  text-indent: 0.25em;
+  background: var(--np-red); /* 完了：テンキーの完了と同じ赤 */
+  color: #fff;
+  border-color: var(--np-red);
+}
+.tp-tab.on { background: var(--hover-1); box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb), .55); font-weight: 700; }
+.tp-k.tp-w2 { grid-column: span 2; }
+/* フリックの十字ガイド */
+#tpguide { position: fixed; z-index: 200; width: 132px; height: 132px; display: none; pointer-events: none; }
+#tpguide .tg { position: absolute; width: 44px; height: 44px; background: var(--bg); border: 1px solid var(--np-red); border-radius: 6px; color: var(--text); font-size: 19px; display: flex; align-items: center; justify-content: center; }
+#tpguide .tg.on { background: var(--np-red); color: #fff; font-weight: 700; }
+#tpguide .gc { left: 44px; top: 44px; }
+#tpguide .gl { left: 0; top: 44px; }
+#tpguide .gu { left: 44px; top: 0; }
+#tpguide .gr { left: 88px; top: 44px; }
+#tpguide .gd { left: 44px; top: 88px; }
+
 /* ================= 追加: 日付ボトムシート ================= */
 .cal-d[data-d] { cursor: pointer; }
 #daySheet { position: fixed; inset: 0; z-index: 105; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.6); }
