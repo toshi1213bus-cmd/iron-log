@@ -1064,6 +1064,8 @@ function fitTimer(force) {
   if (!disp || !tmCenter) return;
   const w = tmCenter.clientWidth;
   if (!w || (!force && w === fitW)) return;
+  /* デジタルフォント（DSEG7）の読み込み前に測ると、別フォントの幅で計算して数字がはみ出す。読み込みが終わるまでは測らない */
+  if (document.fonts && document.fonts.check && !document.fonts.check('700 100px DSEG7')) return;
   const keep = disp.textContent;
   disp.textContent = '00:00';
   disp.style.fontSize = '100px';
@@ -1079,6 +1081,7 @@ if (tmCenter) {
     try { new ResizeObserver(() => fitTimer()).observe(tmCenter); } catch (e) {}
   }
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitTimer(true)).catch(() => {});
+  if (document.fonts && document.fonts.load) { try { document.fonts.load('700 100px DSEG7', '00:00').then(() => fitTimer(true)).catch(() => {}); } catch (e) {} }
 }
 document.addEventListener('click', e => { if (e.target.closest('button')) buzz(10); });
 
