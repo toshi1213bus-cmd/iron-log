@@ -373,8 +373,8 @@ function renderAnalysis() {
   achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
   const pfLv = profileStats().lv;
   const newN = achNewCount(achCats);
-  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span>' + (newN > 0 ? '<span class="ach-new-badge">＋' + newN + '</span>' : '') + '<span class="ach-entry-ar">›</span></span></button>';
-  el.innerHTML = achRow + '<button type="button" class="ai-btn" data-an="ai">分析させる</button>' + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend; /* プロフィールはカレンダー直下・分析の上。月間推移は週間・月間どちらでも常時表示 */
+  const achRow = '<button type="button" class="ach-entry ach-entry-gold" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span>' + (newN > 0 ? '<span class="ach-new-badge">＋' + newN + '</span>' : '') + '<span class="ach-entry-ar">›</span></span></button>';
+  el.innerHTML = achRow + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + '<button type="button" class="ai-btn" data-an="ai">分析させる</button>'; /* プロフィールはカレンダー直下。分析させるはページ最下部。月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-an]');
@@ -1546,12 +1546,9 @@ window.TextPad = { close: closeTextPad };
 /* ===== 折れ線グラフ（金の線＝総合・赤の実線＝推定1RM）。色はテーマで変えない ===== */
 let gid = 0;
 function curvePath(P) {
+  /* 折れ線：全データ点を直線で結ぶ（滑らかな曲線は実在しない値を描くため廃止。ひでぴ決定 2026-11-27） */
   const f = x => x.toFixed(1);
-  let d = 'M' + f(P[0][0]) + ',' + f(P[0][1]);
-  for (let i = 1; i < P.length - 1; i++) {
-    d += ' Q' + f(P[i][0]) + ',' + f(P[i][1]) + ' ' + f((P[i][0] + P[i + 1][0]) / 2) + ',' + f((P[i][1] + P[i + 1][1]) / 2);
-  }
-  return d + ' L' + f(P[P.length - 1][0]) + ',' + f(P[P.length - 1][1]);
+  return 'M' + P.map(p => f(p[0]) + ',' + f(p[1])).join(' L');
 }
 function line(v, w, h, dates, rm, lab, ax, tap, goal) {
   const n = v.length;

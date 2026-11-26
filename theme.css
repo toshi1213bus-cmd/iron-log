@@ -423,7 +423,7 @@ body .ex-toggle-icon.is-open {
 .hm-medal { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1px; animation: medalFloat 3s ease-in-out infinite; }
 @keyframes medalFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
 /* 一枚絵の上の文字：柔らかい影で浮かせる（アート上のテキスト範囲のみ。金ボタン系は除外） */
-#tabContentHome, #tabContentWorkout, #tabContentCardio, #tabContentSettings, #aiPage, #bodyPage, #achPage, #exDetail, #menuEditor { text-shadow: 0 1px 2px rgba(0,0,0,.75); }
+#tabContentHome, #tabContentWorkout, #tabContentCardio, #tabContentSettings, #aiPage, #bodyPage, #achPage, #exDetail, #menuEditor, #daySheet { text-shadow: 0 1px 3px rgba(0,0,0,.55), 0 0 8px rgba(0,0,0,.30); }
 .ai-btn, .ai-conf-b, .goal-chip { text-shadow: none; }
 .hm-word { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.55; }
 .hm-word-lb { font-size: 11px; letter-spacing: 0.1em; color: var(--gold); margin-right: 6px; }
@@ -930,6 +930,10 @@ button:active { transform: scale(.95); }
 .ach-item.off .ach-name { color: var(--muted); }
 .ach-sub { font-size: 11px; color: var(--muted); }
 .ach-new-badge { font-size: 11px; font-weight: 700; color: var(--gold); border: 1px solid var(--gold); border-radius: 999px; padding: 1px 7px; }
+.ach-entry-gold { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border: none; color: var(--on-gold); font-weight: 700; }
+.ach-entry-gold .ach-entry-n { color: var(--on-gold); opacity: .78; }
+.ach-entry-gold .ach-entry-ar { color: var(--on-gold); }
+.ach-entry-gold .ach-new-badge { color: var(--on-gold); border-color: var(--on-gold); }
 .ach-item.new .ach-medal { filter: drop-shadow(0 0 6px var(--gold)); animation: achNewPulse 1.6s ease-in-out infinite; }
 .ach-item.new .ach-name { color: var(--gold); font-weight: 700; }
 .ach-item.new .ach-name::after { content: ' 新'; font-size: 9px; font-weight: 700; }
@@ -1018,4 +1022,4 @@ body { font-variant-numeric: tabular-nums; }
 .hm-pr .seal { width: 24px; height: 24px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.65)); }
 
 /* 自動ビネット：タブ画面のアートの上に薄い暗幕を敷き、文字の読みやすさを面で守る */
-body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 26%, rgba(0,0,0,.16) 62%, rgba(0,0,0,.34)), radial-gradient(115% 88% at 50% 42%, rgba(0,0,0,0) 56%, rgba(0,0,0,.30)); }
+body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(rgba(0,0,0,.16), rgba(0,0,0,.16)), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,0) 26%, rgba(0,0,0,.16) 62%, rgba(0,0,0,.34)), radial-gradient(115% 88% at 50% 42%, rgba(0,0,0,0) 56%, rgba(0,0,0,.30)); }
