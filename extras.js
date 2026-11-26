@@ -1058,30 +1058,43 @@ const disp = document.getElementById('timerDisplay');
 const card = disp ? disp.closest('.bg-gray-800') : null;
 const tmCenter = disp ? disp.closest('.tm-center') : null;
 if (card) setInterval(() => { card.classList.toggle('timer-done', !!alarmInterval); }, 200);
-/* 中央の枠いっぱいに '00:00' が収まる文字サイズを測って決める（画面が見えているときだけ測れる） */
-let fitW = 0;
+/* 中央の枠いっぱいに '00:00' が収まる文字サイズを決める。
+   埋め込みフォント（DSEG7）で '00:00' を 100px 表示したときの幅は 346.4px（実測値）で固定のため、
+   フォントの読み込み完了を待たず、最初からこの比率で計算する（待ち時間なし・はみ出しなし）。
+   読み込み後に実測して、想定とズレていたら実測で決め直す（将来フォントを替えたときの保険） */
+const DSEG_BASE = 346.4;
+let fitW = 0, fitBase = 0;
 function fitTimer(force) {
   if (!disp || !tmCenter) return;
   const w = tmCenter.clientWidth;
-  if (!w || (!force && w === fitW)) return;
-  /* デジタルフォント（DSEG7）の読み込み前に測ると、別フォントの幅で計算して数字がはみ出す。読み込みが終わるまでは測らない */
-  if (document.fonts && document.fonts.check && !document.fonts.check('700 100px DSEG7')) return;
+  if (!w) return;
+  if (!force && w === fitW) return;
+  fitW = w;
+  disp.style.fontSize = Math.floor(Math.max(24, Math.min(140, 100 * (w - 2) / (fitBase || DSEG_BASE)))) + 'px';
+}
+function fitTimerVerify() {
+  if (!disp || !tmCenter || !tmCenter.clientWidth) return;
+  const prev = disp.style.fontSize;
   const keep = disp.textContent;
   disp.textContent = '00:00';
   disp.style.fontSize = '100px';
   const base = disp.getBoundingClientRect().width;
   disp.textContent = keep;
-  if (!base) return;
-  fitW = w;
-  disp.style.fontSize = Math.floor(Math.max(24, Math.min(140, 100 * (w - 2) / base))) + 'px';
+  disp.style.fontSize = prev;
+  if (base && Math.abs(base - DSEG_BASE) / DSEG_BASE > 0.02) { fitBase = base; fitTimer(true); }
 }
 if (tmCenter) {
   window.addEventListener('resize', () => fitTimer(true));
   if (typeof ResizeObserver === 'function') {
-    try { new ResizeObserver(() => fitTimer()).observe(tmCenter); } catch (e) {}
+    try {
+      const ro = new ResizeObserver(() => fitTimer());
+      ro.observe(tmCenter);
+      if (disp) ro.observe(disp);
+    } catch (e) {}
   }
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitTimer(true)).catch(() => {});
-  if (document.fonts && document.fonts.load) { try { document.fonts.load('700 100px DSEG7', '00:00').then(() => fitTimer(true)).catch(() => {}); } catch (e) {} }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitTimerVerify()).catch(() => {});
+  if (document.fonts && document.fonts.load) { try { document.fonts.load('700 100px DSEG7', '00:00').then(() => fitTimerVerify()).catch(() => {}); } catch (e) {} }
+  setTimeout(fitTimerVerify, 1500);
 }
 document.addEventListener('click', e => { if (e.target.closest('button')) buzz(10); });
 
