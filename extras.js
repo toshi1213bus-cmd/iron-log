@@ -638,7 +638,7 @@ function achPageHtml() {
   let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">プロフィール</span><span class="ach-count">実績 ' + gotN + '/' + total + '</span></div>' +
     '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">' + profileCardHtml();
   const bc0 = bodyCalc(), bw0 = latestWeight();
-  h += '<button type="button" class="ach-entry" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
+  h += '<button type="button" class="ach-entry ach-entry-gold" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
     (bw0 ? fmtKg(bw0.kg) + 'kg' + (bc0 ? '・目標 ' + nf(bc0.kcal) + 'kcal' : '') : '未入力') +
     '</span><span class="ach-entry-ar">›</span></span></button>';
   const newNames = achNewSnapshot || new Set();

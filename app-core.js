@@ -761,7 +761,7 @@ function saveWorkout() {
     blurActive();
   } catch (e) { console.log(e); }
   savedFeedback(btn);
-  /* 2回目以降で過去最高を超えたときだけ、金色の NEW RECORD!! とバイブ（初回記録は出さない） */
+  /* 2回目以降で過去最高を超えたときだけ、金色の「記録更新！！」モーダルとバイブ（初回記録は出さない） */
   try { if (prBefore && prCheck(prBefore)) showPRModal(); } catch (e) { console.log(e); }
   return true;
 }
