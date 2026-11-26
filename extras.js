@@ -734,13 +734,13 @@ function plateauEx() {
 }
 function gorillaHeads(volKg) { return Math.round((volKg || 0) / 160); }
 function trendWord(tr) {
-  if (!tr) return 'まずは最初の一歩だ！ 全力で挑め！';
+  if (!tr) return '最初の一歩だ！';
   switch (tr.cls) {
-    case 'hot': return '最高潮だ！！ そのまま突き進め！';
-    case 'up': return '確実に強くなっている！ いい流れだ！';
-    case 'down': return '落ち込むな！ ここから這い上がれ！';
-    case 'flat': return '壁は目の前だ！ 気合いでブチ破れ！';
-    case 'plat': return '限界を突破する時だ！ やり方を変えて攻めろ！';
+    case 'hot': return '最高潮だ！';
+    case 'up': return 'いい流れだ！';
+    case 'down': return '這い上がれ！';
+    case 'flat': return '壁を破れ！';
+    case 'plat': return '限界突破だ！';
     default: return tr.txt;
   }
 }
@@ -2715,7 +2715,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v49',
+  version: 'extras v50',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,

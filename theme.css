@@ -695,7 +695,7 @@ body.np-open { padding-bottom: calc(var(--np-h, 226px) + var(--nav-h, 56px) + 16
 
 /* ================= 追加: 調子ラベル（ホーム種目行の「今日／前回」の横） =================
    上昇・好調＝金文字＋金枠／停滞注意・下降＝赤文字＋赤枠／プラトー＝赤文字＋金枠／記録なし＝白系・枠なし */
-.hm-tr { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; color: var(--gold); }
+.hm-tr { font-size: 12px; font-weight: 500; letter-spacing: 0.1em; white-space: nowrap; color: var(--gold); }
 .hm-tr.hot { font-weight: 600; letter-spacing: 0.15em; }
 /* プラトー検知！！ ＋ 対処案（種目カードを開いているときだけ）：1行に収める */
 .hm-trw { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }

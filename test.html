@@ -320,10 +320,10 @@ async function main() {
     return T.gorillaHeads(16000) === 100 && T.gorillaHeads(39762) === 249 && T.gorillaHeads(0) === 0;
   });
   test('調子判定の文言', () => {
-    return T.trendWord(null) === 'まずは最初の一歩だ！ 全力で挑め！'
-      && T.trendWord({ cls: 'hot', txt: '絶好調！！' }) === '最高潮だ！！ そのまま突き進め！'
-      && T.trendWord({ cls: 'plat', txt: 'プラトー検知！！' }) === '限界を突破する時だ！ やり方を変えて攻めろ！'
-      && T.trendWord({ cls: 'down', txt: '下降傾向' }) === '落ち込むな！ ここから這い上がれ！';
+    return T.trendWord(null) === '最初の一歩だ！'
+      && T.trendWord({ cls: 'hot', txt: '絶好調！！' }) === '最高潮だ！'
+      && T.trendWord({ cls: 'plat', txt: 'プラトー検知！！' }) === '限界突破だ！'
+      && T.trendWord({ cls: 'down', txt: '下降傾向' }) === '這い上がれ！';
   });
 
   test('保存失敗時の巻き戻し（transact）', () => {
