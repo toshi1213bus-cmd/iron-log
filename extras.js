@@ -607,7 +607,8 @@ function achievements() {
   return cats;
 }
 function achMedal(got) {
-  return '<svg class="ach-medal' + (got ? '' : ' off') + '" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="19" r="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M22 12l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z" fill="' + (got ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.4"/><path d="M16 30l-2.5 8L22 34l8.5 4L28 30" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+  /* 実績メダルはバナナ一房（ひでぴ提供のイラスト。画像は theme.css の .ach-medal に埋め込み） */
+  return '<span class="ach-medal' + (got ? '' : ' off') + '" aria-hidden="true"></span>';
 }
 function achPageHtml() {
   const cats = achievements();
