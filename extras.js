@@ -459,6 +459,44 @@ function profileStats() {
   const ace = exList.reduce((a, x) => x.rm > 0 && (!a || x.rm > a.rm) ? x : a, null);
   return { days: dayList.length, vol: vol, prTotal: prTotal, mins: mins, xp: xp, lv: lv, title: title, curRun: curRun, maxRun: maxRun, ageDays: ageDays, top: top, ace: ace };
 }
+function shareGorillaCard() {
+  try {
+    const p = profileStats();
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1350;
+        const c = cv.getContext('2d');
+        c.fillStyle = '#0a0a0b'; c.fillRect(0, 0, 1080, 1350);
+        c.strokeStyle = '#c9a96a'; c.lineWidth = 3; c.strokeRect(36, 36, 1008, 1278);
+        c.drawImage(img, 240, 90, 600, 600);
+        c.textAlign = 'center'; c.fillStyle = '#ece8dd';
+        c.font = '700 64px sans-serif'; c.fillText('ゴリラフィットネス', 540, 800);
+        c.font = '400 44px sans-serif'; c.fillStyle = '#c9a96a';
+        c.fillText('Lv.' + p.lv + ' ' + p.title, 540, 890);
+        c.fillStyle = '#ece8dd'; c.font = '700 92px sans-serif';
+        c.fillText('ゴリラ約' + gorillaHeads(p.vol) + '頭分', 540, 1030);
+        c.font = '400 40px sans-serif'; c.fillStyle = '#b9b4a6';
+        c.fillText('総負荷 ' + (Math.round(p.vol / 100) / 10) + 't ／ 通算 ' + p.days + '日 ／ PR ' + p.prTotal + '回', 540, 1120);
+        c.font = '400 34px sans-serif';
+        c.fillText(dstr(new Date()), 540, 1240);
+        cv.toBlob(async b => {
+          try {
+            const f = new File([b], 'gorilla-card.png', { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f] }); return; }
+            throw new Error('no-share');
+          } catch (e) {
+            if (e && e.name === 'AbortError') return;
+            const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'gorilla-card.png';
+            document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          }
+        }, 'image/png');
+      } catch (e) { alert('カードを作れませんでした'); }
+    };
+    img.onerror = () => alert('カードを作れませんでした');
+    img.src = 'icon-512.png';
+  } catch (e) { alert('カードを作れませんでした'); }
+}
 function profileCardHtml() {
   const p = profileStats();
   const prev = 500 * (p.lv - 1) * p.lv, next = 500 * p.lv * (p.lv + 1);
@@ -476,6 +514,7 @@ function profileCardHtml() {
     stat('最長連続週', p.maxRun + '週') +
     stat('PR更新', p.prTotal + '回') +
     '</div>';
+  if (p.vol > 0) h += '<div class="pf-line">総負荷はゴリラ約' + gorillaHeads(p.vol) + '頭分（1頭＝160kg）</div><button type="button" class="pf-share" data-ach="gcard">ゴリラカードを共有</button>';
   if (p.ace) h += '<div class="pf-line">看板種目：' + escapeHtml(p.ace.name) + '（推定1RM ' + p.ace.rm + 'kg）</div>';
   if (p.top.length) {
     h += '<div class="pf-sec">得意種目</div>' + p.top.map(x => {
@@ -675,6 +714,36 @@ function aiConfidence() {
   } catch (e) { return null; }
 }
 /* ゴリラの一言：今日の記録の状態に反応する一言。同じ日は同じ文（日付シードで選択） */
+function plateauEx() {
+  try {
+    const byName = {};
+    workouts.forEach(w => { const n = w.name.trim(); if (!byName[n]) byName[n] = {}; (byName[n][w.dateStr] = byName[n][w.dateStr] || []).push(...w.setList); });
+    for (const n of Object.keys(byName)) {
+      const ds = Object.keys(byName[n]).sort();
+      if (ds.length < 3) continue;
+      const top = d => { const ss = byName[n][d]; const mw = Math.max(...ss.map(x => x.weight || 0)); const rp = Math.max(...ss.filter(x => (x.weight || 0) === mw).map(x => x.reps || 0)); return mw + 'x' + rp; };
+      const a = ds.slice(-3);
+      if (top(a[0]) === top(a[1]) && top(a[1]) === top(a[2])) {
+        const ss = byName[n][a[2]]; const mw = Math.max(...ss.map(x => x.weight || 0));
+        const rp = Math.max(...ss.filter(x => (x.weight || 0) === mw).map(x => x.reps || 0));
+        return { name: n, mw, rp };
+      }
+    }
+    return null;
+  } catch (e) { return null; }
+}
+function gorillaHeads(volKg) { return Math.round((volKg || 0) / 160); }
+function trendWord(tr) {
+  if (!tr) return 'まずは最初の一歩だ！ 全力で挑め！';
+  switch (tr.cls) {
+    case 'hot': return '最高潮だ！！ そのまま突き進め！';
+    case 'up': return '確実に強くなっている！ いい流れだ！';
+    case 'down': return '落ち込むな！ ここから這い上がれ！';
+    case 'flat': return '壁は目の前だ！ 気合いでブチ破れ！';
+    case 'plat': return '限界を突破する時だ！ やり方を変えて攻めろ！';
+    default: return tr.txt;
+  }
+}
 function gorillaWord() {
   try { return gorillaWordPick(); } catch (e) { return '今日も積む。それだけでいい。'; }
 }
@@ -693,6 +762,8 @@ function gorillaWordPick() {
     return pick(['今日も積んだ。それだけで十分すごい。', '淡々とやる者が最後に残る。今日もその一日。', '派手さはいらない。続けることが力だ。']);
   }
   if (cardios.some(c => c.dateStr === today)) return pick(['有酸素の日。心臓も筋肉のうちだ。', '走る日も鍛える日。いいリズムだ。']);
+  const pl = plateauEx();
+  if (pl) return pick(['『' + escapeHtml(pl.name) + '』、3回つづけて ' + pl.mw + 'kg×' + pl.rp + '回。次は+1回か+2.5kg、いけるはず。', '『' + escapeHtml(pl.name) + '』が3回同じ数字で止まっている。壁は薄い。次に破ろう。']);
   const last = days[days.length - 1];
   if (!last) return pick(['有酸素からでもいい。体を動かす日を作ろう。']);
   const gap = Math.round((new Date(today) - new Date(last)) / 864e5);
@@ -828,6 +899,7 @@ function leaveAch() {
   leaveLayer();
 }
 function onAchClick(e) {
+  if (e.target.closest('[data-ach="gcard"]')) { shareGorillaCard(); return; }
   if (e.target.closest('[data-ach="body"]')) { openBodyPage(); return; }
   if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
   if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
@@ -1352,7 +1424,9 @@ window.showPRModal = function () {
   const o = document.createElement('div');
   o.id = 'prModal';
   o.setAttribute('role', 'alert');
-  o.innerHTML = '<div class="pr-box">NEW RECORD!!</div>';
+  const prMsgs = ['自己ベスト更新！！ 昨日の自分を超えたな！！', '限界突破！！ その一回が全てを変える！！', 'よくやった！！ 積み重ねが実を結んだ！！'];
+    const dust = Array.from({ length: 14 }, (_, i) => '<i style="--x:' + ((i * 37) % 81 - 40) + 'px;--dl:' + (i % 5) * 0.12 + 's"></i>').join('');
+    o.innerHTML = '<div class="pr-box"><div class="pr-t">NEW RECORD!!</div><div class="pr-msg">' + prMsgs[Math.floor(Math.random() * prMsgs.length)] + '</div><span class="pr-dust">' + dust + '</span></div>';
   const close = () => { clearTimeout(t); o.remove(); };
   const t = setTimeout(close, 2400);
   o.addEventListener('click', close);
@@ -1593,9 +1667,9 @@ function medalSvg(uid, label) { /* uid … 複数の勲章を並べても gradie
     '<path class="md-shine" d="M' + pt(-1.9, 10.4) + ' A10.4 10.4 0 0 1 ' + pt(-0.35, 10.4) + '" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.1" stroke-linecap="round"/>' +
     '</svg>').replace(/mdG|mdS|mdB|mdR/g, m => m + uid);
 }
-const MEDAL_HTML = '<div class="hm-medal">' + medalSvg('', '今日のメニュー全完了') + '<div class="hm-medal-lb">COMPLETE</div></div>';
+const MEDAL_HTML = '<div class="hm-medal"><span class="seal" role="img" aria-label="今日のメニュー全完了"></span><div class="hm-medal-lb">完遂</div></div>';
 /* PRミニ勲章（種目名の右。CSS で約24px。下に小さく PR） */
-const prMedal = i => '<span class="hm-pr">' + medalSvg('p' + i, 'PR更新') + '<span class="hm-medal-lb">PR</span></span>';
+const prMedal = i => '<span class="hm-pr"><span class="seal" role="img" aria-label="PR更新"></span><span class="hm-medal-lb">PR</span></span>';
 
 function renderHome() {
   const el = document.getElementById('tabContentHome');
@@ -1638,8 +1712,8 @@ function renderHome() {
       '<span class="hm-chev"></span></div></div><div class="hm-mini"><div class="hm-st">' +
       (b ? (t ? '今日 ' : '前回 ') + fmtSet(b) : '') +
       (tr ? (tr.cls === 'plat' && open
-        ? '<span class="hm-trw"><span class="hm-tr plat">' + tr.txt + '</span><span class="hm-tip">レスト+1分or重量-10%</span></span>'
-        : '<span class="hm-tr ' + tr.cls + '">' + tr.txt + '</span>') : '') + '</div>' +
+        ? '<span class="hm-trw"><span class="hm-tr plat">' + trendWord(tr) + '</span><span class="hm-tip">レスト+1分or重量-10%</span></span>'
+        : '<span class="hm-tr ' + tr.cls + '">' + trendWord(tr) + '</span>') : '<span class="hm-tr none">' + trendWord(null) + '</span>') + '</div>' +
       '</div>' +
       (open && s.length ? '<div class="hm-past">' + detailDaysHtml(detailStats(n), 3) + '</div>' : '') +
       '</div>';
@@ -2641,7 +2715,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v47',
+  version: 'extras v49',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2651,7 +2725,7 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, plateauEx: plateauEx, gorillaHeads: gorillaHeads, trendWord: trendWord, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
   sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
   sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
   data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },

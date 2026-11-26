@@ -306,6 +306,25 @@ async function main() {
     const w1 = T.gorillaWord(), w2 = T.gorillaWord();
     return typeof w1 === 'string' && w1.length > 0 && w1 === w2;
   });
+  test('停滞の検出', () => {
+    const mk = (id, off, w, r) => ({ id: id, name: 'ベンチプレス', dateStr: iso(off), setList: [{ weight: w, reps: r }] });
+    T.swap({ workouts: [mk('s1', -14, 60, 10), mk('s2', -7, 60, 10), mk('s3', -1, 60, 10)], cardios: [], dayPplMap: {}, goalsData: {} });
+    const pl = T.plateauEx();
+    const hit = !!pl && pl.name === 'ベンチプレス' && pl.mw === 60 && pl.rp === 10;
+    T.swap({ workouts: [mk('s1', -14, 60, 10), mk('s2', -7, 62.5, 10), mk('s3', -1, 60, 10)], cardios: [], dayPplMap: {}, goalsData: {} });
+    const miss = T.plateauEx() === null;
+    T.swap(fx);
+    return hit && miss;
+  });
+  test('ゴリラ換算', () => {
+    return T.gorillaHeads(16000) === 100 && T.gorillaHeads(39762) === 249 && T.gorillaHeads(0) === 0;
+  });
+  test('調子判定の文言', () => {
+    return T.trendWord(null) === 'まずは最初の一歩だ！ 全力で挑め！'
+      && T.trendWord({ cls: 'hot', txt: '絶好調！！' }) === '最高潮だ！！ そのまま突き進め！'
+      && T.trendWord({ cls: 'plat', txt: 'プラトー検知！！' }) === '限界を突破する時だ！ やり方を変えて攻めろ！'
+      && T.trendWord({ cls: 'down', txt: '下降傾向' }) === '落ち込むな！ ここから這い上がれ！';
+  });
 
   test('保存失敗時の巻き戻し（transact）', () => {
     /* 保存領域への書き込みをわざと失敗させ、メモリも保存領域も変更前のままか確認する */
