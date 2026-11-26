@@ -2360,9 +2360,7 @@ window.switchTab = function (name) { showTab(name); };
    その日に作った世代は上書きしない＝当日の事故（誤削除・誤復元）の前の状態が残る。
    復元は JSON 復元の仕組み（検証・件数確認・復元前の控え保存）をそのまま使う ===== */
 const SNAP_KEY = 'simple_snapshots', SNAP_MAX = 7;
-function snapData() {
-  return { version: BACKUP_VERSION, workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, menu: menuData, menuTpl: window.tplExport ? window.tplExport() : null, goals: goalsData, body: bodyData, weight: weightData };
-}
+function snapData() { return buildBackupData(); } /* 組み立ては app-core.js の buildBackupData に一本化 */
 function loadSnaps() {
   const s = loadJson(SNAP_KEY, []);
   return Array.isArray(s) ? s.filter(x => x && typeof x.date === 'string' && x.data && typeof x.data === 'object') : [];
@@ -2715,7 +2713,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v50',
+  version: 'extras v51',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
@@ -2725,7 +2723,7 @@ window.PPLTest = {
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
-  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, plateauEx: plateauEx, gorillaHeads: gorillaHeads, trendWord: trendWord, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
+  bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, plateauEx: plateauEx, gorillaHeads: gorillaHeads, trendWord: trendWord, snapData: snapData, buildBackupData: (typeof buildBackupData === 'function') ? buildBackupData : null, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,
   sanitizeBody: (typeof sanitizeBody === 'function') ? sanitizeBody : null,
   sanitizeWeightLog: (typeof sanitizeWeightLog === 'function') ? sanitizeWeightLog : null,
   data: function () { return { workouts: workouts, cardios: cardios, dayPplMap: dayPplMap, goalsData: goalsData, bodyData: bodyData, weightData: weightData }; },

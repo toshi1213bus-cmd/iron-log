@@ -319,6 +319,12 @@ async function main() {
   test('ゴリラ換算', () => {
     return T.gorillaHeads(16000) === 100 && T.gorillaHeads(39762) === 249 && T.gorillaHeads(0) === 0;
   });
+  test('バックアップ項目の一致', () => {
+    if (typeof T.buildBackupData !== 'function' || typeof T.snapData !== 'function') return false;
+    const a = Object.keys(T.buildBackupData()).sort().join(',');
+    const b = Object.keys(T.snapData()).sort().join(',');
+    return a === b && a.split(',').length >= 9;
+  });
   test('調子判定の文言', () => {
     return T.trendWord(null) === '最初の一歩だ！'
       && T.trendWord({ cls: 'hot', txt: '絶好調！！' }) === '最高潮だ！'

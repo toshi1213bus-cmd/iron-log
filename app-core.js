@@ -1052,8 +1052,9 @@ async function saveBackupFile(fileName, json) {
     return false;
   }
 }
-async function exportData() {
-  const exportObj = {
+function buildBackupData() {
+  /* バックアップとスナップショットで共用する、データ一式の組み立て（項目の追加・変更はここだけ直す） */
+  return {
     version: BACKUP_VERSION,
     workouts: workouts,
     cardios: cardios,
@@ -1064,6 +1065,9 @@ async function exportData() {
     body: PARTS.body ? PARTS.body.get() : null,
     weight: PARTS.weight ? PARTS.weight.get() : null
   };
+}
+async function exportData() {
+  const exportObj = buildBackupData();
   const fileName = `ppl_workout_backup_${new Date().toISOString().slice(0,10)}.json`;
   /* 注意：共有シートは「ボタンを押した直後」にしか開けないため、saveBackupFile の前に await を置かない */
   const saved = await saveBackupFile(fileName, JSON.stringify(exportObj));
