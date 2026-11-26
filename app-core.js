@@ -130,11 +130,14 @@ function sanitizeGoals(raw) {
   return out;
 }
 
+/* 数値化の正：文字列・数値どちらでも受け、数値にできない値は null。身体設定の保存側（extras）と検証側で共用する */
+function numVal(v) { const n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? n : null; }
+
 /* 身体設定の検証：使える項目だけを残す（未入力の項目は省く） */
 function sanitizeBody(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
-  const num = v => { const n = typeof v === 'number' ? v : parseFloat(v); return isFinite(n) ? n : null; };
+  const num = numVal;
   const h = num(raw.heightCm); if (h !== null && h >= 100 && h <= 230) out.heightCm = Math.round(h);
   const a = num(raw.age); if (a !== null && a >= 10 && a <= 100) out.age = Math.round(a);
   if (raw.sex === 'm' || raw.sex === 'f') out.sex = raw.sex;

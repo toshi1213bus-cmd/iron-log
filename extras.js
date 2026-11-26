@@ -2962,8 +2962,7 @@ async function onBodyClick(e) {
   if (act === 'save') {
     stashBodyForm();
     const f = bodyState.form;
-    const num = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
-    const height = num(f.height), age = num(f.age), target = num(f.target), kcal = num(f.kcal);
+    const height = numVal(f.height), age = numVal(f.age), target = numVal(f.target), kcal = numVal(f.kcal);
     if (height !== null && (height < 100 || height > 230)) { alert('身長は100〜230cmで入れてください。'); return; }
     if (age !== null && (age < 10 || age > 100)) { alert('年齢は10〜100で入れてください。'); return; }
     if (target !== null && (target < 30 || target > 300)) { alert('目標体重は30〜300kgで入れてください。'); return; }
