@@ -372,8 +372,9 @@ function renderAnalysis() {
   let achTotal = 0, achGot = 0;
   achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
   const pfLv = profileStats().lv;
-  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span><span class="ach-entry-ar">›</span></span></button>';
-  el.innerHTML = '<button type="button" class="ai-btn" data-an="ai">分析させる</button>' + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + achRow; /* 月間推移は週間・月間どちらでも常時表示 */
+  const newN = achNewCount(achCats);
+  const achRow = '<button type="button" class="ach-entry" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span>' + (newN > 0 ? '<span class="ach-new-badge">＋' + newN + '</span>' : '') + '<span class="ach-entry-ar">›</span></span></button>';
+  el.innerHTML = achRow + '<button type="button" class="ai-btn" data-an="ai">分析させる</button>' + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend; /* プロフィールはカレンダー直下・分析の上。月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-an]');
@@ -607,6 +608,25 @@ function achievements() {
   ];
   return cats;
 }
+/* 新着メダルの目印：最後にプロフィールを開いた時点の達成数を、数字1個だけ端末内に保存する（バックアップ・スナップショットには入れない） */
+const ACH_SEEN_KEY = 'iron_ach_seen';
+function achSeenGet() { try { const v = localStorage.getItem(ACH_SEEN_KEY); return v === null ? null : (parseInt(v, 10) || 0); } catch (e) { return null; } }
+function achSeenSet(n) { try { localStorage.setItem(ACH_SEEN_KEY, String(n)); } catch (e) {} }
+function achGotCount(cats) { let n = 0; cats.forEach(c => c.items.forEach(x => { if (x.got) n++; })); return n; }
+/* 未見の新着数。初回（未保存）は今の数を保存して0。復元などで減っていたら合わせ直す */
+function achNewCount(cats) {
+  const got = achGotCount(cats), seen = achSeenGet();
+  if (seen === null || got < seen) { achSeenSet(got); return 0; }
+  return got - seen;
+}
+/* 新着メダルの名前（達成日の新しい順に newN 個。同日は元の並び順で安定） */
+function achNewNames(cats, newN) {
+  const got = [];
+  cats.forEach(c => c.items.forEach(x => { if (x.got) got.push(x); }));
+  got.sort((a, b) => a.got === b.got ? 0 : (a.got < b.got ? 1 : -1));
+  return new Set(got.slice(0, newN).map(x => x.name));
+}
+let achNewSnapshot = null; /* この訪問で光らせる新着メダル名（プロフィールを開いた瞬間に確定） */
 function achMedal(got) {
   /* 実績メダルはバナナ一房（ひでぴ提供のイラスト。画像は theme.css の .ach-medal に埋め込み） */
   return '<span class="ach-medal' + (got ? '' : ' off') + '" aria-hidden="true"></span>';
@@ -621,9 +641,10 @@ function achPageHtml() {
   h += '<button type="button" class="ach-entry" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
     (bw0 ? fmtKg(bw0.kg) + 'kg' + (bc0 ? '・目標 ' + nf(bc0.kcal) + 'kcal' : '') : '未入力') +
     '</span><span class="ach-entry-ar">›</span></span></button>';
+  const newNames = achNewSnapshot || new Set();
   cats.forEach(c => {
     h += '<div class="dt-sec">' + c.label + '</div><div class="ach-grid">' + c.items.map(x =>
-      '<div class="ach-item' + (x.got ? '' : ' off') + '">' + achMedal(!!x.got) +
+      '<div class="ach-item' + (x.got ? '' : ' off') + (newNames.has(x.name) ? ' new' : '') + '">' + achMedal(!!x.got) +
       '<div class="ach-name">' + escapeHtml(x.name) + '</div>' +
       '<div class="ach-sub">' + (x.got ? fmtD(x.got) + ' 達成' : x.prog) + '</div></div>').join('') + '</div>';
   });
@@ -887,13 +908,20 @@ function openAchievements() {
     achEl.setAttribute('aria-modal', 'true');
     achEl.addEventListener('click', onAchClick);
     document.body.appendChild(achEl);
-    return () => { achEl.innerHTML = achPageHtml(); };
+    return () => {
+      const cats = achievements(), gotN = achGotCount(cats), seen = achSeenGet();
+      const newN = (seen === null || gotN < seen) ? 0 : gotN - seen;
+      achNewSnapshot = newN > 0 ? achNewNames(cats, newN) : new Set();
+      achEl.innerHTML = achPageHtml();
+      achSeenSet(gotN);
+    };
   });
 }
 function removeAch() {
   if (!achEl) return;
   achEl.remove();
   achEl = null;
+  achNewSnapshot = null;
 }
 function leaveAch() {
   if (!achEl) return;
