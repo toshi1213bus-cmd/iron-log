@@ -7,7 +7,7 @@
      askConfirm / alert    … 確認ダイアログ・トースト
      todayType / menuAddExercise / tplExport / tplImport … 部位・メニュー（PARTS.menu もここで登録）
      Numpad                … テンキーの窓口（close / followNewRow / release）
-   ■ PR演出：prSnap / prCheck / showPRModal（保存時の判定と、金色の NEW RECORD!! モーダル＋バイブ。初回記録は出さない）
+   ■ PR演出：prSnap / prCheck / showPRModal（保存時の判定と、金色の「記録更新！！」モーダル＋ゴリ朱印の押印アニメ＋バイブ。初回記録は出さない）
    ■ ホームの種目行には開閉にかかわらず常に「詳細」ボタンがあり、種目別の詳細ページ（全画面）へ移動できる（openDetail）
      switchTab / switchSettingsSub / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
    ===================================================================== */
@@ -1417,7 +1417,7 @@ window.prCheck = function (snap) {
   const now = metric(sets);
   return now > snap.best && now > snap.before;
 };
-/* 金色のモーダル（画面中央）＋バイブ。余計な数値や差分は出さない。タップか約2.4秒で閉じる */
+/* 金色のモーダル（画面中央）＋バイブ＋ゴリ朱印の押印アニメ。余計な数値や差分は出さない。タップか約2.4秒で閉じる */
 window.showPRModal = function () {
   if (document.getElementById('prModal')) return;
   const o = document.createElement('div');
@@ -1425,7 +1425,8 @@ window.showPRModal = function () {
   o.setAttribute('role', 'alert');
   const prMsgs = ['自己ベスト更新！！ 昨日の自分を超えたな！！', '限界突破！！ その一回が全てを変える！！', 'よくやった！！ 積み重ねが実を結んだ！！'];
     const dust = Array.from({ length: 14 }, (_, i) => '<i style="--x:' + ((i * 37) % 81 - 40) + 'px;--dl:' + (i % 5) * 0.12 + 's"></i>').join('');
-    o.innerHTML = '<div class="pr-box"><div class="pr-t">NEW RECORD!!</div><div class="pr-msg">' + prMsgs[Math.floor(Math.random() * prMsgs.length)] + '</div><span class="pr-dust">' + dust + '</span></div>';
+    const burst = Array.from({ length: 10 }, (_, i) => { const a = (Math.PI * 2 * i) / 10 + (i % 3) * 0.12, d = 54 + (i % 4) * 15; return '<i style="--dx:' + Math.round(Math.cos(a) * d) + 'px;--dy:' + Math.round(Math.sin(a) * d) + 'px"></i>'; }).join('');
+    o.innerHTML = '<div class="pr-box"><div class="pr-tw"><div class="pr-t">記録更新！！</div><span class="pr-sealpos"><span class="seal pr-seal"></span></span><span class="pr-burst">' + burst + '</span></div><div class="pr-msg">' + prMsgs[Math.floor(Math.random() * prMsgs.length)] + '</div><span class="pr-dust">' + dust + '</span></div>';
   const close = () => { clearTimeout(t); o.remove(); };
   const t = setTimeout(close, 2400);
   o.addEventListener('click', close);
@@ -1716,7 +1717,22 @@ document.addEventListener('click', e => {
 
 /* ===== 種目の編集（画面全体。保存まで確定しない。戻る操作＝キャンセル）
    各部位で「現在オンの枠」を開く。種目リストとテンプレート名をまとめて保存 ===== */
-let draft = null, editType = 'PUSH', pastCache = [];
+let draft = null, editType = 'PUSH', pastCache = [], meSug = [];
+/* 追加フォームの検索候補：入力に部分一致する履歴の種目名（この枠に入っていないもの）を最大8件。
+   空欄のときは候補なし＝候補チップは出ない（旧仕様の常時表示チップは廃止） */
+function calcMeSug(q) {
+  const s = String(q || '').trim().toLowerCase();
+  meSug = s ? pastCache.filter(n => n.toLowerCase().includes(s)).slice(0, 8) : [];
+}
+function meSugHtml() {
+  return meSug.map((n, i) => '<button type="button" class="me-chip" data-act="addpast" data-i="' + i + '">' + escapeHtml(n) + '</button>').join('');
+}
+function paintMeSug() {
+  const el = document.getElementById('meSug');
+  if (!el) return;
+  el.innerHTML = meSugHtml();
+  el.style.display = meSug.length ? '' : 'none';
+}
 function renderEditor() {
   const o = document.getElementById('menuEditor');
   if (!o || !draft) return;
@@ -1730,21 +1746,21 @@ function renderEditor() {
     seen.add(n);
     if (!m.on.includes(n) && !m.off.includes(n)) pastCache.push(n);
   });
-  pastCache = pastCache.slice(0, 12);
+  calcMeSug(keep);
   const tabs = TYPES.map(t => '<button type="button" data-act="type" data-t="' + t + '" class="' + (t === editType ? 'cur' : '') + '">' + t + '</button>').join('');
   const rows = m.on.map((n, i) => '<div class="me-row"><div class="me-name">' + escapeHtml(n) + '</div><div class="me-ops">' +
     '<button type="button" data-act="up" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') + '>▲</button>' +
     '<button type="button" data-act="down" data-i="' + i + '"' + (i === m.on.length - 1 ? ' disabled' : '') + '>▼</button>' +
     '<button type="button" data-act="hide" data-i="' + i + '" class="me-del">非表示</button></div></div>').join('') || '<div class="hm-sub me-pad">種目がありません。</div>';
   const offs = m.off.map((n, i) => '<div class="me-row"><div class="me-name dn">' + escapeHtml(n) + '</div><div class="me-ops"><button type="button" data-act="restore" data-i="' + i + '">戻す</button></div></div>').join('');
-  const past = pastCache.map((n, i) => '<button type="button" class="me-chip" data-act="addpast" data-i="' + i + '">' + escapeHtml(n) + '</button>').join('');
+  const past = meSugHtml();
   o.innerHTML = '<div class="me-head"><div class="hm-lb">種目の編集</div><div class="me-tabs">' + tabs + '</div></div><div class="me-body">' +
     '<div class="me-sec">テンプレート名（全角5文字まで）</div><div class="me-add"><input type="text" id="meName" placeholder="枠の名前" autocomplete="off" value="' +
     escapeHtml(m.name) + '"></div>' +
     '<div class="me-sec">メニュー（上から順に表示）</div>' + rows +
     '<div class="me-sec">種目を追加</div><div class="me-add"><input type="text" id="meInput" placeholder="種目名を入力" autocomplete="off" value="' + escapeHtml(keep) +
     '"><button type="button" data-act="add">追加</button></div>' +
-    (past ? '<div class="me-chips">' + past + '</div>' : '') +
+    '<div class="me-chips" id="meSug"' + (past ? '' : ' style="display:none"') + '>' + past + '</div>' +
     (offs ? '<div class="me-sec">非表示の種目</div>' + offs : '') +
     '</div><div class="me-foot"><button type="button" data-act="cancel">キャンセル</button><button type="button" data-act="save" class="primary">保存</button></div>';
 }
@@ -1821,7 +1837,9 @@ function leaveEditor() {
 }
 /* テンプレート名の入力：変換中は触らず、確定したら文字数を超えた分を切って下書きへ */
 function onEditorInput(e) {
-  if (!draft || !e.target || e.target.id !== 'meName' || e.isComposing) return;
+  if (!draft || !e.target || e.isComposing) return;
+  if (e.target.id === 'meInput') { calcMeSug(e.target.value); paintMeSug(); return; }
+  if (e.target.id !== 'meName') return;
   const v = fitName(e.target.value);
   if (v !== e.target.value) e.target.value = v;
   draft[editType].name = v;
@@ -1853,7 +1871,7 @@ function onEditorClick(e) {
   else if (act === 'down' && i < m.on.length - 1) { const t = m.on[i + 1]; m.on[i + 1] = m.on[i]; m.on[i] = t; }
   else if (act === 'hide') m.off.push(m.on.splice(i, 1)[0]);
   else if (act === 'restore') m.on.push(m.off.splice(i, 1)[0]);
-  else if (act === 'addpast') addName(pastCache[i]);
+  else if (act === 'addpast') addName(meSug[i]);
   else if (act === 'add') { const inp = document.getElementById('meInput'); if (inp) { addName(inp.value); inp.value = ''; } }
   renderEditor();
 }
@@ -2676,7 +2694,7 @@ async function onBodyClick(e) {
    自己診断ページがアプリ本体の計算・集計をそのまま借りてチェックするための入口。
    swap/restore はテスト用データへの差し替えと原状復帰（実データはテスト側で退避される） ===== */
 window.PPLTest = {
-  version: 'extras v53',
+  version: 'extras v54',
   dstr: dstr, fmtD: fmtD, trendOf: trendOf, seriesAll: seriesAll, maxWeightOf: maxWeightOf,
   volByDay: volByDay, trainIn: trainIn, cardioIn: cardioIn,
   achievements: achievements, profileStats: profileStats,
