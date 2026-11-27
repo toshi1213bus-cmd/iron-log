@@ -2206,7 +2206,7 @@ window.calShift = function (d) {
 function renderCalendar() {
   const el = document.getElementById('calendarCard');
   if (!el) return;
-  const tDays = new Set(workouts.map(w => w.dateStr)), cDays = new Set(cardios.map(c => c.dateStr)), hDays = new Set(hiitDays);
+  const tDays = new Set(workouts.map(w => w.dateStr)), cDays = new Set(cardios.map(c => c.dateStr)), hDays = new Set(hiitDays.map(x => x.d));
   const n = new Date(), today = dstr(n);
   const first = new Date(cal.y, cal.m, 1).getDay(), len = new Date(cal.y, cal.m + 1, 0).getDate();
   const atCur = cal.y * 12 + cal.m >= n.getFullYear() * 12 + n.getMonth();
@@ -2254,9 +2254,15 @@ function sheetHtml(d) {
   h += '<div class="sh-sec">有酸素</div>';
   if (cs.length) {
     h += '<div class="space-y-2">' + cs.map(c => '<div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">' +
-      c.minutes + '分 / 約' + Math.round(c.minutes * KCAL_PER_MIN) + 'kcal' + (hiitDoneOn(d) ? ' 🔥' : '') + '</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
-  } else if (hiitDoneOn(d)) {
-    h += '<div class="hm-sub">🔥 HIITをやった日</div>';
+      c.minutes + '分 / 約' + Math.round(c.minutes * KCAL_PER_MIN) + 'kcal</span><button type="button" onclick="deleteCardio(\'' + c.id + '\')" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
+  } else {
+    h += '<div class="hm-sub">記録なし</div>';
+  }
+  h += '<div class="sh-sec">HIIT</div>';
+  const he = hiitEntryOn(d);
+  if (he) {
+    h += '<div class="space-y-2"><div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">🔥 ' +
+      escapeHtml(he.name || 'HIIT') + '</span><button type="button" onclick="sheetDelHiit()" class="text-gray-500 hover:text-red-400 p-1">✕</button></div></div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
   }
@@ -2317,6 +2323,13 @@ function openSheet(d) {
   });
 }
 /* 編集：シートを閉じてトレーニングタブの編集状態へ */
+/* 日付シートのHIIT欄：その日の実施マークを取り消してシートと各画面を描き直す */
+window.sheetDelHiit = function () {
+  if (!sheetDate) return;
+  removeHiitDay(sheetDate);
+  renderSheet();
+  requestRender('all');
+};
 window.sheetEdit = function (id) {
   closeSheet();
   switchTab('workout');
@@ -2612,6 +2625,7 @@ function showTab(name, extra) {
   if (alarmInterval) stopTimer();
   closePad(); /* 下タブが前面にあっても、移動先にテンキーを残さない */
   if (name !== 'workout') closeHistory(); /* 別ページへ移動したら履歴の種目一覧・セット内訳・グラフを閉じる */
+  if (name !== 'cardio') closeHiit(); /* 有酸素以外へ移動したらHIITアコーディオンも閉じる（実行中でも表示だけ閉じる。中身は止めない） */
   if (name !== 'home') homeOpen = null; /* ホームの種目の展開（グラフ）も閉じる。次にホームへ戻ったときは閉じた状態で描く */
   const paging = resetPaging(); /* 履歴の表示件数は基準に戻す（トレーニング＝4件、有酸素＝5件） */
   Object.keys(TABS).forEach(k => {
@@ -3061,6 +3075,14 @@ window.hiitPreset = function (i) {
   document.getElementById('hiitRounds').value = pp.rounds;
   hiitOnInput();
 };
+function closeHiit() {
+  const body = document.getElementById('hiitBody');
+  if (body && !body.classList.contains('hidden')) {
+    body.classList.add('hidden');
+    const ch = document.getElementById('hiitChev');
+    if (ch) ch.classList.remove('is-open');
+  }
+}
 window.toggleHiit = function () {
   const body = document.getElementById('hiitBody');
   if (!body) return;
@@ -3167,7 +3189,7 @@ function hiitFinish() {
   buzz([160, 90, 160, 90, 320]);
   hiitCleanup();
   hiitShowSetup();
-  markHiitDay(d);
+  markHiitDay(d, st.cfg.name);
   requestRender('all');
   alert('HIIT完了！🔥');
 }

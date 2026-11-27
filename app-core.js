@@ -198,15 +198,19 @@ function sanitizeCardios(rawCardios, stat) {
   });
   return Array.from(uniqueMap.values());
 }
-/* HIIT実施日（simple_hiit_days：日付文字列だけの配列）の検証。分数・設定は保存しない */
+/* HIIT実施日（simple_hiit_days：{ d: 日付, name: プリセット名 } の配列）の検証。
+   分数・kcalは保存しない。旧形式（日付文字列だけ）の要素は name 空で取り込む */
 function sanitizeHiitDays(raw, stat) {
   if (!Array.isArray(raw)) return [];
-  const set = new Set();
-  raw.forEach(d => {
-    if (typeof d === 'string' && isRealDate(d)) set.add(d);
-    else if (stat) stat.skipped++;
+  const map = new Map();
+  raw.forEach(x => {
+    const d = typeof x === 'string' ? x : (x && typeof x === 'object' ? x.d : null);
+    if (typeof d !== 'string' || !isRealDate(d)) { if (stat) stat.skipped++; return; }
+    let name = '';
+    if (x && typeof x === 'object' && typeof x.name === 'string') name = x.name.trim().slice(0, 20);
+    map.set(d, { d: d, name: name });
   });
-  return Array.from(set).sort();
+  return Array.from(map.values()).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
 }
 /* 起動時の読み込み：除外があれば元の中身を「キー名_broken」に退避して警告 */
 function loadChecked(key, sanitizer) {
@@ -782,12 +786,24 @@ function saveWorkout() {
 }
 
 /* 有酸素の保存。成否を true / false で返す（失敗・例外は元に戻す） */
-/* HIITを実施した日の判定と記録（残すのは日付だけ。分数・kcal・設定は保存しない） */
-const hiitDoneOn = d => hiitDays.indexOf(d) >= 0;
-function markHiitDay(dateStr) {
-  if (!isRealDate(dateStr) || hiitDoneOn(dateStr)) return true;
+/* HIITを実施した日の判定と記録（残すのは日付とプリセット名だけ。分数・kcalは保存しない） */
+const hiitDoneOn = d => hiitDays.some(x => x.d === d);
+const hiitEntryOn = d => hiitDays.find(x => x.d === d) || null;
+function markHiitDay(dateStr, name) {
+  if (!isRealDate(dateStr)) return false;
+  const nm = typeof name === 'string' ? name.trim().slice(0, 20) : '';
+  const cur = hiitEntryOn(dateStr);
+  if (cur && cur.name === nm) return true;
   if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
-  return transact(['hiit'], () => { hiitDays = hiitDays.concat(dateStr).sort(); });
+  return transact(['hiit'], () => {
+    if (cur) cur.name = nm;
+    else hiitDays = hiitDays.concat({ d: dateStr, name: nm }).sort((a, b) => a.d < b.d ? -1 : 1);
+  });
+}
+/* 日付シートのHIIT欄から、その日の実施マークを取り消す */
+function removeHiitDay(dateStr) {
+  if (!hiitDoneOn(dateStr)) return true;
+  return transact(['hiit'], () => { hiitDays = hiitDays.filter(x => x.d !== dateStr); });
 }
 function saveCardio() {
   const btn = byId('saveCardioBtn');
@@ -1020,7 +1036,7 @@ function drawCardioList() {
   if (empty) empty.classList.add('hidden');
 
   const dateSet = new Set(cardios.map(i => i.dateStr));
-  hiitDays.forEach(d => dateSet.add(d));
+  hiitDays.forEach(x => dateSet.add(x.d));
   const sortedDates = [...dateSet].sort((a, b) => new Date(b) - new Date(a));
   visibleCardioDaysCount = clampCount(visibleCardioDaysCount, sortedDates.length, CARDIO_PAGE_STEP);
   const displayDates = sortedDates.slice(0, visibleCardioDaysCount);
