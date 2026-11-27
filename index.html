@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=81">
+<link rel="stylesheet" href="theme.css?v=82">
   <link rel="stylesheet" href="bg.css">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
@@ -219,12 +219,12 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   </div>
 </div>
 
-<!-- ================= 食事ページ（準備中） ================= -->
+<!-- ================= 食事ページ ================= -->
 <div id="mealPage" class="full-page" hidden>
-  <div class="dt-head"><div class="dt-ttl"><span class="hm-en">食事</span></div><button type="button" class="dt-x" onclick="leaveMealPage()" aria-label="閉じる">✕</button></div>
-  <div class="dt-body">
-    <div class="gate-soon">食事の記録は準備中です。<br>次の段階で、ここに「今日の食事」が入ります。</div>
-  </div>
+  <div class="dt-head"><div class="dt-ttl"><span class="hm-en">食事管理</span></div><button type="button" class="dt-x" onclick="leaveMealPage()" aria-label="閉じる">✕</button></div>
+  <div class="dt-body" id="mealBody"></div>
+  <div id="mealScrim" class="ml-scrim" hidden></div>
+  <div id="mealSheet" class="ml-sheet" hidden></div>
 </div>
 
 <!-- ================= 種目の編集ページ（筋トレのホーム右上の「編集」から開く） ================= -->
@@ -249,7 +249,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </nav>
 
 <script src="app-core.js"></script>
-<script src="extras.js?v=76"></script>
+<script src="extras.js?v=77"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

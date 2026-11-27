@@ -227,6 +227,43 @@ function sanitizeHiitDays(raw, stat) {
   });
   return out.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
 }
+/* 食事（simple_meals：{ presets: [{items:[...]}], days: { 'YYYY-MM-DD': [{items:[...]}] } }）の検証。
+   食品1件 = { name, kcal, p, f, c（100gあたり）, g（グラム）, label（表示用の量） }。
+   プリセットは空でも残す（作りかけの置き場）。その日の登録は食品が1つ以上あるものだけ残す */
+function sanitizeMealItems(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  raw.slice(0, 60).forEach(x => {
+    if (!x || typeof x !== 'object') return;
+    const name = typeof x.name === 'string' ? x.name.trim().slice(0, 60) : '';
+    const kcal = Number(x.kcal), pp = Number(x.p), ff = Number(x.f), cc = Number(x.c), g = Math.round(Number(x.g));
+    if (!name || !isFinite(kcal) || kcal < 0 || kcal > 1000) return;
+    if (!isFinite(g) || g < 1 || g > 5000) return;
+    const nn = v => isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+    out.push({ name: name, kcal: kcal, p: nn(pp), f: nn(ff), c: nn(cc), g: g, label: typeof x.label === 'string' && x.label ? x.label.slice(0, 24) : g + 'g' });
+  });
+  return out;
+}
+function sanitizeMeals(raw) {
+  const out = { presets: [], days: {} };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  if (Array.isArray(raw.presets)) raw.presets.slice(0, 50).forEach(m => {
+    if (m && typeof m === 'object') out.presets.push({ items: sanitizeMealItems(m.items) });
+  });
+  if (raw.days && typeof raw.days === 'object' && !Array.isArray(raw.days)) {
+    Object.keys(raw.days).filter(isRealDate).sort().slice(-730).forEach(d => {
+      const arr = Array.isArray(raw.days[d]) ? raw.days[d] : [];
+      const day = [];
+      arr.slice(0, 30).forEach(m => {
+        if (!m || typeof m !== 'object') return;
+        const items = sanitizeMealItems(m.items);
+        if (items.length) day.push({ items: items });
+      });
+      if (day.length) out.days[d] = day;
+    });
+  }
+  return out;
+}
 /* 起動時の読み込み：除外があれば元の中身を「キー名_broken」に退避して警告 */
 function loadChecked(key, sanitizer) {
   const raw = loadJson(key, []);
@@ -244,6 +281,7 @@ function loadChecked(key, sanitizer) {
 let workouts = loadChecked('simple_workouts', sanitizeWorkouts);
 let cardios = loadChecked('simple_cardios', sanitizeCardios);
 let hiitDays = loadChecked('simple_hiit_days', sanitizeHiitDays);
+let mealStore = loadChecked('simple_meals', sanitizeMeals);
 let dayPplMap = sanitizeDayPpl(loadJson('simple_day_ppl', {}));
 let menuData = loadJson('simple_menu', null); /* 固定メニュー。選択中の枠から extras.js が同期する */
 /* ■ 画面の状態（保存しない。変更は下の「フォーム」「履歴の件数」の関数だけ） */
@@ -272,6 +310,7 @@ const PARTS = {
   workouts: { keys: ['simple_workouts'], get: () => workouts, set: v => { workouts = v; }, save: () => writeJson('simple_workouts', workouts) },
   cardios: { keys: ['simple_cardios'], get: () => cardios, set: v => { cardios = v; }, save: () => writeJson('simple_cardios', cardios) },
   hiit: { keys: ['simple_hiit_days'], get: () => hiitDays, set: v => { hiitDays = v; }, save: () => writeJson('simple_hiit_days', hiitDays) },
+  meals: { keys: ['simple_meals'], get: () => mealStore, set: v => { mealStore = v; }, save: () => writeJson('simple_meals', mealStore) },
   dayPpl: { keys: ['simple_day_ppl'], get: () => dayPplMap, set: v => { dayPplMap = v; }, save: () => writeJson('simple_day_ppl', dayPplMap) }
 };
 /* 保存領域だけの取引：parts をまとめて書き込み、1つでも失敗・例外なら全部の保存領域を元の中身に戻して false */
@@ -804,6 +843,10 @@ function saveWorkout() {
 /* HIITを実施した日の判定と記録（残すのは日付とプリセット名だけ。分数・kcalは保存しない） */
 const hiitDoneOn = d => hiitDays.some(x => x.d === d);
 const hiitEntriesOn = d => hiitDays.filter(x => x.d === d);
+const mealItemKcal = it => it.kcal * it.g / 100;
+const mealItemsKcal = items => (items || []).reduce((a, it) => a + mealItemKcal(it), 0);
+const mealEntriesOn = d => (mealStore && mealStore.days && mealStore.days[d]) || [];
+const mealDayKcal = d => mealEntriesOn(d).reduce((a, e) => a + mealItemsKcal(e.items), 0);
 function markHiitDay(dateStr, name, cfg) {
   if (!isRealDate(dateStr)) return false;
   const nm = typeof name === 'string' ? name.trim().slice(0, 20) : '';
@@ -1123,6 +1166,7 @@ function buildBackupData() {
     workouts: workouts,
     cardios: cardios,
     hiitDays: hiitDays,
+    meals: mealStore,
     dayPplMap: dayPplMap,
     menu: menuData,
     menuTpl: window.tplExport ? window.tplExport() : null,
@@ -1187,7 +1231,7 @@ async function importFromJsonText() {
     alert('JSONの形式が正しくありません。入力内容を確認してください。');
     return;
   }
-  let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null, rawGoals, rawBody, rawWeight, rawHiit; /* rawGoals が undefined の間は「バックアップに目標なし＝今の目標を残す」 */
+  let rawWorkouts, rawCardios = [], rawPpl = {}, rawMenu = null, rawTpl = null, rawGoals, rawBody, rawWeight, rawHiit, rawMeals; /* rawGoals が undefined の間は「バックアップに目標なし＝今の目標を残す」 */
   let oldVersionLabel = null; /* 古い版のバックアップのときだけ入る（警告に使う） */
   if (Array.isArray(imported)) {
     rawWorkouts = imported;
@@ -1216,6 +1260,7 @@ async function importFromJsonText() {
     rawBody = (imported.body && typeof imported.body === 'object' && !Array.isArray(imported.body)) ? sanitizeBody(imported.body) : undefined;
     rawWeight = Array.isArray(imported.weight) ? sanitizeWeightLog(imported.weight) : undefined;
     rawHiit = Array.isArray(imported.hiitDays) ? sanitizeHiitDays(imported.hiitDays) : undefined;
+    rawMeals = (imported.meals && typeof imported.meals === 'object' && !Array.isArray(imported.meals)) ? sanitizeMeals(imported.meals) : undefined;
     rawTpl = (imported.menuTpl && typeof imported.menuTpl === 'object' && !Array.isArray(imported.menuTpl)) ? imported.menuTpl : null;
   } else {
     alert('バックアップの形式が違います。記録は変更していません。');
@@ -1230,18 +1275,19 @@ async function importFromJsonText() {
     return;
   }
   /* 2) 件数を見せて確認（除外があればその件数も） */
-  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件` + (rawGoals !== undefined ? `・目標 ${Object.keys(rawGoals).length}件` : '') + (rawWeight !== undefined ? `・体重 ${rawWeight.length}件` : '') + (rawHiit !== undefined ? `・HIIT ${rawHiit.length}件` : '') + (rawBody !== undefined ? '・身体設定' : '') + `で上書きします。` +
+  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件` + (rawGoals !== undefined ? `・目標 ${Object.keys(rawGoals).length}件` : '') + (rawWeight !== undefined ? `・体重 ${rawWeight.length}件` : '') + (rawHiit !== undefined ? `・HIIT ${rawHiit.length}件` : '') + (rawMeals !== undefined ? `・食事 ${Object.keys(rawMeals.days).length}日分` : '') + (rawBody !== undefined ? '・身体設定' : '') + `で上書きします。` +
     (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') +
     (oldVersionLabel ? `<br>⚠ 古い版（${oldVersionLabel}）のバックアップです。内容を確認してください。` : '') + 'よろしいですか？';
   if (!(await askConfirm(msg, '復元'))) return;
   /* 3) 上書き前の状態を simple_pre_restore に控えてから、記録・有酸素・部位・メニューを1つの取引で入れ替える。
         失敗したらメモリ・保存領域とも全部元に戻す */
-  const prevBackup = { workouts, cardios, hiitDays: hiitDays, dayPplMap, menu: menuData, goals: PARTS.goals ? PARTS.goals.get() : {}, body: PARTS.body ? PARTS.body.get() : null, weight: PARTS.weight ? PARTS.weight.get() : null };
+  const prevBackup = { workouts, cardios, hiitDays: hiitDays, meals: mealStore, dayPplMap, menu: menuData, goals: PARTS.goals ? PARTS.goals.get() : {}, body: PARTS.body ? PARTS.body.get() : null, weight: PARTS.weight ? PARTS.weight.get() : null };
   const restoreParts = ['workouts', 'cardios', 'dayPpl', 'menu'];
   if (rawGoals !== undefined && PARTS.goals) restoreParts.push('goals'); /* 目標入りのバックアップだけ、目標も入れ替える */
   if (rawBody !== undefined && PARTS.body) restoreParts.push('body');
   if (rawWeight !== undefined && PARTS.weight) restoreParts.push('weight');
   if (rawHiit !== undefined) restoreParts.push('hiit');
+  if (rawMeals !== undefined) restoreParts.push('meals');
   const ok = transact(restoreParts, () => {
     if (!writeJson('simple_pre_restore', prevBackup)) return false;
     workouts = newWorkouts;
@@ -1250,6 +1296,7 @@ async function importFromJsonText() {
     if (rawBody !== undefined && PARTS.body) PARTS.body.set(rawBody);
     if (rawWeight !== undefined && PARTS.weight) PARTS.weight.set(rawWeight);
     if (rawHiit !== undefined) hiitDays = rawHiit;
+    if (rawMeals !== undefined) mealStore = rawMeals;
     dayPplMap = sanitizeDayPpl(rawPpl);
     /* テンプレート：新形式はそのまま、旧形式は各部位の1枠目へ取り込む（メモリ上に作るだけ。保存は transact） */
     tplImport(rawTpl, rawMenu);
