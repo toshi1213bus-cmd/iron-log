@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=69">
+<link rel="stylesheet" href="theme.css?v=70">
   <link rel="stylesheet" href="bg.css">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
@@ -24,13 +24,12 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 
 <!-- ================= トップページ（玄関。カレンダー＋筋トレ／食事／設定の入口） ================= -->
 <div id="topPage">
-  <div class="gate-title">ゴリラフィットネス</div>
   <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
   <div class="gate-entries">
     <button type="button" class="gate-entry" onclick="enterFitness()"><span class="gate-name">筋トレ</span><span class="gate-sub" id="topFitSub"></span></button>
     <button type="button" class="gate-entry" onclick="openMealPage()"><span class="gate-name">食事</span><span class="gate-sub">準備中</span></button>
   </div>
-  <button type="button" class="gate-set" onclick="openSetPage()"><span class="gate-set-t">設定</span><span class="gate-set-d">バックアップ・テーマ・ヘルプ（共通）</span></button>
+  <button type="button" class="gate-set" onclick="openSetPage()">設定</button>
 </div>
 
 <!-- ================= 0. ホームタブ（extras.js が描画） ================= -->
