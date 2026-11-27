@@ -112,7 +112,7 @@ body .bg-gray-800.border.rounded-2xl {
 /* 面・線・角丸 */
 body .bg-gray-800 { background: transparent; }
 body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bgimg); }
-body:has(#topPage:not(.hidden))::before { background: var(--bgimg-top, var(--bgimg)); }
+body:has(#topPage:not(.hidden))::before { background: var(--bgimg-top, var(--bgimg)); background-size: cover; background-position: center; }
 body:has(#tabContentWorkout:not(.hidden))::before { background: var(--bgimg-workout, var(--bgimg)); }
 body:has(#tabContentCardio:not(.hidden))::before { background: var(--bgimg-cardio, var(--bgimg)); }
 body:has(#tabContentSettings:not(.hidden))::before { background: var(--bgimg-settings, var(--bgimg)); }
