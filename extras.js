@@ -393,13 +393,7 @@ function renderAnalysis() {
     Object.keys(AN_MODES).map(k => '<button type="button" class="gr-btn' + (k === anMode ? ' on' : '') + '" data-an="mode" data-m="' + k +
       '" aria-pressed="' + (k === anMode ? 'true' : 'false') + '">' + AN_MODES[k].label + '</button>').join('') +
     '</div><div class="dt-n an-pers">' + [3, 6, 12].map(m => '<button type="button" class="gr-btn' + (m === anMonths ? ' on' : '') + '" data-an="span" data-m="' + m + '" aria-pressed="' + (m === anMonths ? 'true' : 'false') + '">' + m + 'か月</button>').join('') + '</div><div class="dt-graph" id="anGraph">' + anGraphHtml() + '</div><div class="gr-info" id="anInfo">' + anInfoHtml() + '</div></div>';
-  const achCats = achievements();
-  let achTotal = 0, achGot = 0;
-  achCats.forEach(c => c.items.forEach(x => { achTotal++; if (x.got) achGot++; }));
-  const pfLv = profileStats().lv;
-  const newN = achNewCount(achCats);
-  const achRow = '<button type="button" class="ach-entry ach-entry-gold" data-an="ach"><span>プロフィール</span><span class="ach-entry-r"><span class="ach-entry-n">Lv.' + pfLv + ' 達成 ' + achGot + '/' + achTotal + '</span>' + (newN > 0 ? '<span class="ach-new-badge">＋' + newN + '</span>' : '') + '<span class="ach-entry-ar">›</span></span></button>';
-  el.innerHTML = achRow + anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + '<button type="button" class="ai-btn" data-an="ai">分析させる</button>'; /* プロフィールはカレンダー直下。分析させるはページ最下部。月間推移は週間・月間どちらでも常時表示 */
+  el.innerHTML = anTabsHtml() + '<div id="anCard">' + anCardHtml() + '</div>' + trend + '<button type="button" class="ai-btn" data-an="ai">分析させる</button>'; /* プロフィールはカレンダー直下。分析させるはページ最下部。月間推移は週間・月間どちらでも常時表示 */
 }
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-an]');
@@ -543,6 +537,10 @@ function profileCardHtml() {
     '</div>';
   if (p.vol > 0) h += '<div class="pf-line">総負荷はゴリラ約' + gorillaHeads(p.vol) + '頭分（1頭＝160kg）</div><button type="button" class="pf-share" data-ach="gcard">ゴリラカードを共有</button>';
   if (p.ace) h += '<div class="pf-line">看板種目：' + escapeHtml(p.ace.name) + '（推定1RM ' + p.ace.rm + 'kg）</div>';
+  const bc0 = bodyCalc(), bw0 = latestWeight();
+  h += '<button type="button" class="ach-entry ach-entry-gold pf-body" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
+    (bw0 ? fmtKg(bw0.kg) + 'kg' + (bc0 ? '・目標 ' + nf(bc0.kcal) + 'kcal' : '') : '未入力') +
+    '</span><span class="ach-entry-ar">›</span></span></button>';
   if (p.top.length) {
     h += '<div class="pf-sec">得意種目</div>' + p.top.map(x => {
       const mlv = MASTERY_DAYS.filter(t => x.days >= t).length;
@@ -990,6 +988,7 @@ function leaveAch() {
   leaveLayer();
 }
 function onAchClick(e) {
+  if (e.target.closest('[data-ach="body"]')) { openBodyPage(); return; }
   if (e.target.closest('[data-ach="gcard"]')) { shareGorillaCard(); return; }
   if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
   if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
@@ -1005,6 +1004,8 @@ function renderTop() {
   const type = todayType(), names = menuData[type].on, today = dstr(new Date());
   const doneN = names.filter(n => workouts.some(w => w.dateStr === today && w.name.trim() === n)).length;
   sub.innerHTML = '今日は <span class="tt-type">' + type + '</span> の日' + (names.length ? ' ・ ' + doneN + '/' + names.length + ' 完了' : '');
+  const pb = document.getElementById('topProfBadge');
+  if (pb) { const nn = achNewCount(achievements()); pb.textContent = nn > 0 ? '＋' + nn : ''; pb.style.display = nn > 0 ? '' : 'none'; }
 }
 function enterTop() {
   closePad();
@@ -1036,6 +1037,7 @@ window.enterFitness = function () {
   if (!fitEntered) { fitEntered = true; showTab('home', { w: true, c: true }); }
   else showTab('home');
 };
+window.openAchievements = openAchievements;
 window.openBodyPage = openBodyPage;
 window.openSetPage = function () {
   openLayer('set', () => !setEl && !detailEl && !sheetEl && !editorOpen(), () => {
@@ -2241,6 +2243,7 @@ window.addEventListener('popstate', () => {
   if (!s.set) removeSetPage();
   if (!s.meal) removeMealPage();
   if (!s.edit) removeEditPage();
+  if (!layerFlagged()) { const tn = document.getElementById('topNav'); if (tn) tn.querySelectorAll('button').forEach(b => b.classList.remove('on')); } /* ページを閉じてトップに戻ったら、下バーの金の光を消す */
   navDone();
 });
 function leaveEditor() {
