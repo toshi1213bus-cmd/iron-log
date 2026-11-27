@@ -332,6 +332,7 @@ body .ex-toggle-icon.is-open {
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #modal,
 #pplPicker,
+#hiitPicker,
 #prModal {
   position: fixed;
   inset: 0;
@@ -1034,13 +1035,16 @@ body::after { content: ''; position: fixed; inset: 0; z-index: -1; pointer-event
 .hiit-srow { display: flex; align-items: center; justify-content: space-between; padding: 9px 2px; border-bottom: 1px solid var(--line); }
 .hiit-k { font-size: 14px; font-weight: 700; letter-spacing: .12em; }
 .hiit-v { display: flex; align-items: baseline; gap: 6px; }
+/* 設定タブのボタン（編集／出力 (JSON)／ファイルから復元／復元実行／ヘルプ）は「＋ セット」と同じ配色（黒地・金の細枠・金文字） */
+#subSettings button.bg-gray-900.border { background: var(--bg); border-color: var(--gold-line); color: var(--gold); }
+#subSettings button.bg-gray-900.border:hover { border-color: var(--gold); background: var(--hover-1); }
 .hiit-in { width: 76px; text-align: center; font-family: var(--num); font-size: 22px; font-weight: 500; letter-spacing: .06em; caret-color: transparent; cursor: pointer; padding: 6px 4px; }
 .hiit-v small { font-size: 11px; color: var(--muted); }
 .hiit-total { text-align: center; font-size: 12px; color: var(--muted); margin: 12px 0 10px; }
 .hiit-total b { color: var(--text); font-size: 15px; }
 .hiit-start { width: 100%; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700; letter-spacing: .15em; text-indent: .15em; color: var(--on-gold); background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); }
 .hiit-phase { text-align: center; font-size: 15px; letter-spacing: .45em; text-indent: .45em; font-weight: 700; color: var(--text); }
-#hiitDisplay { font-family: 'DSEG7', var(--num); text-align: center; font-size: 64px; font-weight: 700; line-height: 1.3; transform: scaleY(1.15); }
+#hiitDisplay { font-family: 'DSEG7', var(--num); text-align: center; font-size: 64px; font-weight: 700; line-height: 1.3; transform: scaleY(1.15); color: var(--gold); }
 .hiit-round { text-align: center; font-size: 13px; color: var(--muted); }
 .hiit-round b { color: var(--text); font-size: 16px; }
 .hiit-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 12px 4px 0; }

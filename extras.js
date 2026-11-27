@@ -131,6 +131,31 @@ window.pickPpl = function (d) {
   document.body.appendChild(o);
 };
 
+/* ===== HIITの種類の選択モーダル（日付シートの「HIIT追加」用。部位選択と同じ黒×金。タップで即追加して閉じる） ===== */
+window.pickHiit = function (d) {
+  if (document.getElementById('hiitPicker')) return; /* 二重表示しない */
+  const o = document.createElement('div');
+  o.id = 'hiitPicker';
+  o.setAttribute('role', 'dialog');
+  o.setAttribute('aria-modal', 'true');
+  o.innerHTML = '<div class="modal-box"><p>HIITの種類を選択</p><div class="pk-list">' +
+    HIIT_PRESETS.map(p => '<button type="button" class="pk-opt" data-v="' + p.name + '">' + p.name + '</button>').join('') +
+    '</div><div class="modal-actions"><button type="button" data-v="">キャンセル</button></div></div>';
+  o.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b && e.target !== o) return;
+    const v = b ? b.dataset.v : '';
+    o.remove();
+    if (v) {
+      const pr = HIIT_PRESETS.find(p => p.name === v);
+      markHiitDay(d, v, pr ? { w: pr.work, r: pr.rest, n: pr.rounds } : null);
+      renderSheet();
+      requestRender('all');
+    }
+  });
+  document.body.appendChild(o);
+};
+
 /* ===== テーマ切替（黒金／深海ブルー／森林グリーン）：localStorage に保存。グラフの色は変えない ===== */
 const THEME_KEY = 'iron_theme';
 const THEMES = ['gold', 'ocean', 'forest'];
@@ -585,6 +610,8 @@ function achievements() {
   const cDayPairs = cDayList.map((d, i) => [d, i + 1]);
   let mins = 0; const minPairs = [];
   cs.forEach(c => { mins += c.minutes || 0; minPairs.push([c.dateStr, mins]); });
+  /* HIIT：累計回数（hiitDays は日付順に整列済み） */
+  const hPairs = hiitDays.map((x, i) => [x.d, i + 1]);
   const mk = (tiers, pairs, cur, fmtLeft) => tiers.map((t, i) => {
     const got = achTierDates(pairs, tiers)[i];
     return { name: '', got: got, prog: got ? '' : fmtLeft(t, cur) };
@@ -604,6 +631,9 @@ function achievements() {
       ...mk([10, 20, 30], exPairs, seen.size, left('種目')).map((x, i) => ({ ...x, name: '' + [10, 20, 30][i] + '種目制覇' })),
       ...mk([10, 30, 100], cDayPairs, cDayList.length, left('日')).map((x, i) => ({ ...x, name: '有酸素' + [10, 30, 100][i] + '日' })),
       ...mk([600, 3000, 10000], minPairs, mins, pct).map((x, i) => ({ ...x, name: '有酸素' + [600, 3000, 10000][i] + '分' }))
+    ]},
+    { label: 'HIIT', items: [
+      ...mk([1, 10, 30, 100], hPairs, hiitDays.length, left('回')).map((x, i) => ({ ...x, name: ['初HIIT', 'HIIT10回', 'HIIT30回', 'HIIT100回'][i] }))
     ]}
   ];
   return cats;
@@ -2305,8 +2335,6 @@ function sheetHtml(d) {
   if (d <= today) {
     h += '<div class="sh-foot three"><button type="button" data-sh="addw">トレーニング追加</button><button type="button" data-sh="addc">有酸素追加</button>' +
       '<button type="button" data-sh="addh">HIIT追加</button></div>';
-    h += '<div id="sheetHiitPick" class="hidden"><div class="hm-sub" style="margin: 10px 14px 0;">HIITの種類を選んでください</div><div class="sh-foot three" style="border-top: none;">' +
-      '<button type="button" data-sh="hadd:タバタ">タバタ</button><button type="button" data-sh="hadd:ハード">ハード</button><button type="button" data-sh="hadd:イージー">イージー</button></div></div>';
   }
   return h;
 }
@@ -2331,6 +2359,8 @@ function renderSheet() {
 function removeSheet() {
   const pk = document.getElementById('pplPicker'); /* 部位選択モーダルが開いたままシートが閉じても残さない */
   if (pk) pk.remove();
+  const hp = document.getElementById('hiitPicker'); /* HIIT選択モーダルも同様 */
+  if (hp) hp.remove();
   if (sheetEl) sheetEl.remove();
   sheetEl = null;
   sheetDate = null;
@@ -2355,8 +2385,7 @@ function openSheet(d) {
       if (a === 'close') closeSheet();
       else if (a === 'addw') { closeSheet(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
       else if (a === 'addc') { closeSheet(); switchTab('cardio'); setCardioDate(day); }
-      else if (a === 'addh') { const p = document.getElementById('sheetHiitPick'); if (p) p.classList.toggle('hidden'); }
-      else if (a.indexOf('hadd:') === 0) { const nm = a.slice(5); const pr = HIIT_PRESETS.find(p => p.name === nm); markHiitDay(day, nm, pr ? { w: pr.work, r: pr.rest, n: pr.rounds } : null); renderSheet(); requestRender('all'); }
+      else if (a === 'addh') { pickHiit(day); }
       else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
     });
     document.body.appendChild(sheetEl);

@@ -124,7 +124,8 @@ async function main() {
     const a = T.achievements();
     const first = a.find(c => c.label === '継続').items.find(i => i.name === '通算10日');
     const pr = a.find(c => c.label === '成長').items.find(i => i.name === 'PR更新10回');
-    return a.length === 3 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回';
+    const hi = a.find(c => c.label === 'HIIT');
+    return a.length === 4 && first.got === null && first.prog === 'あと6日' && pr.prog === 'あと8回' && !!hi && hi.items.length === 4;
   });
   test('PR実績の達成日（複数種目）', () => {
     /* 2種目のPRが日付で入り混じるデータ。PRは 種目A: -25,-20,-15,-10,-5 / 種目B: -28,-27,-26,-24,-23 に発生し、
