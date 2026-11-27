@@ -794,9 +794,40 @@ function gorillaWordPick() {
   if (gap >= 4) return pick(['少し空いたな。でも戻ってくれば、それで続いていることになる。', '間が空いても終わりじゃない。軽い日から再開しよう。']);
   return pick(['今日はどうする？ 動くなら軽くてもいい。', '整える日。次の一回のために体を休めよう。']);
 }
+/* AI分析のHIITセクション：有酸素・活動量には混ぜず、セットの内容と回数だけを材料にする（kcal換算はしない） */
+function aiHiit(inCur, inPrev, P, PP) {
+  try {
+    const cur = hiitDays.filter(x => inCur(x.d)), prev = hiitDays.filter(x => inPrev(x.d));
+    if (!cur.length && !prev.length) return [];
+    if (!cur.length) return ['HIITは' + P + 'まだ実施なし（' + PP + 'は' + prev.length + '回）。'];
+    const days = new Set(cur.map(x => x.d)).size;
+    let s = 'HIITは' + P + ' ' + cur.length + '回・' + days + '日。';
+    if (prev.length) { const df = cur.length - prev.length; s += PP + '比 ' + (df >= 0 ? '+' : '') + df + '回。'; }
+    const secs = cur.map(hiitSeconds).filter(v => v !== null);
+    if (secs.length) {
+      const tot = secs.reduce((a, b) => a + b, 0);
+      s += 'セット時間の合計は約' + Math.max(1, Math.round(tot / 60)) + '分';
+      s += secs.length === cur.length ? '。' : '（設定の記録がある' + secs.length + '回分）。';
+    }
+    const lines = [s];
+    const groups = new Map();
+    cur.forEach(x => {
+      const label = (x.name || 'HIIT') + (typeof x.w === 'number' ? '（' + x.w + '秒/' + x.r + '秒×' + x.n + '）' : '');
+      groups.set(label, (groups.get(label) || 0) + 1);
+    });
+    const det = Array.from(groups.entries()).sort((a, b) => b[1] - a[1]).map(([label, c]) => escapeHtml(label) + ' ×' + c + '回');
+    lines.push('内訳：' + det.join('、') + '。');
+    return lines;
+  } catch (e) { return []; }
+}
 function aiReport() {
   if (!workouts.length && !cardios.length) {
-    const out0 = [{ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] }];
+    const out0 = [];
+    if (!hiitDays.length) out0.push({ t: '', lines: ['まだ記録がありません。トレーニングか有酸素を記録すると、ここに分析が出ます。'] });
+    const r0 = anRanges(), wk0 = anPeriod === 'week';
+    const hi0 = aiHiit(wk0 ? (d => d >= r0.ws && d <= r0.we) : (d => d.slice(0, 7) === r0.ym),
+      wk0 ? (d => d >= r0.pws && d <= r0.pwe) : (d => d.slice(0, 7) === r0.pym), wk0 ? '今週' : '今月', wk0 ? '前週' : '前月');
+    if (hi0.length) out0.push({ t: 'HIIT', lines: hi0 });
     const bd0 = aiBody();
     if (bd0.length) out0.push({ t: '身体・栄養', lines: bd0 });
     return out0;
@@ -808,9 +839,11 @@ function aiReport() {
   const P = wk ? '今週' : '今月', PP = wk ? '前週' : '前月';
   const secs = [];
   const sum = [];
-  const active = !(cur.days === 0 && cc.min === 0);
+  const active = !(cur.days === 0 && cc.min === 0 && !hiitDays.some(x => inCur(x.d)));
   if (!active) {
     sum.push(P + 'はまだ記録がありません。最初の1回を記録すると分析が始まります。');
+  } else if (cur.days === 0 && cc.min === 0) {
+    sum.push(P + 'はHIITのみ実施しています。');
   } else {
     let s1 = P + 'はトレ' + cur.days + '日・総負荷' + nf(cur.vol) + 'kg。';
     if (prev.vol > 0) { const pc = Math.round((cur.vol - prev.vol) / prev.vol * 100); s1 += PP + '比 ' + (pc >= 0 ? '+' : '') + pc + '%。'; }
@@ -850,6 +883,8 @@ function aiReport() {
     const hl = aiHighlights(inCur, wk ? r.ws : r.ms);
     if (hl.length) secs.push({ t: 'ハイライト', lines: hl });
   }
+  const hi = aiHiit(inCur, inPrev, P, PP);
+  if (hi.length) secs.push({ t: 'HIIT', lines: hi });
   const bd = aiBody();
   if (bd.length) secs.push({ t: '身体・栄養', lines: bd });
   const tt = aiTotals();
@@ -2262,7 +2297,7 @@ function sheetHtml(d) {
   const hes = hiitEntriesOn(d);
   if (hes.length) {
     h += '<div class="space-y-2">' + hes.map(x => '<div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">🔥 ' +
-      escapeHtml(x.name || 'HIIT') + '</span><button type="button" data-sh="hdel:' + escapeHtml(x.name) + '" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
+      escapeHtml(x.name || 'HIIT') + (typeof x.w === 'number' ? '（' + x.w + '秒/' + x.r + '秒×' + x.n + '）' : '') + '</span><button type="button" data-sh="hdel:' + escapeHtml(x.name) + '" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
   }
@@ -2321,7 +2356,7 @@ function openSheet(d) {
       else if (a === 'addw') { closeSheet(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
       else if (a === 'addc') { closeSheet(); switchTab('cardio'); setCardioDate(day); }
       else if (a === 'addh') { const p = document.getElementById('sheetHiitPick'); if (p) p.classList.toggle('hidden'); }
-      else if (a.indexOf('hadd:') === 0) { markHiitDay(day, a.slice(5)); renderSheet(); requestRender('all'); }
+      else if (a.indexOf('hadd:') === 0) { const nm = a.slice(5); const pr = HIIT_PRESETS.find(p => p.name === nm); markHiitDay(day, nm, pr ? { w: pr.work, r: pr.rest, n: pr.rounds } : null); renderSheet(); requestRender('all'); }
       else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
     });
     document.body.appendChild(sheetEl);
@@ -2333,12 +2368,13 @@ function openSheet(d) {
 window.sheetDelHiit = async function (d, name) {
   if (!d) return;
   if (!(await askConfirm('このHIITの記録を削除しますか？'))) return;
+  const entry = hiitEntriesOn(d).find(x => x.name === name) || null;
   const ok = removeHiitDay(d, name);
   if (sheetDate === d) renderSheet();
   requestRender('all');
   if (ok && window.showUndoToast) {
     showUndoToast('HIITの記録を削除しました', () => {
-      markHiitDay(d, name);
+      markHiitDay(d, name, entry);
       requestRender('all');
       if (sheetDate === d) renderSheet();
     });
@@ -3203,7 +3239,7 @@ function hiitFinish() {
   buzz([160, 90, 160, 90, 320]);
   hiitCleanup();
   hiitShowSetup();
-  markHiitDay(d, st.cfg.name);
+  markHiitDay(d, st.cfg.name, { w: st.cfg.work, r: st.cfg.rest, n: st.cfg.rounds });
   requestRender('all');
   alert('HIIT完了！🔥');
 }
@@ -3223,6 +3259,7 @@ window.PPLTest = {
   sanitizeWorkouts: (typeof sanitizeWorkouts === 'function') ? sanitizeWorkouts : null,
   sanitizeCardios: (typeof sanitizeCardios === 'function') ? sanitizeCardios : null,
   sanitizeHiitDays: (typeof sanitizeHiitDays === 'function') ? sanitizeHiitDays : null,
+  hiitSeconds: (typeof hiitSeconds === 'function') ? hiitSeconds : null,
   sanitizeDayPpl: (typeof sanitizeDayPpl === 'function') ? sanitizeDayPpl : null,
   applyRename: applyRename,
   bodyCalc: bodyCalc, weeklyAvgWeight: weeklyAvgWeight, bodyAdjustCalc: bodyAdjustCalc, aiReport: aiReport, aiBody: aiBody, aiConfidence: aiConfidence, gorillaWord: gorillaWord, plateauEx: plateauEx, gorillaHeads: gorillaHeads, trendWord: trendWord, snapData: snapData, buildBackupData: (typeof buildBackupData === 'function') ? buildBackupData : null, usageWarn: usageWarn, KCAL_PER_MIN: typeof KCAL_PER_MIN !== 'undefined' ? KCAL_PER_MIN : null,

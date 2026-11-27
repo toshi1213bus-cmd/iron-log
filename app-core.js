@@ -200,6 +200,18 @@ function sanitizeCardios(rawCardios, stat) {
 }
 /* HIIT実施日（simple_hiit_days：{ d: 日付, name: プリセット名 } の配列）の検証。
    分数・kcalは保存しない。旧形式（日付文字列だけ）の要素は name 空で取り込む */
+/* HIITの設定（運動w秒/休憩r秒/n周）の検証。そろっていなければ null（設定なしの記録として扱う） */
+function hiitCfgOf(x) {
+  if (!x || typeof x !== 'object') return null;
+  const w = Math.floor(Number(x.w)), r = Math.floor(Number(x.r)), n = Math.floor(Number(x.n));
+  if (!(w >= 1 && w <= 3600 && r >= 0 && r <= 3600 && n >= 1 && n <= 99)) return null;
+  return { w: w, r: r, n: n };
+}
+/* セットの時間（秒）。準備10秒は含まない。設定がなければ null */
+function hiitSeconds(e) {
+  const c = hiitCfgOf(e);
+  return c ? c.n * c.w + (c.n - 1) * c.r : null;
+}
 function sanitizeHiitDays(raw, stat) {
   if (!Array.isArray(raw)) return [];
   const out = [];
@@ -208,7 +220,10 @@ function sanitizeHiitDays(raw, stat) {
     if (typeof d !== 'string' || !isRealDate(d)) { if (stat) stat.skipped++; return; }
     let name = '';
     if (x && typeof x === 'object' && typeof x.name === 'string') name = x.name.trim().slice(0, 20);
-    out.push({ d: d, name: name }); /* 同じ日に複数回やることもあるので、日付でまとめない（並びは日付順・同日は記録順） */
+    const ent = { d: d, name: name };
+    const cfg = hiitCfgOf(x);
+    if (cfg) { ent.w = cfg.w; ent.r = cfg.r; ent.n = cfg.n; }
+    out.push(ent); /* 同じ日に複数回やることもあるので、日付でまとめない（並びは日付順・同日は記録順） */
   });
   return out.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
 }
@@ -789,12 +804,15 @@ function saveWorkout() {
 /* HIITを実施した日の判定と記録（残すのは日付とプリセット名だけ。分数・kcalは保存しない） */
 const hiitDoneOn = d => hiitDays.some(x => x.d === d);
 const hiitEntriesOn = d => hiitDays.filter(x => x.d === d);
-function markHiitDay(dateStr, name) {
+function markHiitDay(dateStr, name, cfg) {
   if (!isRealDate(dateStr)) return false;
   const nm = typeof name === 'string' ? name.trim().slice(0, 20) : '';
+  const c = hiitCfgOf(cfg);
   if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
   return transact(['hiit'], () => {
-    hiitDays = hiitDays.concat({ d: dateStr, name: nm }).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+    const ent = { d: dateStr, name: nm };
+    if (c) { ent.w = c.w; ent.r = c.r; ent.n = c.n; }
+    hiitDays = hiitDays.concat(ent).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
   });
 }
 /* 日付シートのHIIT欄から、その日の実施マークを1件だけ取り消す（同じ種類が複数あれば最初の1件） */
