@@ -767,6 +767,8 @@ body.tp-open { padding-bottom: calc(var(--tp-h, 340px) + var(--nav-h, 56px) + 16
 .sh-sec { padding: 14px 0 8px; font-size: 11px; letter-spacing: 0.2em; color: var(--muted); }
 .sh-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--bg); }
 .sh-foot button { min-height: 44px; padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
+.sh-foot.three { grid-template-columns: 1fr 1fr 1fr; }
+.sh-foot.three button { font-size: 11px; letter-spacing: .04em; }
 
 /* ================= 追加: 調子ラベル（ホーム種目行の「今日／前回」の横） =================
    上昇・好調＝金文字＋金枠／停滞注意・下降＝赤文字＋赤枠／プラトー＝赤文字＋金枠／記録なし＝白系・枠なし */

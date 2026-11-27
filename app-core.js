@@ -202,15 +202,15 @@ function sanitizeCardios(rawCardios, stat) {
    分数・kcalは保存しない。旧形式（日付文字列だけ）の要素は name 空で取り込む */
 function sanitizeHiitDays(raw, stat) {
   if (!Array.isArray(raw)) return [];
-  const map = new Map();
+  const out = [];
   raw.forEach(x => {
     const d = typeof x === 'string' ? x : (x && typeof x === 'object' ? x.d : null);
     if (typeof d !== 'string' || !isRealDate(d)) { if (stat) stat.skipped++; return; }
     let name = '';
     if (x && typeof x === 'object' && typeof x.name === 'string') name = x.name.trim().slice(0, 20);
-    map.set(d, { d: d, name: name });
+    out.push({ d: d, name: name }); /* 同じ日に複数回やることもあるので、日付でまとめない（並びは日付順・同日は記録順） */
   });
-  return Array.from(map.values()).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  return out.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
 }
 /* 起動時の読み込み：除外があれば元の中身を「キー名_broken」に退避して警告 */
 function loadChecked(key, sanitizer) {
@@ -788,22 +788,20 @@ function saveWorkout() {
 /* 有酸素の保存。成否を true / false で返す（失敗・例外は元に戻す） */
 /* HIITを実施した日の判定と記録（残すのは日付とプリセット名だけ。分数・kcalは保存しない） */
 const hiitDoneOn = d => hiitDays.some(x => x.d === d);
-const hiitEntryOn = d => hiitDays.find(x => x.d === d) || null;
+const hiitEntriesOn = d => hiitDays.filter(x => x.d === d);
 function markHiitDay(dateStr, name) {
   if (!isRealDate(dateStr)) return false;
   const nm = typeof name === 'string' ? name.trim().slice(0, 20) : '';
-  const cur = hiitEntryOn(dateStr);
-  if (cur && cur.name === nm) return true;
   if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
   return transact(['hiit'], () => {
-    if (cur) cur.name = nm;
-    else hiitDays = hiitDays.concat({ d: dateStr, name: nm }).sort((a, b) => a.d < b.d ? -1 : 1);
+    hiitDays = hiitDays.concat({ d: dateStr, name: nm }).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
   });
 }
-/* 日付シートのHIIT欄から、その日の実施マークを取り消す */
-function removeHiitDay(dateStr) {
-  if (!hiitDoneOn(dateStr)) return true;
-  return transact(['hiit'], () => { hiitDays = hiitDays.filter(x => x.d !== dateStr); });
+/* 日付シートのHIIT欄から、その日の実施マークを1件だけ取り消す（同じ種類が複数あれば最初の1件） */
+function removeHiitDay(dateStr, name) {
+  const idx = hiitDays.findIndex(x => x.d === dateStr && x.name === name);
+  if (idx < 0) return true;
+  return transact(['hiit'], () => { hiitDays = hiitDays.filter((_, i) => i !== idx); });
 }
 function saveCardio() {
   const btn = byId('saveCardioBtn');
@@ -1214,7 +1212,7 @@ async function importFromJsonText() {
     return;
   }
   /* 2) 件数を見せて確認（除外があればその件数も） */
-  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件` + (rawGoals !== undefined ? `・目標 ${Object.keys(rawGoals).length}件` : '') + (rawWeight !== undefined ? `・体重 ${rawWeight.length}件` : '') + (rawHiit !== undefined ? `・HIIT ${rawHiit.length}日` : '') + (rawBody !== undefined ? '・身体設定' : '') + `で上書きします。` +
+  const msg = `トレーニング ${newWorkouts.length}件・有酸素 ${newCardios.length}件` + (rawGoals !== undefined ? `・目標 ${Object.keys(rawGoals).length}件` : '') + (rawWeight !== undefined ? `・体重 ${rawWeight.length}件` : '') + (rawHiit !== undefined ? `・HIIT ${rawHiit.length}件` : '') + (rawBody !== undefined ? '・身体設定' : '') + `で上書きします。` +
     (skipped > 0 ? `<br>不正なデータ ${skipped}件は除外されます。` : '') +
     (oldVersionLabel ? `<br>⚠ 古い版（${oldVersionLabel}）のバックアップです。内容を確認してください。` : '') + 'よろしいですか？';
   if (!(await askConfirm(msg, '復元'))) return;

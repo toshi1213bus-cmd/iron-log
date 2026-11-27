@@ -2259,16 +2259,19 @@ function sheetHtml(d) {
     h += '<div class="hm-sub">記録なし</div>';
   }
   h += '<div class="sh-sec">HIIT</div>';
-  const he = hiitEntryOn(d);
-  if (he) {
-    h += '<div class="space-y-2"><div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">🔥 ' +
-      escapeHtml(he.name || 'HIIT') + '</span><button type="button" onclick="sheetDelHiit()" class="text-gray-500 hover:text-red-400 p-1">✕</button></div></div>';
+  const hes = hiitEntriesOn(d);
+  if (hes.length) {
+    h += '<div class="space-y-2">' + hes.map(x => '<div class="flex justify-between items-center bg-gray-900 border border-gray-700 rounded-xl p-3"><span class="text-xs text-white">🔥 ' +
+      escapeHtml(x.name || 'HIIT') + '</span><button type="button" data-sh="hdel:' + escapeHtml(x.name) + '" class="text-gray-500 hover:text-red-400 p-1">✕</button></div>').join('') + '</div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
   }
   h += '</div>';
   if (d <= today) {
-    h += '<div class="sh-foot"><button type="button" data-sh="addw">この日にトレを追加</button><button type="button" data-sh="addc">この日に有酸素を追加</button></div>';
+    h += '<div class="sh-foot three"><button type="button" data-sh="addw">トレーニング追加</button><button type="button" data-sh="addc">有酸素追加</button>' +
+      '<button type="button" data-sh="addh">HIIT追加</button></div>';
+    h += '<div id="sheetHiitPick" class="hidden"><div class="hm-sub" style="margin: 10px 14px 0;">HIITの種類を選んでください</div><div class="sh-foot three" style="border-top: none;">' +
+      '<button type="button" data-sh="hadd:タバタ">タバタ</button><button type="button" data-sh="hadd:ハード">ハード</button><button type="button" data-sh="hadd:イージー">イージー</button></div></div>';
   }
   return h;
 }
@@ -2317,18 +2320,29 @@ function openSheet(d) {
       if (a === 'close') closeSheet();
       else if (a === 'addw') { closeSheet(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
       else if (a === 'addc') { closeSheet(); switchTab('cardio'); setCardioDate(day); }
+      else if (a === 'addh') { const p = document.getElementById('sheetHiitPick'); if (p) p.classList.toggle('hidden'); }
+      else if (a.indexOf('hadd:') === 0) { markHiitDay(day, a.slice(5)); renderSheet(); requestRender('all'); }
+      else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
     });
     document.body.appendChild(sheetEl);
     return renderSheet;
   });
 }
 /* 編集：シートを閉じてトレーニングタブの編集状態へ */
-/* 日付シートのHIIT欄：その日の実施マークを取り消してシートと各画面を描き直す */
-window.sheetDelHiit = function () {
-  if (!sheetDate) return;
-  removeHiitDay(sheetDate);
-  renderSheet();
+/* 日付シートのHIIT欄：その日の実施マークを1件取り消す（他の削除と同じく確認ダイアログ＋元に戻すトースト） */
+window.sheetDelHiit = async function (d, name) {
+  if (!d) return;
+  if (!(await askConfirm('このHIITの記録を削除しますか？'))) return;
+  const ok = removeHiitDay(d, name);
+  if (sheetDate === d) renderSheet();
   requestRender('all');
+  if (ok && window.showUndoToast) {
+    showUndoToast('HIITの記録を削除しました', () => {
+      markHiitDay(d, name);
+      requestRender('all');
+      if (sheetDate === d) renderSheet();
+    });
+  }
 };
 window.sheetEdit = function (id) {
   closeSheet();
