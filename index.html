@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=79">
+<link rel="stylesheet" href="theme.css?v=80">
   <link rel="stylesheet" href="bg.css">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,6 +25,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 <!-- ================= トップページ（玄関。カレンダー＋筋トレ／食事／設定の入口） ================= -->
 <div id="topPage">
   <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
+  <button type="button" id="topToday" onclick="enterFitness()"></button>
 </div>
 
 <!-- トップ用下固定バー（筋トレ側の下タブと同じ形） -->
@@ -248,7 +249,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </nav>
 
 <script src="app-core.js"></script>
-<script src="extras.js?v=74"></script>
+<script src="extras.js?v=75"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {

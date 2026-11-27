@@ -999,12 +999,12 @@ function onAchClick(e) {
    トップへはホーム左上の「トップ」ボタンで戻る。共通ページは他の全画面ページと同じ履歴レイヤー（戻るで閉じる） */
 let setEl = null, mealEl = null, editEl = null, fitEntered = false;
 function renderTop() {
-  const sub = document.getElementById('topFitSub');
+  const sub = document.getElementById('topToday');
   if (!sub) return;
   ensureMenu();
   const type = todayType(), names = menuData[type].on, today = dstr(new Date());
   const doneN = names.filter(n => workouts.some(w => w.dateStr === today && w.name.trim() === n)).length;
-  sub.textContent = names.length ? ('今日は ' + type + ' の日 ・ ' + doneN + '/' + names.length + ' 完了') : ('今日は ' + type + ' の日');
+  sub.innerHTML = '今日は <span class="tt-type">' + type + '</span> の日' + (names.length ? ' ・ ' + doneN + '/' + names.length + ' 完了' : '');
 }
 function enterTop() {
   closePad();

@@ -1062,6 +1062,8 @@ body.at-top { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
 body.at-top #bottomNav { display: none; }
 #topPage { position: relative; }
 #topNav.hidden { display: none; }
+#topToday { display: block; width: 100%; background: none; border: none; padding: 12px 0 2px; text-align: center; font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: var(--muted); cursor: pointer; }
+#topToday .tt-type { color: var(--gold); font-weight: 700; }
 #topNav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 28rem; display: grid; grid-template-columns: repeat(4, 1fr); background: rgba(var(--bg-rgb), .85); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 50; }
 #topNav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px 0 9px; background: none; border: none; font-size: 12px; font-weight: 500; letter-spacing: 0.1em; color: var(--muted); cursor: pointer; transition: color .18s ease, background .18s ease, box-shadow .18s ease; }
 #topNav button svg { width: 21px; height: 21px; flex: none; }
