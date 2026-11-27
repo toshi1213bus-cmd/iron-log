@@ -1016,15 +1016,27 @@ function enterTop() {
   Object.keys(TABS).forEach(k => { const el = document.getElementById(TABS[k]); if (el) el.classList.add('hidden'); });
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.remove('on'));
   const tp = document.getElementById('topPage');
-  if (tp) tp.classList.remove('hidden');
+  if (tp) { tp.classList.remove('hidden'); tp.classList.remove('view-in'); void tp.offsetWidth; tp.classList.add('view-in'); }
+  const tn = document.getElementById('topNav');
+  if (tn) { tn.classList.remove('hidden'); tn.querySelectorAll('button').forEach(b => b.classList.remove('on')); }
   document.body.classList.add('at-top');
   requestRender({ view: 'calendar' });
   window.scrollTo(0, 0);
 }
 window.enterTop = enterTop;
+/* トップの下バー：押したボタンに下タブの選択中と同じ金の光を灯してから、一拍おいて移動する（光が見えるように） */
+window.gateGo = function (btn, fn) {
+  if (btn) {
+    if (btn.classList.contains('on')) return;
+    btn.classList.add('on');
+  }
+  setTimeout(() => { try { fn(); } catch (e) { console.log(e); } }, 190);
+};
 window.enterFitness = function () {
   const tp = document.getElementById('topPage');
   if (tp) tp.classList.add('hidden');
+  const tn = document.getElementById('topNav');
+  if (tn) tn.classList.add('hidden');
   document.body.classList.remove('at-top');
   if (!fitEntered) { fitEntered = true; showTab('home', { w: true, c: true }); }
   else showTab('home');
