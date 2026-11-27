@@ -667,10 +667,6 @@ function achPageHtml() {
   cats.forEach(c => c.items.forEach(x => { total++; if (x.got) gotN++; }));
   let h = '<div class="dt-head"><div class="dt-ttl"><span class="hm-en">プロフィール</span><span class="ach-count">実績 ' + gotN + '/' + total + '</span></div>' +
     '<button type="button" class="dt-x" data-ach="close" aria-label="閉じる">✕</button></div><div class="dt-body">' + profileCardHtml();
-  const bc0 = bodyCalc(), bw0 = latestWeight();
-  h += '<button type="button" class="ach-entry ach-entry-gold" data-ach="body"><span>身体データ</span><span class="ach-entry-r"><span class="ach-entry-n">' +
-    (bw0 ? fmtKg(bw0.kg) + 'kg' + (bc0 ? '・目標 ' + nf(bc0.kcal) + 'kcal' : '') : '未入力') +
-    '</span><span class="ach-entry-ar">›</span></span></button>';
   const newNames = achNewSnapshot || new Set();
   cats.forEach(c => {
     h += '<div class="dt-sec">' + c.label + '</div><div class="ach-grid">' + c.items.map(x =>
@@ -995,7 +991,6 @@ function leaveAch() {
 }
 function onAchClick(e) {
   if (e.target.closest('[data-ach="gcard"]')) { shareGorillaCard(); return; }
-  if (e.target.closest('[data-ach="body"]')) { openBodyPage(); return; }
   if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
   if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
 }
@@ -1041,6 +1036,7 @@ window.enterFitness = function () {
   if (!fitEntered) { fitEntered = true; showTab('home', { w: true, c: true }); }
   else showTab('home');
 };
+window.openBodyPage = openBodyPage;
 window.openSetPage = function () {
   openLayer('set', () => !setEl && !detailEl && !sheetEl && !editorOpen(), () => {
     setEl = document.getElementById('setPage');
@@ -2846,7 +2842,7 @@ function requestPersist() {
 }
 
 
-/* ===== 身体データ（プロフィールから開く専用ページ）
+/* ===== 身体データ（トップの下バーから開く専用ページ）
    simple_body … 設定 { heightCm, age, sex, goal, life, targetKg, kcalManual }
    simple_weight … 体重ログ [{ d, kg }]（1日1件・日付順）
    計算は目安：基礎代謝（ミフリン式）×活動量（日常の動き＋直近4週の運動量）→ 維持カロリー → 目標タイプで調整 → PFC配分 ===== */
