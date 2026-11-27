@@ -10,7 +10,7 @@
      TextPad               … 文字パッドの窓口（close）。種目名などの文字入力欄にフリック／英字パッドを出す
    ■ PR演出：prSnap / prCheck / showPRModal（保存時の判定と、金色の「記録更新！！」モーダル＋ゴリ朱印の押印アニメ＋バイブ。初回記録は出さない）
    ■ ホームの種目行には開閉にかかわらず常に「詳細」ボタンがあり、種目別の詳細ページ（全画面）へ移動できる（openDetail）
-     switchTab / switchSettingsSub / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
+     switchTab / enterFitness / openSetPage / setTheme / toggleHelp など … HTML の onclick から呼ばれるもの
    ===================================================================== */
 (function () {
 const pad = pad2, dstr = toDateStr, fmtD = formatDate; /* index.html の共通関数 */
@@ -999,30 +999,71 @@ function onAchClick(e) {
   if (e.target.closest('[data-ach="close"]')) { leaveAch(); return; }
   if (e.target === achEl || e.target.classList.contains('dt-body') || e.target.closest('.dt-ttl')) leaveAch();
 }
-/* 上サブタブ（編集・分析・設定）。「編集・分析/設定」を開くたびに showTab が最初の「編集・分析」へ戻す */
-function setSub(k) {
-  const a = document.getElementById('subAnalysis'), s = document.getElementById('subSettings');
-  if (a) a.classList.toggle('hidden', k !== 'analysis');
-  if (s) s.classList.toggle('hidden', k !== 'settings');
-  document.querySelectorAll('#setSubTabs button').forEach(b => {
-    const on = b.dataset.s === k;
-    b.classList.toggle('cur', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
+/* ===== トップページ（玄関）と共通ページ（設定／食事／種目の編集） =====
+   起動はトップ（カレンダー＋筋トレ・食事・設定の入口）。筋トレ側は今まで通り下タブで動き、
+   トップへはホーム左上の「トップ」ボタンで戻る。共通ページは他の全画面ページと同じ履歴レイヤー（戻るで閉じる） */
+let setEl = null, mealEl = null, editEl = null, fitEntered = false;
+function renderTop() {
+  const sub = document.getElementById('topFitSub');
+  if (!sub) return;
+  ensureMenu();
+  const type = todayType(), names = menuData[type].on, today = dstr(new Date());
+  const doneN = names.filter(n => workouts.some(w => w.dateStr === today && w.name.trim() === n)).length;
+  sub.textContent = names.length ? ('今日は ' + type + ' の日 ・ ' + doneN + '/' + names.length + ' 完了') : ('今日は ' + type + ' の日');
 }
-window.switchSettingsSub = function (k) {
-  if (k !== 'analysis' && k !== 'settings') return;
+function enterTop() {
   closePad();
-  setSub(k);
+  Object.keys(TABS).forEach(k => { const el = document.getElementById(TABS[k]); if (el) el.classList.add('hidden'); });
+  document.querySelectorAll('#bottomNav button').forEach(b => b.classList.remove('on'));
+  const tp = document.getElementById('topPage');
+  if (tp) tp.classList.remove('hidden');
+  document.body.classList.add('at-top');
+  requestRender({ view: 'calendar' });
+  window.scrollTo(0, 0);
+}
+window.enterTop = enterTop;
+window.enterFitness = function () {
+  const tp = document.getElementById('topPage');
+  if (tp) tp.classList.add('hidden');
+  document.body.classList.remove('at-top');
+  if (!fitEntered) { fitEntered = true; showTab('home', { w: true, c: true }); }
+  else showTab('home');
 };
+window.openSetPage = function () {
+  openLayer('set', () => !setEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    setEl = document.getElementById('setPage');
+    setEl.hidden = false;
+    return () => { safe(paintDataUsage); safe(paintSnapshots); };
+  });
+};
+function removeSetPage() { if (!setEl) return; setEl.hidden = true; setEl = null; }
+window.leaveSetPage = function () { if (!setEl) return; removeSetPage(); leaveLayer(); };
+window.openMealPage = function () {
+  openLayer('meal', () => !mealEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    mealEl = document.getElementById('mealPage');
+    mealEl.hidden = false;
+    return null;
+  });
+};
+function removeMealPage() { if (!mealEl) return; mealEl.hidden = true; mealEl = null; }
+window.leaveMealPage = function () { if (!mealEl) return; removeMealPage(); leaveLayer(); };
+window.openEditPage = function () {
+  openLayer('edit', () => !editEl && !detailEl && !sheetEl && !editorOpen(), () => {
+    editEl = document.getElementById('editPage');
+    editEl.hidden = false;
+    return () => safe(renderMenuSummary);
+  });
+};
+function removeEditPage() { if (!editEl) return; editEl.hidden = true; editEl = null; }
+window.leaveEditPage = function () { if (!editEl) return; removeEditPage(); leaveLayer(); };
 
 /* ===== 画面更新の入口（描画はここだけ。データを変える側は requestRender を1操作につき1回呼ぶ）
    scope … 文字列 'w' | 'c' | 'menu' | 'all'、または { w, c, menu, view }
      w … トレ記録・部位が変わった ／ c … 有酸素が変わった ／ menu … メニュー（テンプレート）が変わった
      view … データは変えず、その画面の表示だけ更新する（'home' | 'settings' | 'calendar'）
    どの変更でどの画面を描くか（見えていないホーム／月間・設定は描かず、タブを開いたとき view 付きで描く）
-     履歴リスト＋「グラフ推移」ボタン … w ／ 有酸素リスト … c ／ 編集・分析（今週・今月・月間推移） … w, c, view=settings
-     カレンダー … w, c, view=settings|calendar ／ メニュー表示 … menu, view=settings
+     履歴リスト＋「グラフ推移」ボタン … w ／ 有酸素リスト … c ／ 分析（今週・今月・月間推移） … w, c, view=settings
+     カレンダー＋トップ … w, c, view=calendar（トップ表示中のみ） ／ メニュー表示 … menu, view=settings
      ホーム … w, menu, view=home ／ 開いている日付シート … w, c
    描く順は固定（リスト → 分析 → カレンダー → メニュー → ホーム → シート）。1つ失敗しても後続は描く ===== */
 const isShown = id => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden'); };
@@ -1034,10 +1075,12 @@ function paint(s) {
   if (s.c) safe(drawCardioList);
   if (isShown('tabContentSettings')) {
     if (data || s.view === 'settings') safe(renderAnalysis);
-    if (data || s.view === 'settings' || s.view === 'calendar') safe(renderCalendar);
-    if (s.menu || s.view === 'settings') safe(renderMenuSummary);
-    if (data || s.menu || s.view === 'settings') safe(paintDataUsage); /* 保存・削除・復元・メニュー変更のたびに最新へ */
   }
+  if (isShown('topPage')) {
+    if (data || s.view === 'calendar' || s.view === 'top') { safe(renderCalendar); safe(renderTop); }
+  }
+  if (s.menu || s.view === 'settings') safe(renderMenuSummary);
+  if (data || s.menu || s.view === 'settings') safe(paintDataUsage); /* 保存・削除・復元・メニュー変更のたびに最新へ */
   if ((s.w || s.menu || s.view === 'home') && isShown('tabContentHome')) safe(renderHome);
   if (data && sheetEl) safe(renderSheet); /* 日付ボトムシートが開いていれば最新化 */
 }
@@ -2009,10 +2052,10 @@ function renderHome() {
   const doneN = names.filter(n => todays.some(t => t.name.trim() === n)).length;
   const allDone = names.length > 0 && doneN === names.length;
   /* 選択中の部位のメニューを全完了したときだけ、部位文字（.hm-big）の右横に勲章を出す */
-  let h = '<div class="hm-card"><div class="hm-pad"><div class="hm-top"><div class="hm-big">' + type +
+  let h = '<div class="hm-util"><button type="button" class="hm-util-btn" onclick="enterTop()">‹ トップ</button><button type="button" class="hm-util-btn gold" onclick="openEditPage()">編集</button></div><div class="hm-card"><div class="hm-pad"><div class="hm-top"><div class="hm-big">' + type +
     '</div>' + (allDone ? MEDAL_HTML : '') + '</div><div class="hm-word"><span class="hm-word-lb">ゴリラの一言</span>' + escapeHtml(gorillaWord()) + '</div><div class="hm-ord">' + chips + '</div></div></div>';
   if (!names.length) {
-    el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。「編集・分析/設定」→「設定」の「種目の編集」から追加できます。</div></div>';
+    el.innerHTML = h + '<div class="hm-card"><div class="hm-pad hm-sub">' + type + ' のメニューが空です。ホーム右上の「編集」から追加できます。</div></div>';
     return;
   }
   h += '<div class="hm-card"><div class="hm-pad" style="padding-bottom:12px"><div class="hm-exh"><div class="hm-lb">今日のメニュー</div><div class="hm-lb hm-gold">' +
@@ -2151,7 +2194,7 @@ function navDone() {
   navQueue = [];
   q.forEach(f => { try { f(); } catch (e) { console.log(e); } });
 }
-function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach || s.ai || s.body)); }
+function layerFlagged() { const s = history.state; return !!(s && (s.sheet || s.me || s.ex || s.ach || s.ai || s.body || s.set || s.meal || s.edit)); }
 function enterLayer(flag) {
   try {
     if (layerFlagged()) history.replaceState({ [flag]: 1 }, ''); /* すでに重なり用の履歴があれば差し替え（増やさない） */
@@ -2187,6 +2230,9 @@ window.addEventListener('popstate', () => {
   if (!s.ach) removeAch();
   if (!s.ai) removeAiPage();
   if (!s.body) removeBodyPage();
+  if (!s.set) removeSetPage();
+  if (!s.meal) removeMealPage();
+  if (!s.edit) removeEditPage();
   navDone();
 });
 function leaveEditor() {
@@ -2714,7 +2760,7 @@ function showTab(name, extra) {
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.t === name));
   const shownEl = document.getElementById(TABS[name]);
   if (shownEl) { shownEl.classList.remove('view-in'); void shownEl.offsetWidth; shownEl.classList.add('view-in'); }
-  if (name === 'settings') { anPeriod = 'week'; setSub('analysis'); } /* 「編集・分析/設定」を開いたときは、最初に「編集・分析」（分析カードは週間分析から） */
+  if (name === 'settings') { anPeriod = 'week'; } /* 「分析」を開いたときは、分析カードは週間分析から */
   /* 件数を戻した履歴と、見えるようになった画面（ホーム／月間・設定）を、最新の内容で1回だけ描く */
   const e = extra || {};
   requestRender({ w: !!e.w || paging.w, c: !!e.c || paging.c, view: name });
@@ -3314,7 +3360,7 @@ window.PPLTest = {
 function step(fn) { try { fn(); } catch (e) { console.log(e); } }
 step(() => { if (layerFlagged()) history.replaceState(null, ''); }); /* 再読み込みで残った重なり用の履歴状態を消す */
 step(() => applyTheme(getTheme()));
-step(() => showTab('home', { w: true, c: true })); /* 履歴・有酸素・ホームを1回ずつ描く */
+step(() => enterTop()); /* 起動はトップページ（カレンダー＋入口）。筋トレ側は入ったときに描く */
 step(() => { ensureDailySnapshot(); requestPersist(); paintSnapshots(); }); /* その日のスナップショット作成と永続化の要求 */
 step(() => fitTimer(true));
 step(() => { if (storageWarn) window.alert('保存データの一部を読み込めませんでした。バックアップから復元してください。', 7000); });

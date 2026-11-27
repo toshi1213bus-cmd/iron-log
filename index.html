@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=68">
+<link rel="stylesheet" href="theme.css?v=69">
   <link rel="stylesheet" href="bg.css">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
@@ -20,10 +20,21 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ゴリラ">
 </head>
-<body class="min-h-screen max-w-md mx-auto">
+<body class="min-h-screen max-w-md mx-auto at-top">
+
+<!-- ================= トップページ（玄関。カレンダー＋筋トレ／食事／設定の入口） ================= -->
+<div id="topPage">
+  <div class="gate-title">ゴリラフィットネス</div>
+  <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
+  <div class="gate-entries">
+    <button type="button" class="gate-entry" onclick="enterFitness()"><span class="gate-name">筋トレ</span><span class="gate-sub" id="topFitSub"></span></button>
+    <button type="button" class="gate-entry" onclick="openMealPage()"><span class="gate-name">食事</span><span class="gate-sub">準備中</span></button>
+  </div>
+  <button type="button" class="gate-set" onclick="openSetPage()"><span class="gate-set-t">設定</span><span class="gate-set-d">バックアップ・テーマ・ヘルプ（共通）</span></button>
+</div>
 
 <!-- ================= 0. ホームタブ（extras.js が描画） ================= -->
-<div id="tabContentHome"></div>
+<div id="tabContentHome" class="hidden"></div>
 
 <!-- ================= 1. トレーニング記録タブ ================= -->
 <div id="tabContentWorkout" class="hidden">
@@ -141,32 +152,18 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   </div>
 </div>
 
-<!-- ================= 3. 編集・分析/設定タブ ================= -->
+<!-- ================= 3. 分析タブ（旧「編集・分析/設定」。カレンダーはトップへ、設定は共通設定ページへ移動） ================= -->
 <div id="tabContentSettings" class="hidden">
-  <!-- 上サブタブ（ホームの部位選択と同じ下線デザイン）。開いたときは最初に「編集・分析」 -->
-  <div class="hm-pad">
-    <div class="hm-ord an-tabs" id="setSubTabs" role="tablist">
-      <button type="button" role="tab" data-s="analysis" class="cur" aria-selected="true" onclick="switchSettingsSub('analysis')">編集・分析</button>
-      <button type="button" role="tab" data-s="settings" aria-selected="false" onclick="switchSettingsSub('settings')">設定</button>
-    </div>
-  </div>
-
-  <!-- ---- 編集・分析（カレンダー＋週間/月間の分析＋月間推移。分析は extras.js の renderAnalysis が描く） ---- -->
   <div id="subAnalysis">
-    <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
     <div id="analysisBody"></div>
   </div>
+</div>
 
-  <!-- ---- 設定（種目の編集・バックアップ・テーマ・ヘルプ） ---- -->
-  <div id="subSettings" class="hidden">
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
-      <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">種目の編集</h2>
-      <div id="menuSummary"></div>
-      <button type="button" onclick="openMenuEditor()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
-        編集
-      </button>
-    </div>
-    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-3">
+<!-- ================= 共通設定ページ（トップから開く。バックアップ・テーマ・ヘルプ） ================= -->
+<div id="setPage" class="full-page" hidden>
+  <div class="dt-head"><div class="dt-ttl"><span class="hm-en">設定</span></div><button type="button" class="dt-x" onclick="leaveSetPage()" aria-label="閉じる">✕</button></div>
+  <div class="dt-body">
+<div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-3">
       <h2 class="text-sm font-semibold text-orange-400 uppercase tracking-wider">バックアップ出力/復元</h2>
       <div class="pt-1">
         <button type="button" onclick="exportData()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
@@ -208,13 +205,34 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
       </button>
       <div id="helpBody" class="help-body hidden">
         <div class="help-item"><div class="help-t">保存とバックアップ</div><div class="help-d">記録はブラウザ内に自動保存されます。ブラウザのキャッシュ削除や端末変更に備えて、JSON出力でバックアップを残してください。</div></div>
-        <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除は「編集・分析」のカレンダーで日付をタップして開く日付シートから行います（トレーニング履歴は閲覧専用です）。</div></div>
-        <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。メニューの編集は「編集・分析/設定」の「設定」タブから行えます。</div></div>
-      <div class="help-item"><div class="help-t">編集・分析</div><div class="help-d">「編集・分析/設定」を開くと最初に「編集・分析」が表示され、カレンダーと分析カードを確認できます。分析カードは「週間分析」（月曜始まり）と「月間分析」を切り替えられ、トレ回数（日）・総負荷量・有酸素（合計時間・約kcal）を全部位と PUSH / PULL / LEGS / OTHER 別に集計し、前週・前月（有酸素は先週・先月）との差を「+1日」「-400kg」「+30分」の形で表示します。記録がない場合は「記録なし」と表示します。</div></div>
+        <div class="help-item"><div class="help-t">入力・修正・削除</div><div class="help-d">種目や記録のタップから詳細や履歴を確認でき、入力途中の内容は画面を切り替えても残ります。記録の編集・削除はトップのカレンダーで日付をタップして開く日付シートから行います（トレーニング履歴は閲覧専用です）。</div></div>
+        <div class="help-item"><div class="help-t">回転メニューと有酸素</div><div class="help-d">Push / Pull / Legs / Other の回転メニューと有酸素記録を管理できます。メニューの編集は筋トレのホーム右上の「編集」から行えます。</div></div>
+      <div class="help-item"><div class="help-t">編集・分析</div><div class="help-d">筋トレ側の「分析」タブで分析カードを確認できます（カレンダーはトップにあります）。分析カードは「週間分析」（月曜始まり）と「月間分析」を切り替えられ、トレ回数（日）・総負荷量・有酸素（合計時間・約kcal）を全部位と PUSH / PULL / LEGS / OTHER 別に集計し、前週・前月（有酸素は先週・先月）との差を「+1日」「-400kg」「+30分」の形で表示します。記録がない場合は「記録なし」と表示します。</div></div>
       <div class="help-item"><div class="help-t">月間推移</div><div class="help-d">直近6か月（当月を含む）の「トレ回数」「有酸素」「総負荷量」を切り替えて折れ線グラフで確認できます。切り替えると縦軸の範囲・ラベル・単位も変わります。2か月以上の記録があるとグラフが表示されます。</div></div>
         <div class="help-item"><div class="help-t">グラフと達成表示</div><div class="help-d">種目ごとの推移や推定1RMなどのグラフを確認でき、その日のメニューを完了すると達成表示が出ます。</div></div>
         <div class="help-item"><div class="help-t">テーマと注意点</div><div class="help-d">見た目のテーマは設定から変更できます（グラフの色は固定）。外部サーバーへ自動送信しないため、端末ごとに管理されます。</div></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 食事ページ（準備中） ================= -->
+<div id="mealPage" class="full-page" hidden>
+  <div class="dt-head"><div class="dt-ttl"><span class="hm-en">食事</span></div><button type="button" class="dt-x" onclick="leaveMealPage()" aria-label="閉じる">✕</button></div>
+  <div class="dt-body">
+    <div class="gate-soon">食事の記録は準備中です。<br>次の段階で、ここに「今日の食事」が入ります。</div>
+  </div>
+</div>
+
+<!-- ================= 種目の編集ページ（筋トレのホーム右上の「編集」から開く） ================= -->
+<div id="editPage" class="full-page" hidden>
+  <div class="dt-head"><div class="dt-ttl"><span class="hm-en">種目の編集</span></div><button type="button" class="dt-x" onclick="leaveEditPage()" aria-label="閉じる">✕</button></div>
+  <div class="dt-body">
+    <div class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5 space-y-2.5">
+      <div id="menuSummary"></div>
+      <button type="button" onclick="openMenuEditor()" class="w-full bg-gray-900 hover:bg-gray-700 text-gray-200 py-3 rounded-xl border border-gray-700 text-xs font-bold transition">
+        編集
+      </button>
     </div>
   </div>
 </div>
@@ -224,11 +242,11 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
   <button type="button" data-t="home" onclick="switchTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 9.8V20h11V9.8"/><path d="M10 20v-5h4v5"/></svg><span>ホーム</span></button>
   <button type="button" data-t="workout" onclick="switchTab('workout')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 6.8v10.4M3.8 9.2v5.6M17.2 6.8v10.4M20.2 9.2v5.6M6.8 12h10.4"/></svg><span>トレーニング</span></button>
   <button type="button" data-t="cardio" onclick="switchTab('cardio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg><span>有酸素</span></button>
-  <button type="button" data-t="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></svg><span>編集・分析/設定</span></button>
+  <button type="button" data-t="settings" onclick="switchTab('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="M7 20v-6M12 20V6M17 20v-9"/></svg><span>分析</span></button>
 </nav>
 
 <script src="app-core.js"></script>
-<script src="extras.js?v=69"></script>
+<script src="extras.js?v=70"></script>
 <script>
 /* サービスワーカー登録：オフラインでも開けるようにする（sw.js） */
 if ('serviceWorker' in navigator) {
