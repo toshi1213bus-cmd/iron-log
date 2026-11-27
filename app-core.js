@@ -936,7 +936,7 @@ function renderPager(container, visible, total, step, onLess, onMore) {
   container.innerHTML = '';
   if (total <= step && visible <= step) return;
   const wrap = document.createElement('div');
-  wrap.className = 'grid grid-cols-2 border-t border-gray-700';
+  wrap.className = 'grid grid-cols-2 border-b border-gray-700';
   const mk = (label, fn, disabled, extra) => {
     const b = document.createElement('button');
     b.type = 'button';

@@ -948,7 +948,7 @@ button:active { transform: scale(.95); }
 .goal-edit { display: flex; align-items: center; gap: 6px; }
 .goal-input { width: 84px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--gold-line); border-radius: 3px; color: var(--text); font-size: 14px; }
 .goal-btn { padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 3px; color: var(--text); font-size: 12px; cursor: pointer; }
-.goal-btn.danger { color: #f87171; }
+.goal-btn.danger { color: var(--np-red); }
 
 /* ===== プロフィール（実績ページ上部のカード） ===== */
 .pf-card { margin: 14px 14px 4px; padding: 14px; background: transparent; border: 1px solid var(--line); border-radius: 3px; }
