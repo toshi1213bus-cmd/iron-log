@@ -10,7 +10,7 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 </script>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="theme.css?v=73">
+<link rel="stylesheet" href="theme.css?v=74">
   <link rel="stylesheet" href="bg.css">
 <meta name="theme-color" content="#0a0a0b">
 <link rel="manifest" href="manifest.webmanifest">
@@ -26,8 +26,8 @@ try { var _t = localStorage.getItem('iron_theme'); if (_t === 'ocean' || _t === 
 <div id="topPage">
   <div id="calendarCard" class="bg-gray-800 border border-gray-700 rounded-2xl p-3.5"></div>
   <div class="gate-entries">
-    <button type="button" class="gate-entry" onclick="enterFitness()"><span class="gate-name">鍛錬</span><span class="gate-sub" id="topFitSub"></span></button>
-    <button type="button" class="gate-entry" onclick="openMealPage()"><span class="gate-name">食事</span><span class="gate-sub">準備中</span></button>
+    <button type="button" class="gate-entry" onclick="enterFitness()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.8 6.8v10.4M3.8 9.2v5.6M17.2 6.8v10.4M20.2 9.2v5.6M6.8 12h10.4"/></svg><span>鍛錬</span></button>
+    <button type="button" class="gate-entry" onclick="openMealPage()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M9 8c1-1.5 5-1.5 6 0"/><path d="M8.5 21h7"/></svg><span>食事管理</span></button>
   </div>
   <button type="button" class="gate-set" onclick="openSetPage()">設定</button>
 </div>
