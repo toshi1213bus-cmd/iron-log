@@ -1059,7 +1059,13 @@ window.openMealPage = function () {
     return () => { safe(renderMeal); };
   });
 };
-function removeMealPage() { if (!mealEl) return; mealEl.hidden = true; mealEl = null; }
+function removeMealPage() {
+  if (!mealEl) return;
+  mealEl.hidden = true; mealEl = null;
+  mealAcc = { e: -1, p: -1, pm: '' }; /* 別ページへ行ったらアコーディオンは閉じておく */
+  mealDraft = null;
+  mealCloseSheet();
+}
 window.leaveMealPage = function () { if (!mealEl) return; removeMealPage(); leaveLayer(); };
 
 /* ===== 食事管理（サンプルv5の形：合計→登録欄→プリセット。保存先は app-core の simple_meals） ===== */
@@ -1070,7 +1076,7 @@ let mealDb = null, mealDbLoading = false;
 let mealFor = null;                  /* 食品追加の対象 {kind:'preset'|'draft', idx} */
 let mealPick = null;                 /* 量を決めている食品 {f, mode:'unit'|'g', n} */
 const MEAL_UNITS = { 1088: ['杯', 150], 1026: ['枚', 60], 12005: ['個', 50], 12004: ['個', 50], 4046: ['パック', 45], 13003: ['杯', 200], 7107: ['本', 90], 7148: ['個', 250], 4032: ['丁', 300], 10127: ['切れ', 80] };
-const MEAL_ALIAS = { 'ごはん': [1088], 'ご飯': [1088], '卵': [12005, 12004], 'たまご': [12005, 12004], 'パン': [1026], '食パン': [1026], '牛乳': [13003], '納豆': [4046], '豆腐': [4032], 'バナナ': [7107], 'りんご': [7148], 'ヨーグルト': [13025] };
+const MEAL_ALIAS = { 'ごはん': [1088], 'ご飯': [1088], '卵': [12005, 12004], 'たまご': [12005, 12004], 'パン': [1026], '食パン': [1026], '牛乳': [13003], '納豆': [4046], '豆腐': [4032], 'バナナ': [7107], 'りんご': [7148], 'ヨーグルト': [13025], '鶏むね': [11214], '鶏胸': [11214], '鶏もも': [11216], '鶏肉': [11214, 11216], '豚肉': [11115], '牛肉': [11004], '味噌': [17045], '鯖': [10154], 'サバ': [10154], '鮭': [10134, 10127] };
 const mlFmt = n => Math.round(n).toLocaleString('ja-JP');
 const mlFmt1 = n => (Math.round(n * 10) / 10).toString();
 function mealDispName(raw) {
@@ -1282,10 +1288,10 @@ function mealDrawAmount() {
   const grams = pk.mode === 'unit' ? (u ? u[1] * pk.n : 0) : pk.n;
   mealSheetHtml('<button type="button" class="ml-backlink" id="mealBackToSearch">‹ 食品を選び直す</button>' +
     '<div class="ml-amtname">' + escapeHtml(f.name) + '<small>100gあたり ' + f.kcal + ' kcal ・ P ' + f.p + 'g / F ' + f.f + 'g / C ' + f.c + 'g</small></div>' +
-    '<div class="ml-chips">' + chips + '</div>' +
     (pk.mode === 'g'
       ? '<div class="ml-amtrow"><input class="ml-amtin" id="mealGrams" type="text" readonly inputmode="none" value="' + pk.n + '"><span class="ml-unit">g</span><span class="ml-prev" id="mealPrev"></span></div>'
       : '<div class="ml-amtrow"><span class="ml-unit">' + pk.n + u[0] + '（' + grams + 'g）</span><span class="ml-prev" id="mealPrev"></span></div>') +
+    '<div class="ml-chips">' + chips + '</div>' +
     '<button type="button" class="ml-go big" onclick="mealCommitFood()">追加する</button>');
   const bk = document.getElementById('mealBackToSearch');
   if (bk) bk.addEventListener('click', () => { const kf = mealFor; mealPick = null; if (kf) window.mealOpenSearch(kf.kind, kf.idx); });

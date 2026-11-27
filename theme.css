@@ -343,7 +343,7 @@ body .ex-toggle-icon.is-open {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  z-index: 110;
+  z-index: 135;
 }
 .modal-box {
   width: 100%;
