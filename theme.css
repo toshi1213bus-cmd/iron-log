@@ -771,6 +771,8 @@ body.tp-open { padding-bottom: calc(var(--tp-h, 340px) + var(--nav-h, 56px) + 16
 .sh-foot button { min-height: 44px; padding: 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; border-radius: 3px; border: 1px solid var(--gold-line); color: var(--gold); }
 .sh-foot.three { grid-template-columns: 1fr 1fr 1fr; }
 .sh-foot.three button { font-size: 11px; letter-spacing: .04em; }
+.sh-foot.four { grid-template-columns: 1fr 1fr 1fr 1fr; }
+.sh-foot.four button { font-size: 11px; letter-spacing: 0; padding: 0 2px; }
 
 /* ================= 追加: 調子ラベル（ホーム種目行の「今日／前回」の横） =================
    上昇・好調＝金文字＋金枠／停滞注意・下降＝赤文字＋赤枠／プラトー＝赤文字＋金枠／記録なし＝白系・枠なし */
@@ -1098,7 +1100,9 @@ body.at-top #bottomNav { display: none; }
 .ml-note{font-size:11px; color:var(--muted); margin-top:8px; line-height:1.6;}
 .ml-sec{font-size:11px; letter-spacing:.22em; color:var(--muted); margin:20px 0 8px;}
 .ml-card{border:1px solid var(--line); border-radius:12px; margin-bottom:10px; background:rgba(var(--bg-rgb),.35); overflow:hidden;}
-.ml-card.ml-draft{border:none; border-bottom:1px solid var(--line); border-radius:0; background:none;}
+.ml-card.ml-draft{border:none; border-bottom:1px solid var(--line); border-radius:0; background:none; margin-bottom:0;}
+.ml-ecard{border:none; border-bottom:1px solid var(--line); border-radius:0; background:none; margin-bottom:0;}
+.ml-pfirst{margin-top:16px;}
 .ml-hd{display:flex; align-items:center; gap:8px; padding:11px 12px;}
 .ml-grow{flex:1; display:flex; align-items:center; gap:10px; background:none; border:none; color:var(--text); text-align:left; cursor:pointer; padding:2px 0; min-width:0;}
 .ml-no{font-size:16px; font-weight:700; letter-spacing:.06em; white-space:nowrap;}
@@ -1116,9 +1120,9 @@ body.at-top #bottomNav { display: none; }
 .ml-fk small{color:var(--muted); font-size:11px;}
 .ml-del{background:none; border:none; color:var(--muted); font-size:16px; padding:4px 0 4px 8px; cursor:pointer;}
 .ml-empty{font-size:12px; color:var(--muted); padding:8px 0;}
-.ml-acts{display:flex; gap:8px; margin-top:12px;}
-.ml-addbtn{flex:1; height:44px; background:var(--bg); border:1px solid var(--gold-line); color:var(--gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
-.ml-go{flex:1; height:44px; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border:none; color:var(--on-gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
+.ml-acts{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+.ml-addbtn{flex:1; height:48px; background:var(--bg); border:1px solid var(--gold-line); color:var(--gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
+.ml-go{flex:1; height:48px; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border:none; color:var(--on-gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
 .ml-go.big{width:100%; margin-top:16px; height:48px;}
 .ml-frow{display:flex; align-items:center; gap:8px; margin-top:6px;}
 .ml-namein{flex:1; min-width:0; height:44px; background:var(--bg); border:1px solid var(--field-line); border-radius:3px; color:var(--text); font-size:15px; padding:0 10px; outline:none;}
@@ -1128,6 +1132,6 @@ body.at-top #bottomNav { display: none; }
 .ml-frow3{display:flex; gap:8px; margin-bottom:2px;}
 .ml-pf{flex:1; display:flex; align-items:center; gap:6px; min-width:0;}
 .ml-pf span{font-size:12px; font-weight:700; color:var(--gold);}
-.ml-pf input{flex:1; min-width:0; height:44px; background:var(--bg); border:1px solid var(--field-line); border-radius:3px; color:var(--text); font-size:15px; padding:0 8px; text-align:right; outline:none; font-variant-numeric:tabular-nums;}
+.ml-pf input{flex:1; min-width:0; height:48px; background:var(--bg); border:1px solid var(--field-line); border-radius:3px; color:var(--text); font-size:15px; padding:0 8px; text-align:right; outline:none; font-variant-numeric:tabular-nums;}
 .ml-bigadd{width:100%; height:48px; margin-top:2px; background:var(--bg); border:1px solid var(--gold-line); color:var(--gold); font-size:14px; font-weight:700; letter-spacing:.22em; border-radius:3px; cursor:pointer;}
 .ml-foot{margin-top:24px; font-size:10px; color:var(--muted); line-height:1.7;}

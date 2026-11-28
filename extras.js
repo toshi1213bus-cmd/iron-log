@@ -1048,11 +1048,11 @@ window.openSetPage = function () {
 };
 function removeSetPage() { if (!setEl) return; setEl.hidden = true; setEl = null; }
 window.leaveSetPage = function () { if (!setEl) return; removeSetPage(); leaveLayer(); };
-window.openMealPage = function () {
+window.openMealPage = function (d0) {
   openLayer('meal', () => !mealEl && !detailEl && !sheetEl && !editorOpen(), () => {
     mealEl = document.getElementById('mealPage');
     mealEl.hidden = false;
-    mealDate = dstr(new Date());
+    mealDate = d0 || dstr(new Date());
     mealAcc = { e: -1, p: -1, pm: '' };
     return () => { safe(renderMeal); };
   });
@@ -1081,7 +1081,7 @@ function mealPresetBody(pi) {
     (edit ? '<div class="ml-note">上の入力フォームで追加・削除できるよ</div>' : '');
 }
 function mealItemRows(items, delFn) {
-  if (!items.length) return '<div class="ml-empty">まだ何もない</div>';
+  if (!items.length) return '';
   return items.map((it, ii) => '<div class="ml-item"><div><div class="ml-fn">' + escapeHtml(it.name) + '</div><div class="ml-fa">' + escapeHtml(it.label) + '</div></div>' +
     '<div class="ml-fk">' + mlFmt(mealItemKcal(it)) + ' <small>kcal</small></div>' +
     (delFn ? '<button type="button" class="ml-del" onclick="' + delFn + '(' + ii + ')">✕</button>' : '') + '</div>').join('');
@@ -1129,10 +1129,9 @@ function renderMeal() {
   } else {
     h += '<div class="ml-empty">まだ記録がない</div>';
   }
-  h += '<div class="ml-sec">プリセット</div>';
   h += mealStore.presets.map((pr, pi) => {
     const open = mealAcc.p === pi, edit = open && mealAcc.pm === 'edit';
-    return '<div class="ml-card ml-pcard' + (open ? ' open' : '') + '"><div class="ml-hd">' +
+    return '<div class="ml-card ml-pcard' + (pi === 0 ? ' ml-pfirst' : '') + (open ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
       '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">記録</button>' +
@@ -1140,7 +1139,7 @@ function renderMeal() {
       '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">✕</button></div>' +
       '<div class="ml-bd">' + (open ? mealPresetBody(pi) : '') + '</div></div>';
   }).join('');
-  h += '<button type="button" class="ml-bigadd" onclick="mealAddPreset()">＋ プリセット</button>';
+  h += '<button type="button" class="ml-bigadd' + (mealStore.presets.length ? '' : ' ml-pfirst') + '" onclick="mealAddPreset()">＋ プリセット</button>';
   h += '<div class="ml-foot">kcalはPFCから自動計算（P×4・F×9・C×4）。グラムを空にすると100gで計算します。</div>';
   body.innerHTML = h;
   mealStore.presets.forEach((pr, pi) => { window['mealDelPresetItem_' + pi] = ii => { mealMut(() => { mealStore.presets[pi].items.splice(ii, 1); }); renderMeal(); }; });
@@ -2590,8 +2589,8 @@ function sheetHtml(d) {
   }
   h += '</div>';
   if (d <= today) {
-    h += '<div class="sh-foot three"><button type="button" data-sh="addw">トレーニング追加</button><button type="button" data-sh="addc">有酸素追加</button>' +
-      '<button type="button" data-sh="addh">HIIT追加</button></div>';
+    h += '<div class="sh-foot four"><button type="button" data-sh="addw">トレーニング追加</button><button type="button" data-sh="addc">有酸素追加</button>' +
+      '<button type="button" data-sh="addh">HIIT追加</button><button type="button" data-sh="addm">食事追加</button></div>';
   }
   return h;
 }
@@ -2643,6 +2642,7 @@ function openSheet(d) {
       else if (a === 'addw') { closeSheet(); enterFitness(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
       else if (a === 'addc') { closeSheet(); enterFitness(); switchTab('cardio'); setCardioDate(day); }
       else if (a === 'addh') { pickHiit(day); }
+      else if (a === 'addm') { closeSheet(); openMealPage(day); }
       else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
       else if (a.indexOf('mdel:') === 0) { const mp = a.split(':'); sheetDelMealItem(day, +mp[1], +mp[2]); }
     });
