@@ -1005,10 +1005,10 @@ function mealSumHtml(d) {
   const bar = (v, t) => '<div class="ml-bar"><i style="width:' + (t > 0 ? Math.min(100, v / t * 100) : 0) + '%"></i></div>';
   return '<div class="ml-sum"><div class="ml-slb">合計</div><div class="ml-kcal"><b>' + mlFmt(tk) + '</b> kcal' +
     (bc ? ' <span>/ 目標 ' + mlFmt(bc.kcal) + ' kcal</span>' : '') + '</div>' + (bc ? bar(tk, bc.kcal) : '') +
-    (bc ? '<div class="ml-pfc">' +
-      '<div><div class="ml-pl"><span>たんぱく質</span><b>' + mlFmt1(tp) + ' / ' + bc.pG + 'g</b></div>' + bar(tp, bc.pG) + '</div>' +
-      '<div><div class="ml-pl"><span>脂質</span><b>' + mlFmt1(tf) + ' / ' + bc.fG + 'g</b></div>' + bar(tf, bc.fG) + '</div>' +
-      '<div><div class="ml-pl"><span>炭水化物</span><b>' + mlFmt1(tc) + ' / ' + bc.cG + 'g</b></div>' + bar(tc, bc.cG) + '</div></div>'
+    (bc ? '<div class="ml-pfc1">' +
+      '<div class="ml-pf1"><span>P</span>' + bar(tp, bc.pG) + '<b>' + mlFmt1(tp) + '/' + bc.pG + 'g</b></div>' +
+      '<div class="ml-pf1"><span>F</span>' + bar(tf, bc.fG) + '<b>' + mlFmt1(tf) + '/' + bc.fG + 'g</b></div>' +
+      '<div class="ml-pf1"><span>C</span>' + bar(tc, bc.cG) + '<b>' + mlFmt1(tc) + '/' + bc.cG + 'g</b></div></div>'
       : '<div class="ml-note">身体データ（プロフィール内）で体重を入れると、目標と比べて表示します</div>') + '</div>';
 }
 function renderTop() {

@@ -1094,6 +1094,11 @@ body.at-top #bottomNav { display: none; }
 .ml-kcal span{font-size:12px;}
 .ml-bar{height:6px; border-radius:99px; background:rgba(255,255,255,.10); overflow:hidden; margin:8px 0 4px;}
 .ml-bar i{display:block; height:100%; width:0%; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border-radius:99px; transition:width .35s ease;}
+.ml-pfc1{display:flex; gap:14px; margin-top:8px;}
+.ml-pf1{flex:1; display:flex; align-items:center; gap:6px; min-width:0;}
+.ml-pf1 span{font-size:11px; font-weight:700; color:var(--gold);}
+.ml-pf1 b{font-size:12px; white-space:nowrap;}
+.ml-pf1 .ml-bar{flex:1; margin:0; min-width:14px;}
 .ml-pfc{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:8px;}
 .ml-pl{font-size:11px; letter-spacing:.1em; color:var(--muted); display:flex; justify-content:space-between;}
 .ml-pl b{color:var(--text); font-size:12px;}
