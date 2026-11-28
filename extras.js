@@ -1074,7 +1074,8 @@ let mealDb = null, mealDbLoading = false;
 let mealFor = null;                  /* 食品追加の対象 {kind:'preset'|'draft', idx} */
 let mealPick = null;                 /* 量を決めている食品 {f, mode:'unit'|'g', n} */
 const MEAL_UNITS = { 1088: ['杯', 150], 1026: ['枚', 60], 12005: ['個', 50], 12004: ['個', 50], 4046: ['パック', 45], 13003: ['杯', 200], 7107: ['本', 90], 7148: ['個', 250], 4032: ['丁', 300], 10127: ['切れ', 80] };
-const MEAL_ALIAS = { 'ごはん': [1088], 'ご飯': [1088], '卵': [12005, 12004], 'たまご': [12005, 12004], 'パン': [1026], '食パン': [1026], '牛乳': [13003], '納豆': [4046], '豆腐': [4032], 'バナナ': [7107], 'りんご': [7148], 'ヨーグルト': [13025], '鶏むね': [11214], '鶏胸': [11214], '鶏もも': [11216], '鶏肉': [11214, 11216], '豚肉': [11115], '牛肉': [11004], '味噌': [17045], '鯖': [10154], 'サバ': [10154], '鮭': [10134, 10127] };
+const MEAL_ALIAS = { 'ごはん': [1088], 'ご飯': [1088], '卵': [12005, 12004], 'たまご': [12005, 12004], 'パン': [1026], '食パン': [1026], '牛乳': [13003], '納豆': [4046], '豆腐': [4032], 'バナナ': [7107], 'りんご': [7148], 'ヨーグルト': [13025], '鶏むね': [11214], '鶏胸': [11214], '鶏もも': [11216], '鶏肉': [11214, 11216], '豚肉': [11115], '牛肉': [11004], '味噌': [17045], '鯖': [10154], 'サバ': [10154], '鮭': [10134, 10127],
+  '黒糖': [3001], '砂糖': [3003], '醤油': [17007], 'しょうゆ': [17007], 'みりん': [16025], '酒': [16001], '酢': [17015], 'オリーブオイル': [14001], 'オリーブ油': [14001], 'ごま油': [14002], 'サラダ油': [14006], 'バター': [14017], 'チーズ': [13040], 'ハム': [11176], 'ベーコン': [11183], 'ウインナー': [11186], 'ソーセージ': [11186], 'マヨネーズ': [17042], 'ケチャップ': [17036], 'はちみつ': [3022], '蜂蜜': [3022], '豆乳': [4052], 'ささみ': [11217], '手羽先': [11285], '手羽元': [11286], 'レバー': [11232], '鶏レバー': [11232], 'ひき肉': [11163, 11089], '挽肉': [11163, 11089], 'かまぼこ': [10379], '油揚げ': [4040], '厚揚げ': [4039], '高野豆腐': [4042], '春雨': [2040], '餅': [1117], 'もち': [1117], '餃子': [18002], 'ギョーザ': [18002], '焼売': [18012], 'ハンバーグ': [18050], 'コーンフレーク': [1137], 'コーンフレークス': [1137], 'パスタ': [1064], 'スパゲッティ': [1064], 'スパゲティ': [1064], 'マカロニ': [1064] };
 const mlFmt = n => Math.round(n).toLocaleString('ja-JP');
 const mlFmt1 = n => (Math.round(n * 10) / 10).toString();
 function mealDispName(raw) {
@@ -1101,7 +1102,12 @@ function ensureMealDb() {
 function mealSearch(q) {
   if (!mealDb) return [];
   const out = [], seen = new Set();
-  (MEAL_ALIAS[String(q).trim()] || []).forEach(id => { const f = mealDb.find(x => x.id === id); if (f && !seen.has(f.id)) { seen.add(f.id); out.push(f); } });
+  const qs = String(q).trim();
+  const aliasIds = [];
+  const pushAlias = ids => ids.forEach(id => { if (!aliasIds.includes(id)) aliasIds.push(id); });
+  if (MEAL_ALIAS[qs]) pushAlias(MEAL_ALIAS[qs]);
+  Object.keys(MEAL_ALIAS).filter(k => k.length >= 2 && qs.length > k.length && qs.includes(k)).sort((a, b) => b.length - a.length).forEach(k => pushAlias(MEAL_ALIAS[k]));
+  aliasIds.forEach(id => { const f = mealDb.find(x => x.id === id); if (f && !seen.has(f.id)) { seen.add(f.id); out.push(f); } });
   const toks = String(q).trim().split(/[\s　]+/).map(mealNorm).filter(Boolean);
   if (!toks.length) return out;
   for (const f of mealDb) {
@@ -2672,7 +2678,7 @@ function sheetHtml(d) {
   const ments = mealEntriesOn(d);
   if (ments.length) {
     h += '<div class="space-y-2">' + ments.map((e, ei) => '<div class="bg-gray-900 border border-gray-700 rounded-xl p-3"><div class="flex justify-between items-center"><span class="text-xs text-white">' + (ei + 1) + '</span><span class="text-xs text-white">' + mlFmt(mealItemsKcal(e.items)) + ' kcal</span></div>' +
-      '<div class="text-xs text-gray-400 mt-1">' + e.items.map(it => escapeHtml(it.name)).join('、') + '</div></div>').join('') + '</div>' +
+      e.items.map((it, ii) => '<div class="flex justify-between items-center mt-1"><span class="text-xs text-gray-300">' + escapeHtml(it.name) + '（' + escapeHtml(it.label || '') + '）</span><span class="flex items-center gap-1"><span class="text-xs text-gray-500">' + mlFmt(mealItemKcal(it)) + '</span><button type="button" data-sh="mdel:' + ei + ':' + ii + '" class="text-gray-500 hover:text-red-400 p-1">✕</button></span></div>').join('') + '</div>').join('') + '</div>' +
       '<div class="hm-sub">合計 ' + mlFmt(mealDayKcal(d)) + ' kcal</div>';
   } else {
     h += '<div class="hm-sub">記録なし</div>';
@@ -2733,6 +2739,7 @@ function openSheet(d) {
       else if (a === 'addc') { closeSheet(); enterFitness(); switchTab('cardio'); setCardioDate(day); }
       else if (a === 'addh') { pickHiit(day); }
       else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
+      else if (a.indexOf('mdel:') === 0) { const mp = a.split(':'); sheetDelMealItem(day, +mp[1], +mp[2]); }
     });
     document.body.appendChild(sheetEl);
     return renderSheet;
@@ -2750,6 +2757,28 @@ window.sheetDelHiit = async function (d, name) {
   if (ok && window.showUndoToast) {
     showUndoToast('HIITの記録を削除しました', () => {
       markHiitDay(d, name, entry);
+      requestRender('all');
+      if (sheetDate === d) renderSheet();
+    });
+  }
+};
+window.sheetDelMealItem = async function (d, ei, ii) {
+  if (!d) return;
+  const dayArr = mealStore.days[d];
+  if (!dayArr || !dayArr[ei] || !dayArr[ei].items[ii]) return;
+  if (!(await askConfirm('この食品を削除しますか？'))) return;
+  const before = JSON.parse(JSON.stringify(dayArr));
+  const ok = mealMut(() => {
+    mealStore.days[d][ei].items.splice(ii, 1);
+    if (!mealStore.days[d][ei].items.length) mealStore.days[d].splice(ei, 1);
+    if (mealStore.days[d] && !mealStore.days[d].length) delete mealStore.days[d];
+  });
+  if (!ok) return;
+  if (sheetDate === d) renderSheet();
+  requestRender('all');
+  if (window.showUndoToast) {
+    showUndoToast('食品を削除しました', () => {
+      mealMut(() => { mealStore.days[d] = before; });
       requestRender('all');
       if (sheetDate === d) renderSheet();
     });
