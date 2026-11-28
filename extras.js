@@ -1123,18 +1123,9 @@ function renderMeal() {
     mealItemRows(fItems, fEdit >= 0 ? 'mealDelPresetItem_' + fEdit : 'mealDelDraftItem') +
     '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealAddManual()">食品追加</button>' +
     '<button type="button" class="ml-go" onclick="mealFormDone()">' + (fEdit >= 0 ? '完了' : '記録') + '</button></div></div></div>';
-  if (ents.length) {
-    h += ents.map((e, ei) => '<div class="ml-card ml-ecard' + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
-      '<button type="button" class="ml-grow" onclick="mealToggleEntry(' + ei + ')"><span class="ml-no">' + (ei + 1) + '</span>' +
-      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (mealAcc.e === ei ? ' is-open' : '') + '"></span></button>' +
-      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="記録を削除">✕</button></div>' +
-      '<div class="ml-bd">' + mealItemRows(e.items, null) + '</div></div>').join('');
-  } else {
-    h += '<div class="ml-empty">まだ記録がない</div>';
-  }
   h += mealStore.presets.map((pr, pi) => {
     const open = mealAcc.p === pi, edit = open && mealAcc.pm === 'edit';
-    return '<div class="ml-card ml-pcard' + (pi === 0 ? ' ml-pfirst' : '') + (open ? ' open' : '') + '"><div class="ml-hd">' +
+    return '<div class="ml-card ml-pcard' + (open ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' + (pr.name ? '<span class="ml-pname">' + escapeHtml(pr.name) + '</span>' : '') +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
       '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">記録</button>' +
@@ -1142,7 +1133,16 @@ function renderMeal() {
       '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">✕</button></div>' +
       '<div class="ml-bd">' + (open ? mealPresetBody(pi) : '') + '</div></div>';
   }).join('');
-  h += '<button type="button" class="ml-bigadd' + (mealStore.presets.length ? '' : ' ml-pfirst') + '" onclick="mealAddPreset()">＋ プリセット</button>';
+  h += '<button type="button" class="ml-bigadd" onclick="mealAddPreset()">＋ プリセット</button>';
+  if (ents.length) {
+    h += ents.map((e, ei) => '<div class="ml-card ml-ecard' + (ei === 0 ? ' ml-efirst' : '') + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
+      '<button type="button" class="ml-grow" onclick="mealToggleEntry(' + ei + ')"><span class="ml-no">' + (ei + 1) + '</span>' +
+      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (mealAcc.e === ei ? ' is-open' : '') + '"></span></button>' +
+      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="記録を削除">✕</button></div>' +
+      '<div class="ml-bd">' + mealItemRows(e.items, null) + '</div></div>').join('');
+  } else {
+    h += '<div class="ml-empty ml-efirst">まだ記録がない</div>';
+  }
   h += '<div class="ml-foot">kcalはPFCから自動計算（P×4・F×9・C×4）。グラムを空にすると100gで計算します。</div>';
   body.innerHTML = h;
   mealStore.presets.forEach((pr, pi) => { window['mealDelPresetItem_' + pi] = ii => { mealMut(() => { mealStore.presets[pi].items.splice(ii, 1); }); renderMeal(); }; });
