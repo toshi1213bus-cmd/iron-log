@@ -1082,6 +1082,7 @@ body.at-top #bottomNav { display: none; }
 .hm-util-btn.gold { color: var(--gold); border: none; }
 
 /* ===== 食事管理ページ（ml-）：サンプルv5の形をテーマ変数で ===== */
+#topMeal{cursor:pointer; margin-top:2px;}
 .ml-date{display:flex; align-items:center; justify-content:center; gap:14px; margin:2px 0 12px;}
 .ml-dbtn{background:none; border:1px solid var(--line); color:var(--gold); width:38px; height:38px; border-radius:50%; font-size:19px; cursor:pointer;}
 .ml-dbtn:disabled{opacity:.3;}
@@ -1110,6 +1111,7 @@ body.at-top #bottomNav { display: none; }
 .ml-mk{font-size:13px; color:var(--muted); white-space:nowrap;}
 .ml-mk b{color:var(--text); font-size:15px;}
 .ml-grow .ex-toggle-icon{margin-left:auto;}
+.ml-bd:first-child{border-top:none; padding-top:12px;}
 .ml-bd{display:none; border-top:1px solid rgba(255,255,255,.06); padding:4px 14px 13px;}
 .ml-card.open .ml-bd, .ml-bd.show{display:block;}
 .ml-icobtn{flex:none; background:none; border:none; color:var(--muted); font-size:17px; padding:6px 4px; cursor:pointer;}

@@ -997,6 +997,20 @@ function onAchClick(e) {
    起動はトップ（カレンダー＋筋トレ・食事・設定の入口）。筋トレ側は今まで通り下タブで動き、
    トップへはホーム左上の「トップ」ボタンで戻る。共通ページは他の全画面ページと同じ履歴レイヤー（戻るで閉じる） */
 let setEl = null, mealEl = null, editEl = null, fitEntered = false;
+function mealSumHtml(d) {
+  const ents = mealEntriesOn(d);
+  let tk = 0, tp = 0, tf = 0, tc = 0;
+  ents.forEach(e => e.items.forEach(it => { const r = it.g / 100; tk += it.kcal * r; tp += it.p * r; tf += it.f * r; tc += it.c * r; }));
+  const bc = bodyCalc();
+  const bar = (v, t) => '<div class="ml-bar"><i style="width:' + (t > 0 ? Math.min(100, v / t * 100) : 0) + '%"></i></div>';
+  return '<div class="ml-sum"><div class="ml-slb">合計</div><div class="ml-kcal"><b>' + mlFmt(tk) + '</b> kcal' +
+    (bc ? ' <span>/ 目標 ' + mlFmt(bc.kcal) + ' kcal</span>' : '') + '</div>' + (bc ? bar(tk, bc.kcal) : '') +
+    (bc ? '<div class="ml-pfc">' +
+      '<div><div class="ml-pl"><span>たんぱく質</span><b>' + mlFmt1(tp) + ' / ' + bc.pG + 'g</b></div>' + bar(tp, bc.pG) + '</div>' +
+      '<div><div class="ml-pl"><span>脂質</span><b>' + mlFmt1(tf) + ' / ' + bc.fG + 'g</b></div>' + bar(tf, bc.fG) + '</div>' +
+      '<div><div class="ml-pl"><span>炭水化物</span><b>' + mlFmt1(tc) + ' / ' + bc.cG + 'g</b></div>' + bar(tc, bc.cG) + '</div></div>'
+      : '<div class="ml-note">身体データ（プロフィール内）で体重を入れると、目標と比べて表示します</div>') + '</div>';
+}
 function renderTop() {
   const sub = document.getElementById('topToday');
   if (!sub) return;
@@ -1006,6 +1020,8 @@ function renderTop() {
   sub.innerHTML = '今日は <span class="tt-type">' + type + '</span> の日' + (names.length ? ' ・ ' + doneN + '/' + names.length + ' 完了' : '');
   const pb = document.getElementById('topProfBadge');
   if (pb) { const nn = achNewCount(achievements()); pb.textContent = nn > 0 ? '＋' + nn : ''; pb.style.display = nn > 0 ? '' : 'none'; }
+  const tm = document.getElementById('topMeal');
+  if (tm) tm.innerHTML = mealSumHtml(dstr(new Date()));
 }
 function enterTop() {
   closePad();
@@ -1091,24 +1107,11 @@ function renderMeal() {
   if (!body || !mealDate) return;
   const today = dstr(new Date());
   const ents = mealEntriesOn(mealDate);
-  let tk = 0, tp = 0, tf = 0, tc = 0;
-  ents.forEach(e => e.items.forEach(it => { const r = it.g / 100; tk += it.kcal * r; tp += it.p * r; tf += it.f * r; tc += it.c * r; }));
-  const bc = bodyCalc();
-  const bar = (v, t) => '<div class="ml-bar"><i style="width:' + (t > 0 ? Math.min(100, v / t * 100) : 0) + '%"></i></div>';
-  let h = '<div class="ml-date"><button type="button" class="ml-dbtn" onclick="mealShiftDate(-1)">‹</button>' +
-    '<span class="ml-dtxt">' + fmtD(mealDate) + (mealDate === today ? '（今日）' : '') + '</span>' +
-    '<button type="button" class="ml-dbtn" onclick="mealShiftDate(1)"' + (mealDate >= today ? ' disabled' : '') + '>›</button></div>';
-  h += '<div class="ml-sum"><div class="ml-slb">合計</div><div class="ml-kcal"><b>' + mlFmt(tk) + '</b> kcal' +
-    (bc ? ' <span>/ 目標 ' + mlFmt(bc.kcal) + ' kcal</span>' : '') + '</div>' + (bc ? bar(tk, bc.kcal) : '') +
-    (bc ? '<div class="ml-pfc">' +
-      '<div><div class="ml-pl"><span>たんぱく質</span><b>' + mlFmt1(tp) + ' / ' + bc.pG + 'g</b></div>' + bar(tp, bc.pG) + '</div>' +
-      '<div><div class="ml-pl"><span>脂質</span><b>' + mlFmt1(tf) + ' / ' + bc.fG + 'g</b></div>' + bar(tf, bc.fG) + '</div>' +
-      '<div><div class="ml-pl"><span>炭水化物</span><b>' + mlFmt1(tc) + ' / ' + bc.cG + 'g</b></div>' + bar(tc, bc.cG) + '</div></div>'
-      : '<div class="ml-note">身体データ（プロフィール内）で体重を入れると、目標と比べて表示します</div>') + '</div>';
+  let h = '';
+  h += mealSumHtml(mealDate);
   const fEdit = mealEditPreset >= 0 && mealStore.presets[mealEditPreset] ? mealEditPreset : -1;
   const fItems = fEdit >= 0 ? mealStore.presets[fEdit].items : mealDraft.items;
-  h += '<div class="ml-card ml-draft"><div class="ml-hd"><span class="ml-no gold">' + (fEdit >= 0 ? 'プリセット' + (fEdit + 1) + ' を編集中' : '入力フォーム') + '</span>' +
-    '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(fItems)) + '</b> kcal</span></div>' +
+  h += '<div class="ml-card ml-draft">' + (fEdit >= 0 ? '<div class="ml-hd"><span class="ml-no gold">プリセット' + (fEdit + 1) + ' を編集中</span></div>' : '') +
     '<div class="ml-bd show">' +
     '<div class="ml-frow"><input id="mealName" class="ml-namein" type="text" placeholder="食品名" autocomplete="off">' +
     '<input id="mealG" class="ml-gin" type="text" readonly inputmode="none" placeholder="100"><span class="ml-unit">g</span></div>' +
