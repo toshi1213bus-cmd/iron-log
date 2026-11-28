@@ -1114,6 +1114,13 @@ function mealSearch(q) {
   return out;
 }
 function mealMut(fn) { const ok = transact(['meals'], fn); if (!ok) window.alert('保存できませんでした'); return ok; }
+function mealPresetBody(pi) {
+  const pr = mealStore.presets[pi];
+  if (!pr) return '';
+  const edit = mealAcc.p === pi && mealAcc.pm === 'edit';
+  return mealItemRows(pr.items, edit ? 'mealDelPresetItem_' + pi : null) +
+    (edit ? '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'preset\',' + pi + ')">追加</button></div>' : '');
+}
 function mealItemRows(items, delFn) {
   if (!items.length) return '<div class="ml-empty">まだ何もない</div>';
   return items.map((it, ii) => '<div class="ml-item"><div><div class="ml-fn">' + escapeHtml(it.name) + '</div><div class="ml-fa">' + escapeHtml(it.label) + '</div></div>' +
@@ -1141,7 +1148,7 @@ function renderMeal() {
       : '<div class="ml-note">身体データ（プロフィール内）で体重を入れると、目標と比べて表示します</div>') + '</div>';
   h += '<div class="ml-sec">登録欄（この日に食べたもの）</div>';
   if (ents.length) {
-    h += ents.map((e, ei) => '<div class="ml-card' + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
+    h += ents.map((e, ei) => '<div class="ml-card ml-ecard' + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealToggleEntry(' + ei + ')"><span class="ml-no">' + (ei + 1) + '</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (mealAcc.e === ei ? ' is-open' : '') + '"></span></button>' +
       '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="登録を削除">✕</button></div>' +
@@ -1162,15 +1169,13 @@ function renderMeal() {
   h += '<div class="ml-sec">プリセット</div>';
   h += mealStore.presets.map((pr, pi) => {
     const open = mealAcc.p === pi, edit = open && mealAcc.pm === 'edit';
-    return '<div class="ml-card' + (open ? ' open' : '') + '"><div class="ml-hd">' +
+    return '<div class="ml-card ml-pcard' + (open ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
-      '<button type="button" class="ml-reg" onclick="mealRegister(' + pi + ')">登録</button>' +
+      '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">登録</button>' +
       '<button type="button" class="ex-edit" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
       '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">✕</button></div>' +
-      '<div class="ml-bd">' + mealItemRows(pr.items, edit ? 'mealDelPresetItem_' + pi : null) +
-      (edit ? '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'preset\',' + pi + ')">追加</button></div>' : '') +
-      '</div></div>';
+      '<div class="ml-bd">' + (open ? mealPresetBody(pi) : '') + '</div></div>';
   }).join('');
   h += '<button type="button" class="ml-bigadd" onclick="mealAddPreset()">＋ プリセット</button>';
   h += '<div class="ml-foot">食品の数値は日本食品標準成分表（八訂）増補2023（文部科学省）から引用。100gあたりの標準値なので目安です。</div>';
@@ -1183,10 +1188,28 @@ window.mealShiftDate = function (n) {
   mealDate = nd; mealDraft = null; mealAcc = { e: -1, p: -1, pm: '' };
   renderMeal();
 };
-window.mealToggleEntry = function (ei) { mealAcc.e = mealAcc.e === ei ? -1 : ei; renderMeal(); };
+window.mealToggleEntry = function (ei) {
+  mealAcc.e = mealAcc.e === ei ? -1 : ei;
+  const cards = document.querySelectorAll('#mealBody .ml-ecard');
+  if (!cards.length) { renderMeal(); return; }
+  cards.forEach((c, i) => {
+    const o = mealAcc.e === i;
+    c.classList.toggle('open', o);
+    const cv = c.querySelector('.ex-toggle-icon');
+    if (cv) cv.classList.toggle('is-open', o);
+  });
+};
 window.mealTogglePreset = function (pi, mode) {
   if (mealAcc.p === pi && mealAcc.pm === mode) { mealAcc.p = -1; mealAcc.pm = ''; } else { mealAcc.p = pi; mealAcc.pm = mode; }
-  renderMeal();
+  const cards = document.querySelectorAll('#mealBody .ml-pcard');
+  if (!cards.length) { renderMeal(); return; }
+  cards.forEach((c, i) => {
+    const o = mealAcc.p === i;
+    c.classList.toggle('open', o);
+    const cv = c.querySelector('.ex-toggle-icon');
+    if (cv) cv.classList.toggle('is-open', o);
+    if (o) { const bd = c.querySelector('.ml-bd'); if (bd) bd.innerHTML = mealPresetBody(i); }
+  });
 };
 window.mealRegister = function (pi) {
   const pr = mealStore.presets[pi];
@@ -1391,6 +1414,8 @@ window.toggleDayAccordion = h => {
   if (row) syncChev(row);
 };
 window.toggleExerciseAccordion = h => {
+  const sb = h.closest('#daySheet .sheet-box');
+  if (sb && !sb.style.height) sb.style.height = sb.offsetHeight + 'px';
   toggle(h, '.ex-toggle-icon');
   syncChev(h.closest('[data-id]'));
 };
