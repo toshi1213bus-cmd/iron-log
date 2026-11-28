@@ -248,7 +248,7 @@ function sanitizeMeals(raw) {
   const out = { presets: [], days: {} };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   if (Array.isArray(raw.presets)) raw.presets.slice(0, 50).forEach(m => {
-    if (m && typeof m === 'object') out.presets.push({ items: sanitizeMealItems(m.items) });
+    if (m && typeof m === 'object') out.presets.push({ name: typeof m.name === 'string' ? m.name.slice(0, 4) : '', items: sanitizeMealItems(m.items) });
   });
   if (raw.days && typeof raw.days === 'object' && !Array.isArray(raw.days)) {
     Object.keys(raw.days).filter(isRealDate).sort().slice(-730).forEach(d => {

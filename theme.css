@@ -1104,6 +1104,8 @@ body.at-top #bottomNav { display: none; }
 .ml-card.ml-draft{border:none; border-bottom:1px solid var(--line); border-radius:0; background:none; margin-bottom:0;}
 .ml-ecard{border:none; border-bottom:1px solid var(--line); border-radius:0; background:none; margin-bottom:0;}
 .ml-pfirst{margin-top:16px;}
+.ml-pname{font-weight:700; letter-spacing:.08em; white-space:nowrap;}
+.ml-pnamein{flex:1; max-width:160px; height:34px; background:var(--bg); border:1px solid var(--field-line); border-radius:3px; color:var(--text); font-size:14px; padding:0 8px; outline:none;}
 .ml-hd{display:flex; align-items:center; gap:8px; padding:11px 12px;}
 .ml-grow{flex:1; display:flex; align-items:center; gap:10px; background:none; border:none; color:var(--text); text-align:left; cursor:pointer; padding:2px 0; min-width:0;}
 .ml-no{font-size:16px; font-weight:700; letter-spacing:.06em; white-space:nowrap;}

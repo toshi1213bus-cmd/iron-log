@@ -1108,10 +1108,10 @@ function renderMeal() {
   const today = dstr(new Date());
   const ents = mealEntriesOn(mealDate);
   let h = '';
-  h += mealSumHtml(mealDate);
   const fEdit = mealEditPreset >= 0 && mealStore.presets[mealEditPreset] ? mealEditPreset : -1;
   const fItems = fEdit >= 0 ? mealStore.presets[fEdit].items : mealDraft.items;
-  h += '<div class="ml-card ml-draft">' + (fEdit >= 0 ? '<div class="ml-hd"><span class="ml-no gold">プリセット' + (fEdit + 1) + ' を編集中</span></div>' : '') +
+  h += '<div class="ml-card ml-draft">' + (fEdit >= 0 ? '<div class="ml-hd"><span class="ml-no gold">プリセット' + (fEdit + 1) + ' を編集中</span>' +
+    '<input id="mealPresetName" class="ml-pnamein" type="text" maxlength="4" placeholder="名前（4文字まで）" value="' + escapeHtml(mealStore.presets[fEdit].name || '') + '" onchange="mealSetPresetName(this.value)"></div>' : '') +
     '<div class="ml-bd show">' +
     '<div class="ml-frow"><input id="mealName" class="ml-namein" type="text" placeholder="食品名" autocomplete="off">' +
     '<input id="mealG" class="ml-gin" type="text" readonly inputmode="none" placeholder="100"><span class="ml-unit">g</span></div>' +
@@ -1135,7 +1135,7 @@ function renderMeal() {
   h += mealStore.presets.map((pr, pi) => {
     const open = mealAcc.p === pi, edit = open && mealAcc.pm === 'edit';
     return '<div class="ml-card ml-pcard' + (pi === 0 ? ' ml-pfirst' : '') + (open ? ' open' : '') + '"><div class="ml-hd">' +
-      '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' +
+      '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' + (pr.name ? '<span class="ml-pname">' + escapeHtml(pr.name) + '</span>' : '') +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
       '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">記録</button>' +
       '<button type="button" class="ex-edit" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
@@ -1228,6 +1228,12 @@ function mealPushFormItem(item) {
   mealDraft.items.push(item);
   return true;
 }
+window.mealSetPresetName = function (v) {
+  if (mealEditPreset < 0 || !mealStore.presets[mealEditPreset]) return;
+  const nm = String(v || '').trim().slice(0, 4);
+  if (!mealMut(() => { mealStore.presets[mealEditPreset].name = nm; })) return;
+  renderMeal();
+};
 window.mealAddManual = function () {
   const item = mealReadFormItem();
   if (!item) { window.alert('食品名を入れて'); return; }
