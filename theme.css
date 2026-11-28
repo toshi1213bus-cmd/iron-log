@@ -1120,7 +1120,6 @@ body.at-top #bottomNav { display: none; }
 .ml-addbtn{flex:1; height:44px; background:var(--bg); border:1px solid var(--gold-line); color:var(--gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
 .ml-go{flex:1; height:44px; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border:none; color:var(--on-gold); font-size:13px; font-weight:700; letter-spacing:.18em; border-radius:3px; cursor:pointer;}
 .ml-go.big{width:100%; margin-top:16px; height:48px;}
-.ml-subbtn{height:44px; background:none; border:1px solid var(--line); color:var(--muted); font-size:12px; letter-spacing:.08em; border-radius:3px; padding:0 13px; cursor:pointer;}
 .ml-bigadd{width:100%; height:48px; margin-top:2px; background:var(--bg); border:1px solid var(--gold-line); color:var(--gold); font-size:14px; font-weight:700; letter-spacing:.22em; border-radius:3px; cursor:pointer;}
 .ml-foot{margin-top:24px; font-size:10px; color:var(--muted); line-height:1.7;}
 .ml-scrim{position:absolute; inset:0; background:rgba(0,0,0,.6); z-index:30;}

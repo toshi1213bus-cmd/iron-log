@@ -1053,7 +1053,6 @@ window.openMealPage = function () {
     mealEl = document.getElementById('mealPage');
     mealEl.hidden = false;
     mealDate = dstr(new Date());
-    mealDraft = null;
     mealAcc = { e: -1, p: -1, pm: '' };
     ensureMealDb();
     return () => { safe(renderMeal); };
@@ -1063,7 +1062,6 @@ function removeMealPage() {
   if (!mealEl) return;
   mealEl.hidden = true; mealEl = null;
   mealAcc = { e: -1, p: -1, pm: '' }; /* 別ページへ行ったらアコーディオンは閉じておく */
-  mealDraft = null;
   mealCloseSheet();
 }
 window.leaveMealPage = function () { if (!mealEl) return; removeMealPage(); leaveLayer(); };
@@ -1071,7 +1069,7 @@ window.leaveMealPage = function () { if (!mealEl) return; removeMealPage(); leav
 /* ===== 食事管理（サンプルv5の形：合計→登録欄→プリセット。保存先は app-core の simple_meals） ===== */
 let mealDate = null;                 /* 表示中の日付（開くたび今日） */
 let mealAcc = { e: -1, p: -1, pm: '' }; /* 開いているアコーディオン */
-let mealDraft = null;                /* 登録欄で作っている食事 {items} */
+let mealDraft = { items: [] };       /* 入力フォームで作っている食事 {items}（常時表示・日付を変えても残す） */
 let mealDb = null, mealDbLoading = false;
 let mealFor = null;                  /* 食品追加の対象 {kind:'preset'|'draft', idx} */
 let mealPick = null;                 /* 量を決めている食品 {f, mode:'unit'|'g', n} */
@@ -1147,24 +1145,19 @@ function renderMeal() {
       '<div><div class="ml-pl"><span>炭水化物</span><b>' + mlFmt1(tc) + ' / ' + bc.cG + 'g</b></div>' + bar(tc, bc.cG) + '</div></div>'
       : '<div class="ml-note">身体データ（プロフィール内）で体重を入れると、目標と比べて表示します</div>') + '</div>';
   h += '<div class="ml-sec">記録欄（今日の食事）</div>';
+  h += '<div class="ml-card ml-draft"><div class="ml-hd"><span class="ml-no gold">入力フォーム</span>' +
+    '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(mealDraft.items)) + '</b> kcal</span></div>' +
+    '<div class="ml-bd show">' + mealItemRows(mealDraft.items, 'mealDelDraftItem') +
+    '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'draft\',0)">食品追加</button>' +
+    '<button type="button" class="ml-go" onclick="mealCommitDraft()">記録</button></div></div></div>';
   if (ents.length) {
     h += ents.map((e, ei) => '<div class="ml-card ml-ecard' + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealToggleEntry(' + ei + ')"><span class="ml-no">' + (ei + 1) + '</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (mealAcc.e === ei ? ' is-open' : '') + '"></span></button>' +
-      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="登録を削除">✕</button></div>' +
+      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="記録を削除">✕</button></div>' +
       '<div class="ml-bd">' + mealItemRows(e.items, null) + '</div></div>').join('');
   } else {
-    h += '<div class="ml-empty">まだ登録がない。プリセットの「登録」か、下の「＋追加」から</div>';
-  }
-  if (mealDraft) {
-    h += '<div class="ml-card ml-draft"><div class="ml-hd"><span class="ml-no gold">編集中</span>' +
-      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(mealDraft.items)) + '</b> kcal</span></div>' +
-      '<div class="ml-bd show">' + mealItemRows(mealDraft.items, 'mealDelDraftItem') +
-      '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'draft\',0)">食品追加</button>' +
-      '<button type="button" class="ml-go" onclick="mealCommitDraft()">記録する</button>' +
-      '<button type="button" class="ml-subbtn" onclick="mealCancelDraft()">やめる</button></div></div></div>';
-  } else {
-    h += '<button type="button" class="ml-bigadd" onclick="mealStartDraft()">記録する</button>';
+    h += '<div class="ml-empty">まだ記録がない</div>';
   }
   h += '<div class="ml-sec">プリセット</div>';
   h += mealStore.presets.map((pr, pi) => {
@@ -1172,7 +1165,7 @@ function renderMeal() {
     return '<div class="ml-card ml-pcard' + (open ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
-      '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">記録する</button>' +
+      '<button type="button" class="ex-edit" onclick="mealRegister(' + pi + ')">記録</button>' +
       '<button type="button" class="ex-edit" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
       '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">✕</button></div>' +
       '<div class="ml-bd">' + (open ? mealPresetBody(pi) : '') + '</div></div>';
@@ -1185,7 +1178,7 @@ function renderMeal() {
 window.mealShiftDate = function (n) {
   const nd = shiftDate(mealDate, n), today = dstr(new Date());
   if (nd > today) return;
-  mealDate = nd; mealDraft = null; mealAcc = { e: -1, p: -1, pm: '' };
+  mealDate = nd; mealAcc = { e: -1, p: -1, pm: '' };
   renderMeal();
 };
 window.mealToggleEntry = function (ei) {
@@ -1218,7 +1211,7 @@ window.mealRegister = function (pi) {
   if (mealMut(() => {
     if (!mealStore.days[mealDate]) mealStore.days[mealDate] = [];
     mealStore.days[mealDate].push({ items: copy });
-  })) { window.alert('登録した'); renderMeal(); }
+  })) { window.alert('記録した'); renderMeal(); }
 };
 window.mealDelEntry = async function (ei) {
   if (!(await askConfirm('この登録を削除しますか？', '削除'))) return;
@@ -1238,8 +1231,6 @@ window.mealAddPreset = function () {
     renderMeal();
   }
 };
-window.mealStartDraft = function () { mealDraft = { items: [] }; renderMeal(); };
-window.mealCancelDraft = function () { mealDraft = null; renderMeal(); };
 window.mealDelDraftItem = function (ii) { if (mealDraft) { mealDraft.items.splice(ii, 1); renderMeal(); } };
 window.mealCommitDraft = function () {
   if (!mealDraft || !mealDraft.items.length) { window.alert('食品が入ってない'); return; }
@@ -1247,7 +1238,7 @@ window.mealCommitDraft = function () {
   if (mealMut(() => {
     if (!mealStore.days[mealDate]) mealStore.days[mealDate] = [];
     mealStore.days[mealDate].push({ items: items });
-  })) { mealDraft = null; window.alert('登録した'); renderMeal(); }
+  })) { mealDraft = { items: [] }; window.alert('記録した'); renderMeal(); }
 };
 /* ===== 食品の検索・量のシート（食事ページの中だけに出す） ===== */
 function mealSheetHtml(html) {
