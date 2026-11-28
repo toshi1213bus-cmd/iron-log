@@ -1153,11 +1153,11 @@ function renderMeal() {
     h += '<div class="ml-card ml-draft"><div class="ml-hd"><span class="ml-no gold">編集中</span>' +
       '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(mealDraft.items)) + '</b> kcal</span></div>' +
       '<div class="ml-bd show">' + mealItemRows(mealDraft.items, 'mealDelDraftItem') +
-      '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'draft\',0)">＋ 追加</button>' +
+      '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'draft\',0)">追加</button>' +
       '<button type="button" class="ml-go" onclick="mealCommitDraft()">登録する</button>' +
       '<button type="button" class="ml-subbtn" onclick="mealCancelDraft()">やめる</button></div></div></div>';
   } else {
-    h += '<button type="button" class="ml-bigadd" onclick="mealStartDraft()">＋ 追加</button>';
+    h += '<button type="button" class="ml-bigadd" onclick="mealStartDraft()">登録</button>';
   }
   h += '<div class="ml-sec">プリセット</div>';
   h += mealStore.presets.map((pr, pi) => {
@@ -1169,7 +1169,7 @@ function renderMeal() {
       '<button type="button" class="ml-txtbtn" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
       '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">×</button></div>' +
       '<div class="ml-bd">' + mealItemRows(pr.items, edit ? 'mealDelPresetItem_' + pi : null) +
-      (edit ? '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'preset\',' + pi + ')">＋ 追加</button></div>' : '') +
+      (edit ? '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'preset\',' + pi + ')">追加</button></div>' : '') +
       '</div></div>';
   }).join('');
   h += '<button type="button" class="ml-bigadd" onclick="mealAddPreset()">＋ プリセット</button>';
@@ -2713,8 +2713,8 @@ function openSheet(d) {
       if (!b) return;
       const day = sheetDate, a = b.dataset.sh;
       if (a === 'close') closeSheet();
-      else if (a === 'addw') { closeSheet(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
-      else if (a === 'addc') { closeSheet(); switchTab('cardio'); setCardioDate(day); }
+      else if (a === 'addw') { closeSheet(); enterFitness(); switchTab('workout'); if (editingId !== null) resetForm(); setFormDate(day); }
+      else if (a === 'addc') { closeSheet(); enterFitness(); switchTab('cardio'); setCardioDate(day); }
       else if (a === 'addh') { pickHiit(day); }
       else if (a.indexOf('hdel:') === 0) { sheetDelHiit(day, a.slice(5)); }
     });
@@ -2741,8 +2741,10 @@ window.sheetDelHiit = async function (d, name) {
 };
 window.sheetEdit = function (id) {
   closeSheet();
+  enterFitness(); /* トップのカレンダーが上に残らないよう、フィットネスへ入ってから編集する */
   switchTab('workout');
   editWorkout(id);
+  window.__sheetEditTop = true; /* 更新したらトップページへ戻る */
 };
 document.addEventListener('click', e => {
   const c = e.target.closest('.cal-d[data-d]');

@@ -536,6 +536,7 @@ function resetFormFields() {
 function resetForm(keep) {
   const keepDate = (keep === true || editingId !== null) ? formDate : null;
   editingId = null;
+  window.__sheetEditTop = false; /* カレンダー編集の「終わったらトップへ戻る」は、編集をやめたら消す */
   formDate = keepDate;
   homeInput = false;
   homeInputName = null;
@@ -545,8 +546,10 @@ function resetForm(keep) {
 }
 /* キャンセル：フォームをリセットし、フォーカス（とテンキー）も外してキーボードが勝手に立ち上がらないようにする */
 function cancelEdit() {
+  const backToTop = !!window.__sheetEditTop; /* カレンダーから入った編集は、キャンセルでもトップへ戻る */
   resetForm(true);
   blurActive();
+  if (backToTop && window.enterTop) { try { window.enterTop(); } catch (e) { console.log(e); } }
 }
 /* 編集の開始：日付指定（formDate）は消さない */
 function editWorkout(id) {
@@ -803,6 +806,8 @@ function saveWorkout() {
   let prBefore = null;
   try { if (typeof prSnap === 'function') prBefore = prSnap(name, prDate); } catch (e) { console.log(e); }
   if (typeof ensureDailySnapshot === 'function') ensureDailySnapshot(); /* スナップショットは保存「前」の状態で作る（その日1回だけ） */
+  const backToTop = !!window.__sheetEditTop; /* カレンダーの日付シートから編集に入ったときだけ、保存後にトップへ戻る */
+  window.__sheetEditTop = false;
   const ok = transact(['workouts', 'dayPpl', 'menu'], () => {
     if (editingId) {
       const target = workouts.find(i => i.id === editingId);
@@ -836,6 +841,7 @@ function saveWorkout() {
   savedFeedback(btn);
   /* 2回目以降で過去最高を超えたときだけ、金色の「記録更新！！」モーダルとバイブ（初回記録は出さない） */
   try { if (prBefore && prCheck(prBefore)) showPRModal(); } catch (e) { console.log(e); }
+  if (backToTop && window.enterTop) { try { window.enterTop(); } catch (e) { console.log(e); } }
   return true;
 }
 
