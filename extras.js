@@ -1110,13 +1110,13 @@ function renderMeal() {
   h += '<div class="ml-card ml-draft"><div class="ml-hd"><span class="ml-no gold">' + (fEdit >= 0 ? 'プリセット' + (fEdit + 1) + ' を編集中' : '入力フォーム') + '</span>' +
     '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(fItems)) + '</b> kcal</span></div>' +
     '<div class="ml-bd show">' +
-    '<div class="ml-frow"><input id="mealName" class="ml-namein" type="text" readonly inputmode="none" placeholder="食品名" autocomplete="off">' +
+    '<div class="ml-frow"><input id="mealName" class="ml-namein" type="text" placeholder="食品名" autocomplete="off">' +
     '<input id="mealG" class="ml-gin" type="text" readonly inputmode="none" placeholder="100"><span class="ml-unit">g</span></div>' +
     '<div class="ml-cap">100gあたりのPFCを入れてね（kcalは自動計算）</div>' +
     '<div class="ml-frow3">' +
-    '<label class="ml-pf"><span>P</span><input id="mealP" type="text" readonly inputmode="none"></label>' +
-    '<label class="ml-pf"><span>F</span><input id="mealF" type="text" readonly inputmode="none"></label>' +
-    '<label class="ml-pf"><span>C</span><input id="mealC" type="text" readonly inputmode="none"></label></div>' +
+    '<div class="ml-pf"><span>P</span><input id="mealP" type="text" readonly inputmode="none"></div>' +
+    '<div class="ml-pf"><span>F</span><input id="mealF" type="text" readonly inputmode="none"></div>' +
+    '<div class="ml-pf"><span>C</span><input id="mealC" type="text" readonly inputmode="none"></div></div>' +
     mealItemRows(fItems, fEdit >= 0 ? 'mealDelPresetItem_' + fEdit : 'mealDelDraftItem') +
     '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealAddManual()">食品追加</button>' +
     '<button type="button" class="ml-go" onclick="mealFormDone()">' + (fEdit >= 0 ? '完了' : '記録') + '</button></div></div></div>';
@@ -1598,7 +1598,7 @@ document.addEventListener('focusin', e => {
    ・カナ面はフリック入力（タップ・左・上・右・下）。漢字変換はできないため、
      「キーボード」キーで通常のキーボードに切り替える逃げ道を用意する
    ・入力欄は readonly。タップで金枠ハイライト（input.np-active を流用）＋画面下にパッド ===== */
-const TP_SEL = '#exerciseName, #meInput, #meName, #renInput, #mealName';
+const TP_SEL = '#exerciseName, #meInput, #meName, #renInput';
 const tpEl = document.createElement('div');
 tpEl.id = 'textpad';
 tpEl.setAttribute('aria-hidden', 'true');
