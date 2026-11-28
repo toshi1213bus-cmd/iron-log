@@ -1118,7 +1118,7 @@ function mealItemRows(items, delFn) {
   if (!items.length) return '<div class="ml-empty">まだ何もない</div>';
   return items.map((it, ii) => '<div class="ml-item"><div><div class="ml-fn">' + escapeHtml(it.name) + '</div><div class="ml-fa">' + escapeHtml(it.label) + '</div></div>' +
     '<div class="ml-fk">' + mlFmt(mealItemKcal(it)) + ' <small>kcal</small></div>' +
-    (delFn ? '<button type="button" class="ml-del" onclick="' + delFn + '(' + ii + ')">×</button>' : '') + '</div>').join('');
+    (delFn ? '<button type="button" class="ml-del" onclick="' + delFn + '(' + ii + ')">✕</button>' : '') + '</div>').join('');
 }
 function renderMeal() {
   const body = document.getElementById('mealBody');
@@ -1143,8 +1143,8 @@ function renderMeal() {
   if (ents.length) {
     h += ents.map((e, ei) => '<div class="ml-card' + (mealAcc.e === ei ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealToggleEntry(' + ei + ')"><span class="ml-no">' + (ei + 1) + '</span>' +
-      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ml-chev">⌄</span></button>' +
-      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="登録を削除">×</button></div>' +
+      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(e.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (mealAcc.e === ei ? ' is-open' : '') + '"></span></button>' +
+      '<button type="button" class="ml-icobtn" onclick="mealDelEntry(' + ei + ')" aria-label="登録を削除">✕</button></div>' +
       '<div class="ml-bd">' + mealItemRows(e.items, null) + '</div></div>').join('');
   } else {
     h += '<div class="ml-empty">まだ登録がない。プリセットの「登録」か、下の「＋追加」から</div>';
@@ -1164,10 +1164,10 @@ function renderMeal() {
     const open = mealAcc.p === pi, edit = open && mealAcc.pm === 'edit';
     return '<div class="ml-card' + (open ? ' open' : '') + '"><div class="ml-hd">' +
       '<button type="button" class="ml-grow" onclick="mealTogglePreset(' + pi + ',\'view\')"><span class="ml-no">' + (pi + 1) + '</span>' +
-      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ml-chev">⌄</span></button>' +
+      '<span class="ml-mk"><b>' + mlFmt(mealItemsKcal(pr.items)) + '</b> kcal</span><span class="ex-toggle-icon' + (open ? ' is-open' : '') + '"></span></button>' +
       '<button type="button" class="ml-reg" onclick="mealRegister(' + pi + ')">登録</button>' +
-      '<button type="button" class="ml-txtbtn" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
-      '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">×</button></div>' +
+      '<button type="button" class="ex-edit" onclick="mealTogglePreset(' + pi + ',\'edit\')">編集</button>' +
+      '<button type="button" class="ml-icobtn" onclick="mealDelPreset(' + pi + ')" aria-label="プリセットを削除">✕</button></div>' +
       '<div class="ml-bd">' + mealItemRows(pr.items, edit ? 'mealDelPresetItem_' + pi : null) +
       (edit ? '<div class="ml-acts"><button type="button" class="ml-addbtn" onclick="mealOpenSearch(\'preset\',' + pi + ')">追加</button></div>' : '') +
       '</div></div>';
