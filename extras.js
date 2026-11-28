@@ -1209,23 +1209,32 @@ window.mealAddPreset = function () {
   }
 };
 window.mealDelDraftItem = function (ii) { if (mealDraft) { mealDraft.items.splice(ii, 1); renderMeal(); } };
-window.mealAddManual = function () {
+function mealReadFormItem() {
   const nameEl = document.getElementById('mealName');
   const name = nameEl ? nameEl.value.trim() : '';
-  if (!name) { window.alert('食品名を入れて'); return; }
+  if (!name) return null;
   const gv = parseFloat((document.getElementById('mealG') || {}).value);
   const g = isFinite(gv) && gv > 0 ? Math.min(2000, gv) : 100;
   const num = id => { const v = parseFloat((document.getElementById(id) || {}).value); return isFinite(v) && v > 0 ? v : 0; };
   const pv = num('mealP'), fv = num('mealF'), cv = num('mealC');
-  const item = { name: name.slice(0, 60), kcal: Math.round((pv * 4 + fv * 9 + cv * 4) * 10) / 10, p: pv, f: fv, c: cv, g: g, label: g + 'g' };
+  return { name: name.slice(0, 60), kcal: Math.round((pv * 4 + fv * 9 + cv * 4) * 10) / 10, p: pv, f: fv, c: cv, g: g, label: g + 'g' };
+}
+function mealPushFormItem(item) {
   if (mealEditPreset >= 0 && mealStore.presets[mealEditPreset]) {
-    if (!mealMut(() => { mealStore.presets[mealEditPreset].items.push(item); })) return;
-  } else {
-    mealDraft.items.push(item);
+    return mealMut(() => { mealStore.presets[mealEditPreset].items.push(item); });
   }
+  mealDraft.items.push(item);
+  return true;
+}
+window.mealAddManual = function () {
+  const item = mealReadFormItem();
+  if (!item) { window.alert('食品名を入れて'); return; }
+  if (!mealPushFormItem(item)) return;
   renderMeal();
 };
 window.mealFormDone = function () {
+  const item = mealReadFormItem();
+  if (item && !mealPushFormItem(item)) return;
   if (mealEditPreset >= 0) { const pi = mealEditPreset; mealEditPreset = -1; mealAcc = { e: -1, p: pi, pm: 'view' }; renderMeal(); return; }
   mealCommitDraft();
 };
